@@ -152,6 +152,95 @@ function doGet(e) {
       return ContentService.createTextOutput(JSON.stringify({events: events})).setMimeType(ContentService.MimeType.JSON);
     }
 
+    if (e.parameter.action === 'generateProposal') {
+     try {
+      var templateId = '1g0qJvwZJ1WaZ1U6rLTUBIBaIUoju2cdIcb8GjR-QB9U';
+      var templateFile = DriveApp.getFileById(templateId);
+      var p = e.parameter;
+      var schoolName = decodeURIComponent(p.schoolName || '');
+      var code = decodeURIComponent(p.code || '');
+      var authority = decodeURIComponent(p.authority || '');
+      var address = decodeURIComponent(p.address || '');
+      var managerName = decodeURIComponent(p.managerName || '');
+      var managerPhone = decodeURIComponent(p.managerPhone || '');
+      var budgetStr = decodeURIComponent(p.budget || '0');
+
+      var copyName = '\u05d4\u05e6\u05e2\u05ea \u05e9\u05d9\u05e8\u05d5\u05ea - ' + schoolName + ' (' + code + ')';
+      var copy = templateFile.makeCopy(copyName);
+      var doc = DocumentApp.openById(copy.getId());
+      var body = doc.getBody();
+
+      body.replaceText('__________________', schoolName || '________');
+      body.replaceText('\u05e9\u05dd \u05d4\u05de\u05d5\u05e1\u05d3: ________', '\u05e9\u05dd \u05d4\u05de\u05d5\u05e1\u05d3: ' + schoolName);
+      body.replaceText('\u05e1\u05de\u05dc \u05de\u05d5\u05e1\u05d3: __________', '\u05e1\u05de\u05dc \u05de\u05d5\u05e1\u05d3: ' + code);
+      body.replaceText('\u05e8\u05e9\u05d5\u05ea: __________', '\u05e8\u05e9\u05d5\u05ea: ' + authority);
+      body.replaceText('\u05db\u05ea\u05d5\u05d1\u05ea \u05de\u05d5\u05e1\u05d3: ____________', '\u05db\u05ea\u05d5\u05d1\u05ea \u05de\u05d5\u05e1\u05d3: ' + address);
+      body.replaceText('\u05e9\u05dd \u05de\u05e0\u05d4\u05dc/\u05ea \u05d4\u05de\u05d5\u05e1\u05d3: ___________', '\u05e9\u05dd \u05de\u05e0\u05d4\u05dc/\u05ea \u05d4\u05de\u05d5\u05e1\u05d3: ' + managerName);
+      body.replaceText("\u05de\u05e1' \u05d8\u05dc' \u05de\u05e0\u05d4\u05dc/\u05ea \u05de\u05d5\u05e1\u05d3: _____________", "\u05de\u05e1' \u05d8\u05dc' \u05de\u05e0\u05d4\u05dc/\u05ea \u05de\u05d5\u05e1\u05d3: " + managerPhone);
+
+      var budget = parseFloat(budgetStr.replace(/[^\d.]/g, '')) || 0;
+      var monthly = Math.round(budget / 12);
+      var totalVat = Math.round(budget * 1.17);
+      body.replaceText('\u05e1\u05da \u05e9\u05dc _______', '\u05e1\u05da \u05e9\u05dc ' + monthly.toLocaleString() + ' \u20aa');
+      body.replaceText('\u05d5\u05d1\u05e1\u05d4"\u05db _____\u05db\u05d5\u05dc\u05dc', '\u05d5\u05d1\u05e1\u05d4"\u05db ' + totalVat.toLocaleString() + ' \u20aa \u05db\u05d5\u05dc\u05dc');
+
+      // Lookup user in הרשאות by column C (name)
+      // Col A(0)=מזהה(phone), B(1)=סוג, C(2)=שם, D(3)=פעיל, E(4)=מייל
+      var userId = decodeURIComponent(p.user || '');
+      var authSheet2 = ss.getSheetByName('\u05d4\u05e8\u05e9\u05d0\u05d5\u05ea');
+      var sigName = '', sigPhone = '', sigEmail = '';
+      if (authSheet2 && userId) {
+        var authRows2 = authSheet2.getDataRange().getValues();
+        for (var ai = 1; ai < authRows2.length; ai++) {
+          if (String(authRows2[ai][2]).trim() === userId) {
+            sigName = String(authRows2[ai][2] || '').trim();
+            sigPhone = String(authRows2[ai][0] || '').trim();
+            sigEmail = String(authRows2[ai][4] || '').trim();
+            break;
+          }
+        }
+      }
+
+      // Add signature to document
+      if (sigName) {
+        body.appendParagraph('\u05d1\u05d1\u05e8\u05db\u05d4,');
+        body.appendParagraph(sigName);
+        body.appendParagraph(sigPhone);
+        body.appendParagraph('\u05e0\u05e1 \u05de\u05d8\u05d7');
+        body.appendParagraph(sigEmail);
+      }
+
+      doc.saveAndClose();
+      copy.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+      // Send email with PDF attachment
+      var toEmail = decodeURIComponent(p.toEmail || '');
+      var pdfBlob = DocumentApp.openById(copy.getId()).getAs('application/pdf');
+      pdfBlob.setName(copyName + '.pdf');
+
+      var emailSubject = '\u05e0\u05e1 \u05de\u05d8\u05d7 \u2014 \u05d4\u05e6\u05e2\u05ea \u05e9\u05d9\u05e8\u05d5\u05ea \u2014 ' + schoolName;
+      var emailBody = '\u05e9\u05dc\u05d5\u05dd \u05e8\u05d1,\n\n';
+      emailBody += '\u05de\u05e6\u05d5\u05e8\u05e3 \u05d4\u05e6\u05e2\u05ea \u05e9\u05d9\u05e8\u05d5\u05ea \u05e2\u05d1\u05d5\u05e8 ' + schoolName + ' (\u05e1\u05de\u05dc ' + code + ').\n\n';
+      if (sigName) {
+        emailBody += '\u05d1\u05d1\u05e8\u05db\u05d4,\n' + sigName + '\n' + sigPhone + '\n\u05e0\u05e1 \u05de\u05d8\u05d7\n' + sigEmail;
+      }
+
+      var mailOptions = {
+        attachments: [pdfBlob],
+        name: '\u05e0\u05e1 \u05de\u05d8\u05d7'
+      };
+      if (sigEmail) mailOptions.bcc = sigEmail;
+      if (sigEmail) mailOptions.replyTo = sigEmail;
+
+      GmailApp.sendEmail(toEmail, emailSubject, emailBody, mailOptions);
+
+      var docUrl = 'https://docs.google.com/document/d/' + copy.getId() + '/edit?usp=sharing';
+      return ContentService.createTextOutput(JSON.stringify({status:'ok', docUrl: docUrl, sent: true})).setMimeType(ContentService.MimeType.JSON);
+     } catch(err) {
+      return ContentService.createTextOutput(JSON.stringify({status:'error', message: err.message})).setMimeType(ContentService.MimeType.JSON);
+     }
+    }
+
     if (e.parameter.action === 'getContacts') {
       var cSheet = ss.getSheetByName('\u05db\u05ea\u05d5\u05d1\u05d5\u05ea');
       var contacts = [];
