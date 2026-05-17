@@ -1,0 +1,21 @@
+# Backups
+backups/
+BU*/
+
+# OS files
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# IDE
+.windsurf/
+.vscode/
+
+# Access/Excel binaries
+*.accdb
+*.accde
+*.laccdb
+*.xlsx
+
+# Temp/misc
+בדיקה*/

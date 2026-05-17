@@ -1,0 +1,133 @@
+Attribute VB_Name = "AutoBackup"
+Option Compare Database
+Option Explicit
+
+' ===========================================================================
+' מודול: AutoBackup
+' תיאור: מערכת גיבוי אוטומטי ברוטציה
+' מטרה:
+'   - גיבוי FE (טפסים + קוד): AutoBackupRotation
+'   - גיבוי BE (טבלאות): AutoBackupBE
+'   - רוטציה: ימ1497ם זוגיות -> Backup_Odd / Backup_Even
+'   - יעד: C:\Temp\
+'   - נקרא מ-Form_Load בפתיחת האפליקציה
+' ===========================================================================
+
+Public Function AutoBackupRotation(ByVal mode As String)
+    On Error GoTo ErrorHandler
+
+    Dim fso As Object
+    Dim sourcePath As String
+    Dim targetFolder As String
+    Dim targetName As String
+    Dim fullTargetPath As String
+    Dim dayNum As Integer
+    Dim shouldBackup As Boolean
+
+    ' Paths setup
+    sourcePath = CurrentProject.FullName
+    targetFolder = "C:\Temp\"
+    Set fso = CreateObject("Scripting.FileSystemObject")
+
+    ' Create folder if missing
+    If Not fso.FolderExists(targetFolder) Then
+        fso.CreateFolder (targetFolder)
+    End If
+
+    ' Determine target filename based on Odd/Even day
+    dayNum = Day(Date)
+    If dayNum Mod 2 = 0 Then
+        targetName = "Backup_Even.accdb"
+    Else
+        targetName = "Backup_Odd.accdb"
+    End If
+
+    fullTargetPath = targetFolder & targetName
+    shouldBackup = False
+
+    ' Logic based on parameter
+    Select Case mode
+        Case "#רגיל#"
+            ' Only backup if file doesn't exist for today
+            If Not fso.FileExists(fullTargetPath) Then
+                shouldBackup = True
+            End If
+
+        Case "#גיבוי#", "#גבוי#", "גיבוי", "גבוי"
+            ' Force backup regardless
+            shouldBackup = True
+    End Select
+
+    ' Execute Backup
+    If shouldBackup Then
+        fso.CopyFile sourcePath, fullTargetPath, True
+        Debug.Print "AutoBackup: " & targetName & " created at " & Now
+    End If
+
+CleanExit:
+    Set fso = Nothing
+    Exit Function
+
+ErrorHandler:
+    Debug.Print "AutoBackupRotation ERROR: " & Err.Number & " - " & Err.Description
+    Resume CleanExit
+End Function
+
+
+' ---------------------------------------------------------------------------
+' AutoBackupBE - Backup the Back-End database
+' Same Odd/Even rotation as FE backup
+' Called from Form_Load alongside AutoBackupRotation
+' ---------------------------------------------------------------------------
+Public Sub AutoBackupBE(Optional ByVal forceBackup As Boolean = False)
+    On Error GoTo ErrorHandler
+    Dim fso As Object
+    Set fso = CreateObject("Scripting.FileSystemObject")
+
+    ' Find BE path
+    Dim bePath As String
+    bePath = GetBEPath()
+    If Len(bePath) = 0 Then
+        Debug.Print "AutoBackupBE: BE not found, skipping"
+        GoTo CleanExit
+    End If
+
+    ' Target folder
+    Dim targetFolder As String
+    targetFolder = "C:\Temp\"
+    If Not fso.FolderExists(targetFolder) Then fso.CreateFolder targetFolder
+
+    ' Odd/Even filename
+    Dim targetName As String
+    If Day(Date) Mod 2 = 0 Then
+        targetName = "BE_Backup_Even.accdb"
+    Else
+        targetName = "BE_Backup_Odd.accdb"
+    End If
+
+    Dim fullTarget As String
+    fullTarget = targetFolder & targetName
+
+    ' Check if backup needed
+    If Not forceBackup Then
+        If fso.FileExists(fullTarget) Then
+            ' Skip if already backed up today
+            If DateValue(fso.GetFile(fullTarget).DateLastModified) = Date Then
+                Debug.Print "AutoBackupBE: Already backed up today, skipping"
+                GoTo CleanExit
+            End If
+        End If
+    End If
+
+    ' Copy BE file
+    fso.CopyFile bePath, fullTarget, True
+    Debug.Print "AutoBackupBE: " & targetName & " created from " & bePath & " at " & Now
+
+CleanExit:
+    Set fso = Nothing
+    Exit Sub
+
+ErrorHandler:
+    Debug.Print "AutoBackupBE ERROR: " & Err.Number & " - " & Err.Description
+    Resume CleanExit
+End Sub
