@@ -152,6 +152,18 @@ function doGet(e) {
       return ContentService.createTextOutput(JSON.stringify({events: events})).setMimeType(ContentService.MimeType.JSON);
     }
 
+    if (e.parameter.action === 'getContacts') {
+      var cSheet = ss.getSheetByName('\u05db\u05ea\u05d5\u05d1\u05d5\u05ea');
+      var contacts = [];
+      if (cSheet) {
+        var cRows = cSheet.getDataRange().getValues();
+        for (var i = 1; i < cRows.length; i++) {
+          contacts.push({code: String(cRows[i][0]).trim(), desc: String(cRows[i][1]||'').trim(), value: String(cRows[i][2]||'').trim()});
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({contacts: contacts})).setMimeType(ContentService.MimeType.JSON);
+    }
+
     if (e.parameter.action === 'deviceAuth') {
       var did = e.parameter.deviceId;
       var dSheet = ss.getSheetByName('\u05de\u05db\u05e9\u05d9\u05e8\u05d9\u05dd');

@@ -167,6 +167,34 @@
             font-size: 13px; padding: 0 2px; opacity: 0.6;
         }
         .copy-code-btn:active { opacity: 1; }
+        .contacts-section {
+            margin-top: 8px;
+            padding: 8px 0;
+            border-top: 1px solid #eee;
+        }
+        .contacts-select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 13px;
+            direction: rtl;
+            margin-top: 4px;
+        }
+        .contacts-action-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            margin-top: 6px;
+            min-height: 32px;
+        }
+        .contacts-value {
+            flex: 1;
+            font-size: 13px;
+            font-weight: 500;
+            direction: ltr;
+            text-align: right;
+        }
         .report-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: rgba(0,0,0,0.5); z-index: 10000;
@@ -1196,6 +1224,15 @@
                                 <button class="phone-btn copy" onclick="copyEmail(this)">📋</button>
                             </div>
                         </div>
+                        ${(allContacts[r.code] && allContacts[r.code].length > 0) ? `
+                        <div class="contacts-section" id="contacts_${esc(r.code)}">
+                            <div class="contact-row-label">📇 אנשי קשר נוספים</div>
+                            <select class="contacts-select" onchange="onContactSelect(this, '${esc(r.code)}')">
+                                <option value="">-- בחר איש קשר --</option>
+                                ${allContacts[r.code].map((c,i) => `<option value="${i}">${esc(c.desc)}</option>`).join('')}
+                            </select>
+                            <div class="contacts-action-row" id="contact_action_${esc(r.code)}"></div>
+                        </div>` : ''}
                         <div class="notes-section">
                             <div class="notes-label">📝 הערות</div>
                             <textarea class="notes-textarea" data-key="${baseKey}"
@@ -1600,6 +1637,42 @@
             setTimeout(() => toast.classList.remove('show'), 1500);
         }
 
+        // Contacts from כתובות sheet - grouped by institution code
+        let allContacts = {};
+
+        function loadContacts() {
+            fetch(SCRIPT_URL + '?action=getContacts', {mode: 'cors'})
+                .then(r => r.json())
+                .then(data => {
+                    allContacts = {};
+                    (data.contacts || []).forEach(c => {
+                        if (!allContacts[c.code]) allContacts[c.code] = [];
+                        allContacts[c.code].push({desc: c.desc, value: c.value});
+                    });
+                    applyFilters(); // re-render cards with contacts
+                }).catch(e => console.warn('loadContacts error:', e));
+        }
+
+        function onContactSelect(sel, code) {
+            const actionDiv = document.getElementById('contact_action_' + code);
+            const idx = sel.value;
+            if (idx === '' || !allContacts[code]) { actionDiv.innerHTML = ''; return; }
+            const contact = allContacts[code][parseInt(idx)];
+            const val = contact.value;
+            const isPhone = /^0\d{8,9}$/.test(val.replace(/[\s\-]/g, ''));
+            const isEmail = val.includes('@');
+            let html = `<span class="contacts-value">${esc(val)}</span>`;
+            if (isPhone) {
+                html += `<button class="phone-btn call" onclick="window.open('tel:${val}')">📞</button>`;
+                const intl = '972' + val.replace(/[\s\-]/g,'').substring(1);
+                html += `<button class="phone-btn whatsapp" onclick="window.open('https://wa.me/${intl}','_blank')">WA</button>`;
+            } else if (isEmail) {
+                html += `<button class="phone-btn mail" onclick="window.open('mailto:${val}')">📧</button>`;
+            }
+            html += `<button class="phone-btn copy" onclick="_copyText('${val}')">📋</button>`;
+            actionDiv.innerHTML = html;
+        }
+
         // Load notes from cloud on startup
         function loadCloudNotes() {
             fetch(SCRIPT_URL, {mode: 'cors'})
@@ -1767,6 +1840,7 @@
             });
             loadData();
             loadCloudNotes();
+            loadContacts();
         }
 
         function checkAuth() {
