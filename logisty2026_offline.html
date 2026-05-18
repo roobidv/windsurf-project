@@ -963,7 +963,7 @@
     </div>
 
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw7iRBbaj5pQdyYn9rxqfyo9kjvq3Li4P5hPtKp3JxmH-0X-57oAnsaZmxmzQmSKVzB/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGREAsjxdWogVRqCe7N6ww2cKWghWTRp0QJ9_B2SC5qdcsJzwviziBSOxbq6xoefxV/exec';
         let cloudNotes = {};
 
         let allRows = [];
@@ -1635,19 +1635,11 @@
         });
 
         // ===== Attach Files Dialog =====
-        const USER_FILES = {
-            'רובי דביר': {
-                docUrl: 'https://docs.google.com/document/d/1g0qJvwZJ1WaZ1U6rLTUBIBaIUoju2cdIcb8GjR-QB9U/edit?usp=sharing',
-                pdfUrl: 'https://docs.google.com/document/d/1g0qJvwZJ1WaZ1U6rLTUBIBaIUoju2cdIcb8GjR-QB9U/export?format=pdf'
-            }
-        };
-        const EXTRA_FILES = {
-            customerForm: {
-                name: '\u05d8\u05d5\u05e4\u05e1 \u05e4\u05ea\u05d9\u05d7\u05ea \u05dc\u05e7\u05d5\u05d7',
-                pdfUrl: 'https://docs.google.com/document/d/12gfOCPywl2IUE8okDTKhFR6NgrJR3OK6_IxHBnd_1aU/export?format=pdf',
-                docUrl: 'https://docs.google.com/document/d/12gfOCPywl2IUE8okDTKhFR6NgrJR3OK6_IxHBnd_1aU/edit?usp=sharing'
-            }
-        };
+        const ATTACH_FILES = [
+            {id: 'proposal', name: 'הצעת שירות תשפ"ז', icon: '📄', generate: true},
+            {id: 'pricelist', name: 'מחירון שירותים', icon: '💰', url: ''},
+            {id: 'agreement', name: 'הסכם התקשרות', icon: '📋', url: ''},
+        ];
         let _attachEmail = '', _attachName = '', _attachCode = '', _attachRow = null;
 
         function openAttachDialog(email, name, code) {
@@ -1657,8 +1649,13 @@
             _attachRow = allRows.find(r => r.code === code);
             document.getElementById('attachTarget').textContent = name + ' (' + code + ') — ' + (email || 'אין מייל');
             const list = document.getElementById('attachFileList');
-            list.innerHTML = `<li><input type="checkbox" id="attach_proposal" checked><span class="file-icon">📄</span><span class="file-name">הצעת שירות תשפ"ז</span></li>` +
-                `<li><input type="checkbox" id="attach_customerForm"><span class="file-icon">📋</span><span class="file-name">טופס פתיחת לקוח</span></li>`;
+            list.innerHTML = ATTACH_FILES.map(f =>
+                `<li>
+                    <input type="checkbox" id="attach_${f.id}" value="${f.id}">
+                    <span class="file-icon">${f.icon}</span>
+                    <span class="file-name">${f.name}${f.generate ? ' <small style="color:#f59e0b">(מותאם אישית)</small>' : ''}</span>
+                </li>`
+            ).join('');
             document.getElementById('attachOverlay').classList.add('visible');
         }
 
@@ -1671,74 +1668,78 @@
         });
 
         function sendWithAttachments() {
+            const selected = ATTACH_FILES.filter(f => {
+                const cb = document.getElementById('attach_' + f.id);
+                return cb && cb.checked;
+            });
+            if (selected.length === 0) { alert('נא לבחור לפחות קובץ אחד'); return; }
             if (!_attachEmail) { alert('אין כתובת מייל'); return; }
-            if (!_attachRow) { alert('לא נמצא מידע על בית הספר'); return; }
-            const includeCustomerForm = document.getElementById('attach_customerForm') && document.getElementById('attach_customerForm').checked;
 
-            const baseKey = _attachRow.code + '_' + _attachRow.level.replace(/"/g,'');
-            const gV = (f) => localStorage.getItem(f + '_' + baseKey) || _attachRow[f] || '';
+            const needsGenerate = selected.find(f => f.generate);
+            if (needsGenerate && _attachRow) {
+                const sendBtn = document.querySelector('.attach-send');
+                sendBtn.textContent = '⏳ מייצר קובץ...';
+                sendBtn.disabled = true;
 
-            const userName = localStorage.getItem('auth_name') || '';
-            const userPhone = localStorage.getItem('auth_token') || '';
-            const userFiles = USER_FILES[userName] || USER_FILES['רובי דביר'];
+                const baseKey = _attachRow.code + '_' + _attachRow.level.replace(/"/g,'');
+                const gV = (f) => localStorage.getItem(f + '_' + baseKey) || _attachRow[f] || '';
 
-            // Calculate costs - budget field is annual total including VAT
-            const budgetRaw = parseFloat(String(_attachRow.budget || '0').replace(/[^\d.]/g, '')) || 0;
-            const annual = Math.round(budgetRaw).toLocaleString();
-            const monthly = Math.round(budgetRaw / 12).toLocaleString();
+                const payload = {
+                    action: 'generateProposal',
+                    schoolName: _attachRow.name,
+                    code: _attachRow.code,
+                    authority: _attachRow.authority,
+                    address: gV('address'),
+                    managerName: gV('name_mgr'),
+                    managerPhone: gV('phone_mgr'),
+                    budget: _attachRow.budget,
+                    user: _getUserId(),
+                    toEmail: _attachEmail
+                };
 
-            const subject = '\u202B\u05e0\u05e1 \u05de\u05d8\u05d7 \u2014 \u05d4\u05e6\u05e2\u05ea \u05e9\u05d9\u05e8\u05d5\u05ea \u2014 ' + _attachName;
-            const R = '\u202B';
-            const lines = [
-                R + '\u05e9\u05dc\u05d5\u05dd \u05e8\u05d1,',
-                '',
-                R + '\u05d4\u05e0\u05d3\u05d5\u05df: \u05d4\u05e6\u05e2\u05ea \u05e9\u05d9\u05e8\u05d5\u05ea \u05d0\u05d7\u05d6\u05e7\u05ea \u05de\u05d7\u05e9\u05d5\u05d1 \u2014 \u05e9\u05e0\u05d4"\u05dc \u05ea\u05e9\u05e4"\u05d6',
-                '',
-                R + '\u05de\u05e6\u05d5\u05e8\u05e4\u05ea \u05d4\u05e6\u05e2\u05ea \u05e9\u05d9\u05e8\u05d5\u05ea \u05e2\u05d1\u05d5\u05e8 \u05de\u05d5\u05e1\u05d3\u05db\u05dd:',
-                '',
-                R + '\u05e9\u05dd \u05de\u05d5\u05e1\u05d3:  ' + _attachRow.name,
-                R + '\u05e1\u05de\u05dc \u05de\u05d5\u05e1\u05d3:  ' + _attachRow.code,
-                R + '\u05e8\u05e9\u05d5\u05ea:  ' + (_attachRow.authority || ''),
-                R + '\u05db\u05ea\u05d5\u05d1\u05ea:  ' + gV('address'),
-                R + '\u05de\u05e0\u05d4\u05dc/\u05ea:  ' + gV('name_mgr'),
-                R + '\u05d8\u05dc\u05e4\u05d5\u05df \u05de\u05e0\u05d4\u05dc/\u05ea:  ' + gV('phone_mgr'),
-                '',
-                R + '\u05e1\u05d4"\u05db \u05e9\u05e0\u05ea\u05d9 \u05db\u05d5\u05dc\u05dc \u05de\u05e2"\u05de \u05dc\u05d7\u05d9\u05d5\u05d1 \u05d9\u05e9\u05d9\u05e8\u05d5\u05ea \u05de\u05d4\u05d2\u05e4\u05df ' + annual + ' \u05e9"\u05d7 ,(\u05de\u05d7\u05d9\u05d9\u05d1 \u05d0\u05ea \u05d1\u05d9\u05ea \u05d4\u05e1\u05e4\u05e8 \u05dc\u05d1\u05d7\u05d5\u05e8 \u05d1\u05d2\u05e4\u05df  \u05d1\u05d0\u05de\u05e6\u05e2\u05d5\u05ea \u05d4\u05de\u05e9\u05e8\u05d3).',
-                R + '\u05dc\u05e6\u05d5\u05e8\u05da \u05d4\u05de\u05d7\u05e9\u05d4, \u05d4\u05e2\u05dc\u05d5\u05ea \u05d4\u05d7\u05d5\u05d3\u05e9\u05d9\u05ea \u05d4\u05d9\u05d0 ' + annual + '/12 = ' + monthly + ' \u05e9"\u05d7.',
-                '',
-                R + '\u05dc\u05e2\u05d9\u05d5\u05df \u05d1\u05d4\u05e6\u05e2\u05d4 \u05d4\u05de\u05dc\u05d0\u05d4, \u05d9\u05e9 \u05dc\u05d4\u05d5\u05e8\u05d9\u05d3 \u05d0\u05ea \u05d4\u05e7\u05d5\u05d1\u05e5 \u05de\u05d4\u05e2\u05e0\u05df \u05e9\u05dc \u05e0\u05e1 \u05de\u05d8\u05d7:',
-                userFiles.pdfUrl,
-                '',
-                R + '\u05d4\u05e7\u05d5\u05d1\u05e5 \u05d4\u05d9\u05e0\u05d5 \u05de\u05e1\u05d5\u05d2',
-                'PDF-',
-                '',
-                R + '\u05e0\u05d0 \u05dc\u05e2\u05d9\u05d9\u05df, \u05dc\u05de\u05dc\u05d0 \u05d0\u05ea \u05d4\u05e4\u05e8\u05d8\u05d9\u05dd \u05de\u05d2\u05d5\u05e3 \u05d4\u05de\u05d9\u05d9\u05dc \u05dc\u05d4\u05dc\u05df ,\u05dc\u05d7\u05ea\u05d5\u05dd \u05d5\u05dc\u05d4\u05d7\u05d6\u05d9\u05e8 \u05e2\u05d5\u05ea\u05e7 \u05d7\u05ea\u05d5\u05dd \u05d1\u05de\u05d9\u05d9\u05dc.',
-            ];
-            if (includeCustomerForm) {
-                lines.push('');
-                lines.push(R + '\u05db\u05d3\u05d9 \u05e9\u05e0\u05d4\u05d9\u05d4 \u05d1\u05e7\u05e9\u05e8 \u05d0\u05e0\u05d5 \u05de\u05d1\u05e7\u05e9\u05d9\u05dd \u05dc\u05e8\u05e2\u05e0\u05df \u05d8\u05d5\u05e4\u05e1 \u05e4\u05ea\u05d9\u05d7\u05ea \u05dc\u05e7\u05d5\u05d7 \u05d2\u05dd \u05d0\u05dd \u05d0\u05ea\u05dd \u05dc\u05e7\u05d5\u05d7\u05d5\u05ea \u05e7\u05d9\u05d9\u05de\u05d9\u05dd.');
-                lines.push(EXTRA_FILES.customerForm.pdfUrl);
-                lines.push('');
-                lines.push(R + '\u05e0\u05d0 \u05dc\u05de\u05e9\u05d5\u05da \u05e7\u05d5\u05d1\u05e5 \u05d1\u05e4\u05d5\u05e8\u05de\u05d8');
-                lines.push('PDF');
-                lines.push(R + '\u05de\u05e2\u05e0\u05df \u05e0\u05e1 \u05de\u05d8\u05d7, \u05dc\u05de\u05dc\u05d0 \u05d5\u05dc\u05d4\u05d7\u05d6\u05d9\u05e8. \u05ea\u05d5\u05d3\u05d4, \u05e6\u05d5\u05d5\u05ea \u05e0\u05e1 \u05de\u05d8\u05d7');
+                const params = Object.entries(payload).map(([k,v]) => k + '=' + encodeURIComponent(v||'')).join('&');
+                fetch(SCRIPT_URL + '?' + params, {mode:'cors'})
+                    .then(r => r.json())
+                    .then(result => {
+                        if (result.status === 'ok' && result.sent) {
+                            logEvent(_attachCode, 'שליחת הצעה', '', 'הצעת שירות נשלחה ל-' + _attachEmail);
+                            alert('✅ המייל נשלח בהצלחה עם PDF מצורף!\nנשלח ל: ' + _attachEmail + '\nהעתק נשלח אליך.');
+                            closeAttachDialog();
+                        } else {
+                            alert('שגיאה ביצירת/שליחת הקובץ');
+                        }
+                    })
+                    .catch(e => {
+                        console.error('generateProposal error:', e);
+                        alert('שגיאה בחיבור לשרת');
+                    })
+                    .finally(() => {
+                        sendBtn.textContent = 'שלח במייל 📧';
+                        sendBtn.disabled = false;
+                    });
+            } else {
+                _openMailWithAttachments(selected);
             }
-            lines.push(...[
-                '',
-                R + '\u05e0\u05e9\u05de\u05d7 \u05dc\u05e2\u05de\u05d5\u05d3 \u05dc\u05e8\u05e9\u05d5\u05ea\u05db\u05dd \u05d1\u05db\u05dc \u05e9\u05d0\u05dc\u05d4.',
-                '',
-                R + '\u05d1\u05d1\u05e8\u05db\u05d4,',
-                R + userName,
-                R + userPhone,
-                R + '\u05e0\u05e1 \u05de\u05d8\u05d7',
-            ]);
-            const body = lines.join('\n');
+        }
+
+        function _openMailWithAttachments(selected) {
+            const subject = 'נס מטח — ' + selected.map(f => f.name).join(', ') + ' — ' + _attachName;
+            let body = 'שלום רב,\n\n';
+            body += 'מצורפים הקבצים הבאים עבור ' + _attachName + ' (סמל ' + _attachCode + '):\n\n';
+            selected.forEach(f => {
+                body += '📎 ' + f.name + '\n';
+                if (f.pdfUrl) body += '   PDF: ' + f.pdfUrl + '\n';
+                if (f.url) body += '   מסמך: ' + f.url + '\n';
+                body += '\n';
+            });
+            const userName = localStorage.getItem('auth_name') || '';
+            const userPhone = _getUserId();
+            body += 'בברכה,\n' + userName + '\n' + userPhone + '\nנס מטח';
 
             const mailUrl = 'mailto:' + encodeURIComponent(_attachEmail)
                 + '?subject=' + encodeURIComponent(subject)
                 + '&body=' + encodeURIComponent(body);
             window.open(mailUrl);
-            logEvent(_attachCode, 'שליחת הצעה', '', 'הצעת שירות נשלחה ל-' + _attachEmail);
             closeAttachDialog();
         }
 
