@@ -296,6 +296,27 @@
             align-items: flex-start;
             margin-bottom: 8px;
         }
+        .expand-hint {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary);
+            background: var(--primary-light);
+            border-radius: 12px;
+            padding: 4px 14px;
+            margin: 6px auto 0;
+            width: fit-content;
+            opacity: 0.85;
+        }
+        .expand-hint::before {
+            content: '\25BC   לחץ לפרטים';
+        }
+        .card.expanded .expand-hint::before {
+            content: '\25B2   סגור';
+        }
         .institution-name {
             font-size: 15px;
             font-weight: 700;
@@ -1225,6 +1246,7 @@
                             <div class="amount-value">${esc(r.paid86) || '-'}</div>
                         </div>
                     </div>
+                    <div class="expand-hint"></div>
                     <div class="card-details" onclick="event.stopPropagation()">
                         <div class="detail-row"><span class="detail-label">סוג רכש</span><span class="detail-value">${esc(r.purchaseType)}</span></div>
                         <div class="detail-row"><span class="detail-label">סוג תקציב</span><span class="detail-value">${esc(r.budgetType)}</span></div>
