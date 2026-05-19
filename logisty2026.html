@@ -167,6 +167,64 @@
             font-size: 16px; padding: 4px 8px; border-radius: 6px;
             margin-right: 6px; opacity: 0.8; min-width: 32px; min-height: 32px;
         }
+        .status-bar {
+            display: flex;
+            gap: 6px;
+            align-items: flex-start;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .status-btn {
+            font-size: 13px;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1.5px solid #ccc;
+            background: #f5f5f5;
+            color: #555;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 58px;
+            height: 32px;
+            text-align: center;
+            line-height: 20px;
+        }
+        .status-btn:active { transform: scale(0.95); }
+        .status-btn:disabled { opacity: 0.4; cursor: default; }
+        .status-btn:disabled:active { transform: none; }
+        .status-btn.active-call { background: #fde047; border-color: #ca8a04; color: #422006; font-weight: 800; }
+        .status-btn.active-proposal { background: #c084fc; border-color: #7c3aed; color: #fff; font-weight: 800; }
+        .status-btn.active-nochance { background: #ef4444; border-color: #991b1b; color: #fff; font-weight: 800; }
+        .close-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            cursor: pointer;
+        }
+        .close-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: #555;
+        }
+        .close-input {
+            width: 70px;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 6px 8px;
+            border-radius: 8px;
+            border: 1.5px solid #ccc;
+            background: #f5f5f5;
+            text-align: center;
+            direction: ltr;
+            height: 32px;
+            cursor: pointer;
+        }
+        .close-input.active-close {
+            background: #bbf7d0;
+            border-color: #16a34a;
+            color: #166534;
+        }
         .copy-code-btn:hover { opacity: 1; background: #c7deff; }
         .copy-code-btn:active { opacity: 1; transform: scale(0.92); }
         .contacts-section {
@@ -986,7 +1044,7 @@
     </div>
 
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw7iRBbaj5pQdyYn9rxqfyo9kjvq3Li4P5hPtKp3JxmH-0X-57oAnsaZmxmzQmSKVzB/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyDpHILojQ7y-evR-Nn5_syYQmJygVht7Q5bXTQorzBTze9uDQRxdRE_4VWxbeaiCMy/exec';
         let cloudNotes = {};
 
         let allRows = [];
@@ -1055,8 +1113,15 @@
                 name_sec:r[11]||'',phone_sec:r[12]||'',
                 name_mgr:r[13]||'',phone_mgr:r[14]||'',
                 it_name:r[15]||'',it_phone:r[16]||'',
-                email:r[17]||'',address:r[18]||''
+                email:r[17]||'',address:r[18]||'',
+                status:r[20]||'',close_amount:r[21]||''
             })).filter(r => r.name);
+            // Sync status & close_amount from cloud to localStorage (override local with sheet)
+            allRows.forEach(r => {
+                const bk = r.code + '_' + r.level.replace(/"/g,'');
+                localStorage.setItem('status_' + bk, r.status);
+                localStorage.setItem('close_amount_' + bk, r.close_amount);
+            });
             // Show data source in subtitle
             const cacheTime = localStorage.getItem('csv_cache_time');
             const src = cacheTime ? 'עדכון: ' + new Date(cacheTime).toLocaleString('he-IL',{day:'numeric',month:'numeric',hour:'2-digit',minute:'2-digit'}) : 'נתונים מקומיים';
@@ -1250,8 +1315,15 @@
                     </div>
                     <div class="expand-hint"></div>
                     <div class="card-details" onclick="event.stopPropagation()">
-                        <div class="detail-row"><span class="detail-label">סוג רכש</span><span class="detail-value">${esc(r.purchaseType)}</span></div>
-                        <div class="detail-row"><span class="detail-label">סוג תקציב</span><span class="detail-value">${esc(r.budgetType)}</span></div>
+                        <div class="status-bar">
+                            <button class="status-btn${gV('status')==='שיחה'?' active-call':''}" onclick="setStatus('${baseKey}','שיחה',this)"${gV('close_amount')?' disabled':''}>שיחה</button>
+                            <button class="status-btn${gV('status')==='הצעה'?' active-proposal':''}" onclick="setStatus('${baseKey}','הצעה',this)"${gV('close_amount')?' disabled':''}>הצעה</button>
+                            <button class="status-btn${gV('status')==='אבוד'?' active-nochance':''}" onclick="setStatus('${baseKey}','אבוד',this)"${gV('close_amount')?' disabled':''}>אבוד</button>
+                            <div class="close-group" onclick="handleClose('${baseKey}')">
+                                <input class="close-input${gV('close_amount')?' active-close':''}" id="close_${baseKey}" type="text" value="${esc(gV('close_amount'))}" readonly placeholder="₪">
+                                <span class="close-label">סגירה</span>
+                            </div>
+                        </div>
                         <div class="detail-row"><span class="detail-label">מספר מוסדות</span><span class="detail-value">${esc(r.count)}</span></div>
                         <div class="phone-fields">
                             <div class="contact-row-label">מזכירות</div>
@@ -1468,6 +1540,64 @@
                 const parts = baseKey.split('_');
                 logEvent(parts[0], field, origVal, newVal);
             }
+        }
+
+        function setStatus(baseKey, status, btn) {
+            const bar = btn.closest('.status-bar');
+            const current = localStorage.getItem('status_' + baseKey) || '';
+            // Toggle off if same button clicked
+            const newStatus = (current === status) ? '' : status;
+            localStorage.setItem('status_' + baseKey, newStatus);
+            // Clear all button highlights
+            bar.querySelectorAll('.status-btn').forEach(b => {
+                b.className = 'status-btn';
+            });
+            // Clear close field highlight if not closing
+            const closeInput = bar.querySelector('.close-input');
+            if (newStatus !== 'סגירה') {
+                // keep close_amount displayed but don't change it
+            }
+            // Set active class
+            if (newStatus === 'שיחה') btn.classList.add('active-call');
+            else if (newStatus === 'הצעה') btn.classList.add('active-proposal');
+            else if (newStatus === 'אבוד') btn.classList.add('active-nochance');
+            // Sync to cloud
+            _syncToCloud(baseKey, 'status', newStatus);
+            const parts = baseKey.split('_');
+            logEvent(parts[0], 'סטטוס', current, newStatus || '(ריק)');
+        }
+
+        function handleClose(baseKey) {
+            const input = document.getElementById('close_' + baseKey);
+            if (!input) return;
+            const currentAmount = localStorage.getItem('close_amount_' + baseKey) || '';
+            if (currentAmount) {
+                const userName = localStorage.getItem('auth_name') || '';
+                if (userName !== 'אדמין' && userName !== 'admin') {
+                    alert('סכום סגירה כבר נרשם. רק אדמין יכול לשנות.');
+                    return;
+                }
+            }
+            const pass = prompt('נא להזין סיסמה (מספר טלפון):');
+            if (!pass) return;
+            const authToken = localStorage.getItem('auth_token') || '';
+            if (pass.trim() !== authToken.trim()) {
+                alert('סיסמה שגויה');
+                return;
+            }
+            const amount = prompt('מזל טוב, כל הכבוד!\nנא הזן את הסכום השנתי בש"ח:');
+            if (!amount || !amount.trim()) return;
+            const val = amount.trim();
+            input.value = val;
+            input.classList.add('active-close');
+            localStorage.setItem('close_amount_' + baseKey, val);
+            localStorage.setItem('status_' + baseKey, 'סגירה');
+            _syncToCloud(baseKey, 'close_amount', val);
+            _syncToCloud(baseKey, 'status', 'סגירה');
+            const bar = input.closest('.status-bar');
+            bar.querySelectorAll('.status-btn').forEach(b => b.className = 'status-btn');
+            const parts = baseKey.split('_');
+            logEvent(parts[0], 'סגירה', '', val + ' ש"ח');
         }
 
         function logEvent(code, field, oldVal, newVal) {

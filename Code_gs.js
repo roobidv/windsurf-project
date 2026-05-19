@@ -42,7 +42,7 @@ function doPost(e) {
   }
 
   // Save field directly to Sheet1 (main data)
-  var fieldColMap = {name_sec:12, phone_sec:13, name_mgr:14, phone_mgr:15, it_name:16, it_phone:17, email:18, address:19};
+  var fieldColMap = {name_sec:12, phone_sec:13, name_mgr:14, phone_mgr:15, it_name:16, it_phone:17, email:18, address:19, status:21, close_amount:22};
   var col = fieldColMap[data.field];
   if (col) {
     var mainSheet = ss.getSheets()[0];
