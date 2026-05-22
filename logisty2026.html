@@ -227,6 +227,63 @@
         }
         .copy-code-btn:hover { opacity: 1; background: #c7deff; }
         .copy-code-btn:active { opacity: 1; transform: scale(0.92); }
+        .mgr-report-btn {
+            font-size: 13px; font-weight: 700; padding: 6px 12px;
+            border-radius: 8px; border: 1.5px solid var(--primary);
+            background: var(--primary-light); color: var(--primary);
+            cursor: pointer; white-space: nowrap;
+        }
+        .mgr-overlay { z-index: 9999; }
+        .mgr-overlay.visible { display: flex; }
+        .mgr-report-dialog {
+            background: #fff; border-radius: 16px; width: 95%; max-width: 600px;
+            max-height: 90vh; display: flex; flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25); overflow: hidden;
+        }
+        .mgr-report-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 18px; border-bottom: 1px solid #eee;
+        }
+        .mgr-report-header h3 { margin: 0; font-size: 18px; }
+        .mgr-close-btn { font-size: 22px; background: none; border: none; cursor: pointer; padding: 4px 8px; }
+        .mgr-report-body { padding: 16px; overflow-y: auto; flex: 1; }
+        .mgr-section { margin-bottom: 20px; text-align: center; }
+        .mgr-section h4 { margin: 0 0 10px; font-size: 15px; color: #333; }
+        .mgr-charts-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .mgr-charts-row .mgr-section { flex: 1; min-width: 140px; }
+        .chart-legend { font-size: 12px; margin-top: 6px; line-height: 1.8; }
+        .chart-legend span { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-left: 4px; vertical-align: middle; }
+        .progress-container {
+            width: 100%; height: 32px; border-radius: 8px; overflow: hidden;
+            background: #fee2e2; position: relative; direction: ltr;
+        }
+        .progress-fill {
+            height: 100%; background: #22c55e; display: flex; align-items: center;
+            justify-content: center; color: #fff; font-size: 12px; font-weight: 700;
+            transition: width 0.5s;
+        }
+        .progress-remain {
+            position: absolute; top: 0; right: 0; height: 100%;
+            display: flex; align-items: center; padding: 0 8px;
+            color: #991b1b; font-size: 12px; font-weight: 600;
+        }
+        .mgr-table { width: 100%; border-collapse: collapse; font-size: 13px; direction: rtl; }
+        .mgr-table th, .mgr-table td { border: 1px solid #ddd; padding: 6px 10px; text-align: center; }
+        .mgr-table th { background: #f1f5f9; font-weight: 700; }
+        .mgr-table tr:last-child { background: #fef9c3; font-weight: 700; }
+        .mgr-report-footer { padding: 12px 18px; border-top: 1px solid #eee; text-align: center; }
+        .mgr-print-btn {
+            font-size: 14px; font-weight: 700; padding: 8px 20px;
+            border-radius: 8px; border: none; background: var(--primary);
+            color: #fff; cursor: pointer;
+        }
+        @media print {
+            body * { visibility: hidden; }
+            #mgrReportOverlay, #mgrReportOverlay * { visibility: visible; }
+            #mgrReportOverlay { position: absolute; top: 0; left: 0; width: 100%; }
+            .mgr-report-dialog { max-height: none; box-shadow: none; width: 100%; max-width: 100%; }
+            .mgr-close-btn, .mgr-print-btn, .mgr-report-footer { display: none; }
+        }
         .contacts-section {
             margin-top: 8px;
             padding: 8px 0;
@@ -318,10 +375,13 @@
         /* Authority Filter Dropdown */
         .authority-filter {
             padding: 0 16px 8px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
         }
         .authority-select {
-            width: 100%;
-            padding: 10px 14px;
+            flex: 1;
+            padding: 8px 12px;
             border: 1.5px solid var(--border);
             border-radius: 10px;
             font-size: 14px;
@@ -977,6 +1037,7 @@
         <select class="authority-select" id="authoritySelect">
             <option value="">כל הרשויות</option>
         </select>
+        <button class="mgr-report-btn" id="mgrReportBtn" style="display:none" onclick="openMgrReport()">📊 דו"ח מנהל</button>
     </div>
 
     <div class="filters" id="levelFilters">
@@ -1021,6 +1082,48 @@
         </div>
     </div>
 
+    <div class="report-overlay mgr-overlay" id="mgrReportOverlay">
+        <div class="mgr-report-dialog">
+            <div class="mgr-report-header">
+                <h3>📊 דו"ח מנהל</h3>
+                <button class="mgr-close-btn" onclick="closeMgrReport()">✕</button>
+            </div>
+            <div class="mgr-report-body" id="mgrReportBody">
+                <div class="mgr-section">
+                    <h4>טבלת ביצועים ל-<input type="number" id="mgrDays" value="7" min="1" max="90" style="width:40px;text-align:center;font-weight:700;border:1px solid #ccc;border-radius:4px;"> ימים אחרונים</h4>
+                    <table class="mgr-table" id="mgrTable">
+                        <thead><tr><th>משימה</th><th>רובי</th><th>אירית</th><th>סה"כ צוות</th></tr></thead>
+                        <tbody><tr><td colspan="4">טוען...</td></tr></tbody>
+                    </table>
+                </div>
+                <div class="mgr-charts-row">
+                    <div class="mgr-section">
+                        <h4>רובי</h4>
+                        <canvas id="mgrPieRubi" width="220" height="220"></canvas>
+                        <div class="chart-legend" id="mgrLegendRubi"></div>
+                    </div>
+                    <div class="mgr-section">
+                        <h4>אירית</h4>
+                        <canvas id="mgrPieIrit" width="220" height="220"></canvas>
+                        <div class="chart-legend" id="mgrLegendIrit"></div>
+                    </div>
+                </div>
+                <div class="mgr-section">
+                    <h4>סרגל התקדמות כללי</h4>
+                    <div class="progress-container" id="mgrProgressBar"></div>
+                </div>
+                <div class="mgr-section">
+                    <h4>עוגה כללית — סוג רכש</h4>
+                    <canvas id="mgrPieGeneral" width="280" height="280"></canvas>
+                    <div class="chart-legend" id="mgrLegendGeneral"></div>
+                </div>
+            </div>
+            <div class="mgr-report-footer">
+                <button class="mgr-print-btn" onclick="printMgrReport()">🖨️ הדפס / PDF</button>
+            </div>
+        </div>
+    </div>
+
     <div class="cards" id="cardsContainer">
         <div class="loading">
             <div class="spinner"></div>
@@ -1044,7 +1147,7 @@
     </div>
 
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyDpHILojQ7y-evR-Nn5_syYQmJygVht7Q5bXTQorzBTze9uDQRxdRE_4VWxbeaiCMy/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzXl1sYJ9T2aUQZ65rCRsC3XaboP7wMDe09tgJPWxwC_yGe0KhSJpW9Lt_vkokmPqz5/exec';
         let cloudNotes = {};
 
         let allRows = [];
@@ -1114,7 +1217,7 @@
                 name_mgr:r[13]||'',phone_mgr:r[14]||'',
                 it_name:r[15]||'',it_phone:r[16]||'',
                 email:r[17]||'',address:r[18]||'',
-                status:r[20]||'',close_amount:r[21]||''
+                status:r[20]||'',close_amount:r[21]||'',status_date:r[22]||''
             })).filter(r => r.name);
             // Sync status & close_amount from cloud to localStorage (override local with sheet)
             allRows.forEach(r => {
@@ -1563,6 +1666,10 @@
             else if (newStatus === 'אבוד') btn.classList.add('active-nochance');
             // Sync to cloud
             _syncToCloud(baseKey, 'status', newStatus);
+            // Save status timestamp
+            const now = new Date().toISOString();
+            localStorage.setItem('status_date_' + baseKey, now);
+            _syncToCloud(baseKey, 'status_date', now);
             const parts = baseKey.split('_');
             logEvent(parts[0], 'סטטוס', current, newStatus || '(ריק)');
         }
@@ -1594,6 +1701,9 @@
             localStorage.setItem('status_' + baseKey, 'סגירה');
             _syncToCloud(baseKey, 'close_amount', val);
             _syncToCloud(baseKey, 'status', 'סגירה');
+            const now2 = new Date().toISOString();
+            localStorage.setItem('status_date_' + baseKey, now2);
+            _syncToCloud(baseKey, 'status_date', now2);
             const bar = input.closest('.status-bar');
             bar.querySelectorAll('.status-btn').forEach(b => b.className = 'status-btn');
             const parts = baseKey.split('_');
@@ -1604,6 +1714,222 @@
             fetch(SCRIPT_URL, {method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'},
                 body: JSON.stringify({action:'logEvent', code:code, user:_getUserId(), field:field, oldVal:oldVal, newVal:newVal})
             });
+        }
+
+        // === MANAGER REPORT ===
+        function openMgrReport() {
+            const userName = localStorage.getItem('auth_name') || '';
+            const days = prompt('שלום רב ' + userName + ',\nהאם תרצה דו"ח ל-7 הימים האחרונים?\n(ניתן לשנות מספר ימים)', '7');
+            if (!days || !days.trim()) return;
+            const d = parseInt(days.trim()) || 7;
+            document.getElementById('mgrDays').value = d;
+            document.getElementById('mgrReportOverlay').classList.add('visible');
+            renderMgrReport();
+        }
+        function closeMgrReport() {
+            document.getElementById('mgrReportOverlay').classList.remove('visible');
+        }
+        document.getElementById('mgrReportOverlay').addEventListener('click', e => {
+            if (e.target === e.currentTarget) closeMgrReport();
+        });
+        document.getElementById('mgrDays').addEventListener('change', fetchMgrTable);
+        function printMgrReport() { window.print(); }
+
+        function renderMgrReport() {
+            const rows = allRows;
+            const total = rows.length;
+            const rubiRows = rows.filter(r => r.salesperson.includes('רובי') && !r.purchaseType.includes('משרדי'));
+            const iritRows = rows.filter(r => r.salesperson.includes('אירית') && !r.purchaseType.includes('משרדי'));
+
+            // Pie charts: based on current cumulative state
+            function countStatuses(arr) {
+                const s = {שיחה:0, הצעה:0, אבוד:0, סגירה:0, none:0};
+                arr.forEach(r => {
+                    const bk = r.code + '_' + r.level.replace(/"/g,'');
+                    const st = localStorage.getItem('status_' + bk) || r.status || '';
+                    if (s[st] !== undefined) s[st]++;
+                    else s.none++;
+                });
+                return s;
+            }
+            const rubiStats = countStatuses(rubiRows);
+            const iritStats = countStatuses(iritRows);
+            drawPersonPie('mgrPieRubi', 'mgrLegendRubi', rubiStats, rubiRows.length);
+            drawPersonPie('mgrPieIrit', 'mgrLegendIrit', iritStats, iritRows.length);
+
+            // General pie
+            const misradi = rows.filter(r => r.purchaseType.includes('משרדי'));
+            const nonMisradi = rows.filter(r => !r.purchaseType.includes('משרדי'));
+            const contacted = nonMisradi.filter(r => {
+                const bk = r.code + '_' + r.level.replace(/"/g,'');
+                const st = localStorage.getItem('status_' + bk) || r.status || '';
+                return st !== '';
+            });
+            drawGeneralPie(misradi.length, nonMisradi.length, contacted.length, total);
+
+            // Progress bar
+            const target = nonMisradi.length;
+            const done = contacted.length;
+            const pct = target > 0 ? Math.round(done / target * 100) : 0;
+            document.getElementById('mgrProgressBar').innerHTML =
+                `<div class="progress-fill" style="width:${pct}%">נוצר קשר ${pct}% (${done})</div>` +
+                `<div class="progress-remain">${100-pct}% (${target-done}) ללא קשר</div>`;
+
+            // Table: fetch from backend for the period
+            fetchMgrTable();
+        }
+
+        function fetchMgrTable() {
+            const days = parseInt(document.getElementById('mgrDays').value) || 7;
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - days);
+            cutoff.setHours(0,0,0,0);
+            const allNonMisradi = allRows.filter(r => !r.purchaseType.includes('משרדי'));
+            // Filter only rows with status_date within period
+            const rows = allNonMisradi.filter(r => {
+                const bk = r.code + '_' + r.level.replace(/"/g,'');
+                const st = localStorage.getItem('status_' + bk) || r.status || '';
+                if (!st) return false;
+                const d = r.status_date ? new Date(r.status_date) : null;
+                return d && d >= cutoff;
+            });
+            const rubiRows = rows.filter(r => r.salesperson.includes('רובי'));
+            const iritRows = rows.filter(r => r.salesperson.includes('אירית'));
+            function countSt(arr) {
+                const s = {שיחה:0, הצעה:0, אבוד:0, סגירה:0};
+                arr.forEach(r => {
+                    const bk = r.code + '_' + r.level.replace(/"/g,'');
+                    const st = localStorage.getItem('status_' + bk) || r.status || '';
+                    if (s[st] !== undefined) s[st]++;
+                });
+                return s;
+            }
+            const rubi = countSt(rubiRows);
+            const irit = countSt(iritRows);
+            const statuses = ['שיחה','הצעה','אבוד','סגירה'];
+            const tbody = document.querySelector('#mgrTable tbody');
+            let html = '';
+            statuses.forEach(s => {
+                html += `<tr><td>${s}</td><td>${rubi[s]}</td><td>${irit[s]}</td><td>${rubi[s]+irit[s]}</td></tr>`;
+            });
+            const rubiT = rubi['שיחה']+rubi['הצעה']+rubi['אבוד']+rubi['סגירה'];
+            const iritT = irit['שיחה']+irit['הצעה']+irit['אבוד']+irit['סגירה'];
+            const rubiAll = allNonMisradi.filter(r=>r.salesperson.includes('רובי')).length;
+            const iritAll = allNonMisradi.filter(r=>r.salesperson.includes('אירית')).length;
+            html += `<tr><td>סה"כ</td><td>${rubiT} / ${rubiAll}</td><td>${iritT} / ${iritAll}</td><td>${rubiT+iritT} / ${rubiAll+iritAll}</td></tr>`;
+            tbody.innerHTML = html;
+        }
+
+        function drawPersonPie(canvasId, legendId, stats, total) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            const cx = canvas.width/2, cy = canvas.height/2, r = Math.min(cx,cy)-10;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const slices = [
+                {label:'שיחה', val:stats['שיחה'], color:'#fde047'},
+                {label:'הצעה', val:stats['הצעה'], color:'#c084fc'},
+                {label:'אבוד', val:stats['אבוד'], color:'#ef4444'},
+                {label:'סגירה', val:stats['סגירה'], color:'#22c55e'},
+                {label:'ללא', val:stats.none, color:'#e5e7eb'}
+            ];
+            let start = -Math.PI/2;
+            slices.forEach(s => {
+                if (s.val === 0) return;
+                const angle = (s.val / total) * Math.PI * 2;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.arc(cx, cy, r, start, start + angle);
+                ctx.closePath();
+                ctx.fillStyle = s.color;
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                // Label
+                const mid = start + angle/2;
+                const pct = Math.round(s.val/total*100);
+                if (pct > 3) {
+                    const lx = cx + Math.cos(mid) * r * 0.6;
+                    const ly = cy + Math.sin(mid) * r * 0.6;
+                    ctx.fillStyle = '#000';
+                    ctx.font = 'bold 11px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(pct+'%', lx, ly);
+                }
+                start += angle;
+            });
+            // Center text
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(total + ' לקוחות', cx, cy + 4);
+            // Legend
+            const legendEl = document.getElementById(legendId);
+            legendEl.innerHTML = slices.filter(s=>s.val>0).map(s =>
+                `<span style="background:${s.color}"></span>${s.label}: ${s.val} (${Math.round(s.val/total*100)}%)`
+            ).join(' &nbsp; ');
+        }
+
+        function drawGeneralPie(misradiCount, nonMisradiCount, contactedCount, total) {
+            const canvas = document.getElementById('mgrPieGeneral');
+            const ctx = canvas.getContext('2d');
+            const cx = canvas.width/2, cy = canvas.height/2, r = Math.min(cx,cy)-10;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let start = -Math.PI/2;
+            // Green: misradi
+            const misAngle = (misradiCount/total) * Math.PI * 2;
+            ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,start+misAngle); ctx.closePath();
+            ctx.fillStyle = '#22c55e'; ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+            // Label
+            let mid = start + misAngle/2;
+            let pct = Math.round(misradiCount/total*100);
+            ctx.fillStyle='#fff'; ctx.font='bold 12px sans-serif'; ctx.textAlign='center';
+            ctx.fillText('משרדי '+pct+'%', cx+Math.cos(mid)*r*0.6, cy+Math.sin(mid)*r*0.6);
+            ctx.fillText('('+misradiCount+')', cx+Math.cos(mid)*r*0.6, cy+Math.sin(mid)*r*0.6+14);
+            start += misAngle;
+            // Pie = 100%: green(misradi) + red(non-misradi no contact) + purple(non-misradi contacted)
+            const noContactCount = nonMisradiCount - contactedCount;
+            const redPct = Math.round(noContactCount/total*100);
+            const purplePct = Math.round(contactedCount/total*100);
+            const redAngle = (noContactCount/total) * Math.PI * 2;
+            const purpleAngle = (contactedCount/total) * Math.PI * 2;
+            // Draw red (non-contacted)
+            if (redAngle > 0) {
+                ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,start,start+redAngle); ctx.closePath();
+                ctx.fillStyle = '#fca5a5'; ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+                mid = start + redAngle/2;
+                ctx.fillStyle='#7f1d1d'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center';
+                ctx.fillText('שרות לא משרדי', cx+Math.cos(mid)*r*0.6, cy+Math.sin(mid)*r*0.6);
+                ctx.fillText(redPct+'% ('+noContactCount+')', cx+Math.cos(mid)*r*0.6, cy+Math.sin(mid)*r*0.6+13);
+            }
+            start += redAngle;
+            // Draw purple (contacted) with 3D offset
+            if (purpleAngle > 0) {
+                const offsetDist = 8;
+                const offsetMid = start + purpleAngle/2;
+                const ox = Math.cos(offsetMid) * offsetDist;
+                const oy = Math.sin(offsetMid) * offsetDist;
+                ctx.save();
+                ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                ctx.shadowBlur = 6;
+                ctx.shadowOffsetX = 2;
+                ctx.shadowOffsetY = 2;
+                ctx.beginPath(); ctx.moveTo(cx+ox,cy+oy); ctx.arc(cx+ox,cy+oy,r,start,start+purpleAngle); ctx.closePath();
+                ctx.fillStyle = '#a855f7'; ctx.fill();
+                ctx.restore();
+                ctx.beginPath(); ctx.moveTo(cx+ox,cy+oy); ctx.arc(cx+ox,cy+oy,r,start,start+purpleAngle); ctx.closePath();
+                ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+                mid = start + purpleAngle/2;
+                ctx.fillStyle='#fff'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center';
+                const contactOfNonPct = nonMisradiCount > 0 ? Math.round(contactedCount/nonMisradiCount*100) : 0;
+                ctx.fillText('נוצר קשר', cx+ox+Math.cos(mid)*r*0.55, cy+oy+Math.sin(mid)*r*0.55);
+                ctx.fillText(contactOfNonPct+'% ('+contactedCount+')', cx+ox+Math.cos(mid)*r*0.55, cy+oy+Math.sin(mid)*r*0.55+13);
+            }
+            // Legend
+            document.getElementById('mgrLegendGeneral').innerHTML =
+                `<span style="background:#22c55e"></span>מענה משרדי: ${misradiCount} (${pct}%) &nbsp; ` +
+                `<span style="background:#a855f7"></span>נוצר קשר: ${contactedCount} (${nonMisradiCount > 0 ? Math.round(contactedCount/nonMisradiCount*100) : 0}% מהלא-משרדי) &nbsp; ` +
+                `<span style="background:#fca5a5"></span>שרות לא משרדי: ${noContactCount} (${redPct}%)`;
         }
 
         function sendWhatsApp(phone) {
@@ -2053,6 +2379,8 @@
             if (e.key === 'Escape') {
                 // Don't close card if a dropdown (select) is focused
                 if (document.activeElement && document.activeElement.tagName === 'SELECT') return;
+                const mgrOvl = document.getElementById('mgrReportOverlay');
+                if (mgrOvl.classList.contains('visible')) { closeMgrReport(); return; }
                 const attachOvl = document.getElementById('attachOverlay');
                 if (attachOvl.classList.contains('visible')) { closeAttachDialog(); return; }
                 const overlay = document.getElementById('reportOverlay');
@@ -2133,6 +2461,7 @@
                         localStorage.setItem('auth_token', value);
                         localStorage.setItem('auth_type', _loginTab);
                         localStorage.setItem('auth_name', data.name || '');
+                        localStorage.setItem('auth_perm', data.permType || '');
                         _registerDevice(data.name || value, value);
                         showApp(data.name);
                     } else {
@@ -2153,6 +2482,10 @@
             if (name) document.getElementById('lastUpdate').textContent = 'שלום, ' + name;
             // Show smart search bar for all users
             document.getElementById('geminiBar').classList.add('visible');
+            // Show manager report button for phone1 users
+            if (localStorage.getItem('auth_perm') === 'phone1') {
+                document.getElementById('mgrReportBtn').style.display = '';
+            }
             // Log login
             fetch(SCRIPT_URL, {method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'},
                 body: JSON.stringify({action:'logLogin', user: _getUserId()})
@@ -2174,6 +2507,7 @@
                         if (data.authorized) {
                             // Update local name if server has newer
                             if (data.name) localStorage.setItem('auth_name', data.name);
+                            if (data.permType) localStorage.setItem('auth_perm', data.permType);
                             showApp(data.name || savedName);
                         } else {
                             // Device revoked or unknown — fall back to token auth
@@ -2198,6 +2532,7 @@
                     .then(r => r.json())
                     .then(data => {
                         if (data.authorized) {
+                            if (data.permType) localStorage.setItem('auth_perm', data.permType);
                             _registerDevice(data.name || savedToken, savedToken);
                             showApp(data.name || localStorage.getItem('auth_name'));
                         } else {

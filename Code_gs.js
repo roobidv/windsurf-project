@@ -42,7 +42,7 @@ function doPost(e) {
   }
 
   // Save field directly to Sheet1 (main data)
-  var fieldColMap = {name_sec:12, phone_sec:13, name_mgr:14, phone_mgr:15, it_name:16, it_phone:17, email:18, address:19, status:21, close_amount:22};
+  var fieldColMap = {name_sec:12, phone_sec:13, name_mgr:14, phone_mgr:15, it_name:16, it_phone:17, email:18, address:19, status:21, close_amount:22, status_date:23};
   var col = fieldColMap[data.field];
   if (col) {
     var mainSheet = ss.getSheets()[0];
@@ -54,6 +54,10 @@ function doPost(e) {
       var rowLevel = String(values[i][4]).replace(/"/g,'').trim();
       if (rowCode === code && (!level || rowLevel === level)) {
         mainSheet.getRange(i+1, col).setValue(data.value || '');
+        // Write timestamp to column W when status changes
+        if (data.field === 'status' || data.field === 'close_amount') {
+          mainSheet.getRange(i+1, 23).setValue(new Date());
+        }
         break;
       }
     }
@@ -152,6 +156,42 @@ function doGet(e) {
       return ContentService.createTextOutput(JSON.stringify({events: events})).setMimeType(ContentService.MimeType.JSON);
     }
 
+    if (e.parameter.action === 'getMgrReport') {
+      var mgrDays = parseInt(e.parameter.days) || 7;
+      var evSheet = ss.getSheetByName('\u05d0\u05e8\u05d5\u05e2\u05d9\u05dd');
+      // Fixed salesperson keys
+      var counts = {
+        '\u05e8\u05d5\u05d1\u05d9': {'\u05e9\u05d9\u05d7\u05d4':0, '\u05d4\u05e6\u05e2\u05d4':0, '\u05d0\u05d1\u05d5\u05d3':0, '\u05e1\u05d2\u05d9\u05e8\u05d4':0},
+        '\u05d0\u05d9\u05e8\u05d9\u05ea': {'\u05e9\u05d9\u05d7\u05d4':0, '\u05d4\u05e6\u05e2\u05d4':0, '\u05d0\u05d1\u05d5\u05d3':0, '\u05e1\u05d2\u05d9\u05e8\u05d4':0}
+      };
+      if (evSheet) {
+        var evRows = evSheet.getDataRange().getValues();
+        var cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - mgrDays);
+        for (var i = 1; i < evRows.length; i++) {
+          var evDate = new Date(evRows[i][0]);
+          if (evDate < cutoff) continue;
+          var evUser = String(evRows[i][1]).trim();
+          var field = String(evRows[i][3] || '').trim();
+          var newVal = String(evRows[i][5] || '').trim();
+          // Map user to salesperson key (partial match)
+          var spKey = '';
+          if (evUser.indexOf('\u05e8\u05d5\u05d1\u05d9') >= 0) spKey = '\u05e8\u05d5\u05d1\u05d9';
+          else if (evUser.indexOf('\u05d0\u05d9\u05e8\u05d9\u05ea') >= 0) spKey = '\u05d0\u05d9\u05e8\u05d9\u05ea';
+          if (!spKey) continue;
+          // Count status changes (field='סטטוס') and closings (field='סגירה')
+          if (field === '\u05e1\u05d8\u05d8\u05d5\u05e1' || field === '\u05e1\u05d2\u05d9\u05e8\u05d4') {
+            if (field === '\u05e1\u05d2\u05d9\u05e8\u05d4') {
+              counts[spKey]['\u05e1\u05d2\u05d9\u05e8\u05d4']++;
+            } else if (counts[spKey][newVal] !== undefined) {
+              counts[spKey][newVal]++;
+            }
+          }
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({counts: counts})).setMimeType(ContentService.MimeType.JSON);
+    }
+
     if (e.parameter.action === 'getContacts') {
       var cSheet = ss.getSheetByName('\u05db\u05ea\u05d5\u05d1\u05d5\u05ea');
       var contacts = [];
@@ -171,7 +211,21 @@ function doGet(e) {
         var dRows = dSheet.getDataRange().getValues();
         for (var i = 1; i < dRows.length; i++) {
           if (String(dRows[i][0]) === did && String(dRows[i][5]).trim() === '\u05db\u05df') {
-            return ContentService.createTextOutput(JSON.stringify({authorized:true, name:dRows[i][1]||''})).setMimeType(ContentService.MimeType.JSON);
+            // Look up permType from auth sheet using token
+            var devToken = String(dRows[i][2]||'').replace(/[\s\-()]/g,'').toLowerCase();
+            var permType = 'phone';
+            var aSheet = ss.getSheetByName('\u05d4\u05e8\u05e9\u05d0\u05d5\u05ea');
+            if (aSheet) {
+              var aRows = aSheet.getDataRange().getValues();
+              for (var j = 1; j < aRows.length; j++) {
+                var aid = String(aRows[j][0]).replace(/[\s\-()]/g,'').toLowerCase();
+                if (aid === devToken && String(aRows[j][3]).trim() === '\u05db\u05df') {
+                  permType = String(aRows[j][1]).trim();
+                  break;
+                }
+              }
+            }
+            return ContentService.createTextOutput(JSON.stringify({authorized:true, name:dRows[i][1]||'', permType:permType})).setMimeType(ContentService.MimeType.JSON);
           }
         }
       }
@@ -207,11 +261,15 @@ function doAuth(type, value) {
     var id = String(rows[i][0]).replace(/[\s\-()]/g, '').toLowerCase();
     var idType = String(rows[i][1]).trim();
     if (idType === type && id === cleanVal) {
-      return ContentService.createTextOutput(JSON.stringify({authorized:true, name:rows[i][2]||''})).setMimeType(ContentService.MimeType.JSON);
+      return ContentService.createTextOutput(JSON.stringify({authorized:true, name:rows[i][2]||'', permType:idType})).setMimeType(ContentService.MimeType.JSON);
+    }
+    // phone1 is a higher-level phone permission
+    if (idType === 'phone1' && type === 'phone' && id === cleanVal) {
+      return ContentService.createTextOutput(JSON.stringify({authorized:true, name:rows[i][2]||'', permType:'phone1'})).setMimeType(ContentService.MimeType.JSON);
     }
     if (idType === 'domain' && type === 'email' && id.charAt(0) === '@') {
       if (cleanVal.indexOf(id) === cleanVal.length - id.length) {
-        return ContentService.createTextOutput(JSON.stringify({authorized:true, name:rows[i][2]||value})).setMimeType(ContentService.MimeType.JSON);
+        return ContentService.createTextOutput(JSON.stringify({authorized:true, name:rows[i][2]||value, permType:idType})).setMimeType(ContentService.MimeType.JSON);
       }
     }
   }
