@@ -242,13 +242,13 @@
         }
         .mgr-report-header {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 14px 18px; border-bottom: 1px solid #eee;
+            padding: 8px 18px; border-bottom: 1px solid #eee;
         }
         .mgr-report-header h3 { margin: 0; font-size: 18px; }
         .mgr-close-btn { font-size: 22px; background: none; border: none; cursor: pointer; padding: 4px 8px; }
-        .mgr-report-body { padding: 16px; overflow-y: auto; flex: 1; }
-        .mgr-section { margin-bottom: 20px; text-align: center; }
-        .mgr-section h4 { margin: 0 0 10px; font-size: 15px; color: #333; }
+        .mgr-report-body { padding: 10px 16px; overflow-y: auto; flex: 1; }
+        .mgr-section { margin-bottom: 8px; text-align: center; }
+        .mgr-section h4 { margin: 0 0 4px; font-size: 14px; color: #333; }
         .mgr-charts-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
         .mgr-charts-row .mgr-section { flex: 1; min-width: 140px; }
         .chart-legend { font-size: 12px; margin-top: 6px; line-height: 1.8; }
@@ -268,7 +268,7 @@
             color: #991b1b; font-size: 12px; font-weight: 600;
         }
         .mgr-table { width: 100%; border-collapse: collapse; font-size: 13px; direction: rtl; }
-        .mgr-table th, .mgr-table td { border: 1px solid #ddd; padding: 6px 10px; text-align: center; }
+        .mgr-table th, .mgr-table td { border: 1px solid #ddd; padding: 4px 8px; text-align: center; font-size: 12px; }
         .mgr-table th { background: #f1f5f9; font-weight: 700; }
         .mgr-table tr:last-child { background: #fef9c3; font-weight: 700; }
         .mgr-report-footer { padding: 12px 18px; border-top: 1px solid #eee; text-align: center; }
@@ -277,12 +277,22 @@
             border-radius: 8px; border: none; background: var(--primary);
             color: #fff; cursor: pointer;
         }
+        .mgr-signature { font-size: 11px; color: #888; text-align: center; margin-top: 4px; padding: 4px 0; border-top: 1px solid #eee; }
         @media print {
-            body * { visibility: hidden; }
-            #mgrReportOverlay, #mgrReportOverlay * { visibility: visible; }
-            #mgrReportOverlay { position: absolute; top: 0; left: 0; width: 100%; }
-            .mgr-report-dialog { max-height: none; box-shadow: none; width: 100%; max-width: 100%; }
-            .mgr-close-btn, .mgr-print-btn, .mgr-report-footer { display: none; }
+            @page { size: A4 portrait; margin: 8mm; }
+            body > *:not(#mgrReportOverlay) { display: none !important; }
+            #mgrReportOverlay { display: flex !important; position: fixed; top: 0; left: 0; width: 100%; height: auto; overflow: visible; }
+            .mgr-report-dialog { max-height: none; box-shadow: none; width: 100%; max-width: 100%; border-radius: 0; overflow: visible; }
+            .mgr-close-btn, .mgr-print-btn { display: none !important; }
+            .mgr-report-footer { display: none !important; }
+            .mgr-report-body { padding: 4px 10px; overflow: visible; }
+            .mgr-section { margin-bottom: 4px; }
+            .mgr-section h4 { font-size: 12px; margin: 0 0 2px; }
+            .mgr-charts-row canvas { width: 160px !important; height: 160px !important; }
+            #mgrPieGeneral { width: 200px !important; height: 200px !important; }
+            .mgr-table th, .mgr-table td { padding: 2px 6px; font-size: 11px; }
+            .progress-container { height: 24px; }
+            .mgr-signature { display: block !important; }
         }
         .contacts-section {
             margin-top: 8px;
@@ -1099,12 +1109,12 @@
                 <div class="mgr-charts-row">
                     <div class="mgr-section">
                         <h4>רובי</h4>
-                        <canvas id="mgrPieRubi" width="220" height="220"></canvas>
+                        <canvas id="mgrPieRubi" width="180" height="180"></canvas>
                         <div class="chart-legend" id="mgrLegendRubi"></div>
                     </div>
                     <div class="mgr-section">
                         <h4>אירית</h4>
-                        <canvas id="mgrPieIrit" width="220" height="220"></canvas>
+                        <canvas id="mgrPieIrit" width="180" height="180"></canvas>
                         <div class="chart-legend" id="mgrLegendIrit"></div>
                     </div>
                 </div>
@@ -1114,10 +1124,11 @@
                 </div>
                 <div class="mgr-section">
                     <h4>עוגה כללית — סוג רכש</h4>
-                    <canvas id="mgrPieGeneral" width="280" height="280"></canvas>
+                    <canvas id="mgrPieGeneral" width="220" height="220"></canvas>
                     <div class="chart-legend" id="mgrLegendGeneral"></div>
                 </div>
             </div>
+            <div class="mgr-signature">נכתב על ידי רובי דביר roobid@gmail.com</div>
             <div class="mgr-report-footer">
                 <button class="mgr-print-btn" onclick="printMgrReport()">🖨️ הדפס / PDF</button>
             </div>
