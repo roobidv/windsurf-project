@@ -2474,7 +2474,7 @@
                         localStorage.setItem('auth_name', data.name || '');
                         localStorage.setItem('auth_perm', data.permType || '');
                         _registerDevice(data.name || value, value);
-                        showApp(data.name);
+                        showApp(data.name, data.permType);
                     } else {
                         errEl.textContent = 'אין הרשאה. פנה למנהל המערכת.';
                         btn.disabled = false;
@@ -2488,14 +2488,17 @@
                 });
         }
 
-        function showApp(name) {
+        function showApp(name, permOverride) {
             document.getElementById('loginOverlay').classList.add('hidden');
             if (name) document.getElementById('lastUpdate').textContent = 'שלום, ' + name;
             // Show smart search bar for all users
             document.getElementById('geminiBar').classList.add('visible');
             // Show manager report button for phone1 users
-            if (localStorage.getItem('auth_perm') === 'phone1') {
+            var perm = permOverride || localStorage.getItem('auth_perm') || '';
+            console.log('showApp: name=' + name + ' perm=' + perm + ' stored=' + localStorage.getItem('auth_perm'));
+            if (perm === 'phone1') {
                 document.getElementById('mgrReportBtn').style.display = '';
+                localStorage.setItem('auth_perm', 'phone1');
             }
             // Log login
             fetch(SCRIPT_URL, {method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'},
@@ -2523,7 +2526,7 @@
                             if (data.permType && !(curPerm === 'phone1' && data.permType === 'phone')) {
                                 localStorage.setItem('auth_perm', data.permType);
                             }
-                            showApp(data.name || savedName);
+                            showApp(data.name || savedName, data.permType || curPerm);
                         } else {
                             // Device revoked or unknown — fall back to token auth
                             _checkTokenAuth();
@@ -2549,7 +2552,7 @@
                         if (data.authorized) {
                             if (data.permType) localStorage.setItem('auth_perm', data.permType);
                             _registerDevice(data.name || savedToken, savedToken);
-                            showApp(data.name || localStorage.getItem('auth_name'));
+                            showApp(data.name || localStorage.getItem('auth_name'), data.permType);
                         } else {
                             localStorage.removeItem('auth_token');
                             localStorage.removeItem('auth_type');
