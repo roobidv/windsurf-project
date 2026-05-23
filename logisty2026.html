@@ -2521,12 +2521,26 @@
                         if (data.authorized) {
                             // Update local name if server has newer
                             if (data.name) localStorage.setItem('auth_name', data.name);
-                            // Only update perm if server returns a value; never downgrade phone1→phone
-                            var curPerm = localStorage.getItem('auth_perm') || '';
-                            if (data.permType && !(curPerm === 'phone1' && data.permType === 'phone')) {
-                                localStorage.setItem('auth_perm', data.permType);
+                            // If deviceAuth returned phone1 — use it directly
+                            if (data.permType === 'phone1') {
+                                localStorage.setItem('auth_perm', 'phone1');
+                                showApp(data.name || savedName, 'phone1');
+                            } else {
+                                // deviceAuth didn't confirm phone1 — verify via doAuth
+                                var savedToken = localStorage.getItem('auth_token');
+                                var savedType = localStorage.getItem('auth_type');
+                                if (savedToken && savedType) {
+                                    fetch(SCRIPT_URL + '?action=auth&type=' + savedType + '&value=' + encodeURIComponent(savedToken), {mode:'cors'})
+                                        .then(function(r){return r.json();})
+                                        .then(function(authData){
+                                            var perm = (authData.authorized && authData.permType) ? authData.permType : (localStorage.getItem('auth_perm')||'');
+                                            if (perm) localStorage.setItem('auth_perm', perm);
+                                            showApp(data.name || savedName, perm);
+                                        }).catch(function(){ showApp(data.name || savedName); });
+                                } else {
+                                    showApp(data.name || savedName);
+                                }
                             }
-                            showApp(data.name || savedName, data.permType || curPerm);
                         } else {
                             // Device revoked or unknown — fall back to token auth
                             _checkTokenAuth();
