@@ -2445,9 +2445,9 @@
                 deviceId = _genUUID();
                 localStorage.setItem('device_id', deviceId);
             }
-            // Register device on server
+            // Register device on server (include permType for persistent permission)
             fetch(SCRIPT_URL, {method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'},
-                body: JSON.stringify({action:'registerDevice', deviceId: deviceId, name: name, token: token, ua: navigator.userAgent.substring(0,80)})
+                body: JSON.stringify({action:'registerDevice', deviceId: deviceId, name: name, token: token, ua: navigator.userAgent.substring(0,80), permType: localStorage.getItem('auth_perm') || ''})
             });
         }
 
@@ -2518,7 +2518,11 @@
                         if (data.authorized) {
                             // Update local name if server has newer
                             if (data.name) localStorage.setItem('auth_name', data.name);
-                            if (data.permType) localStorage.setItem('auth_perm', data.permType);
+                            // Only update perm if server returns a value; never downgrade phone1→phone
+                            var curPerm = localStorage.getItem('auth_perm') || '';
+                            if (data.permType && !(curPerm === 'phone1' && data.permType === 'phone')) {
+                                localStorage.setItem('auth_perm', data.permType);
+                            }
                             showApp(data.name || savedName);
                         } else {
                             // Device revoked or unknown — fall back to token auth

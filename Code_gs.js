@@ -24,19 +24,21 @@ function doPost(e) {
   }
 
   if (action === 'registerDevice') {
-    var dSheet = getOrCreateSheet(ss, '\u05de\u05db\u05e9\u05d9\u05e8\u05d9\u05dd', ['deviceId','\u05e9\u05dd','\u05d8\u05d5\u05e7\u05df','UA','\u05ea\u05d0\u05e8\u05d9\u05da \u05e8\u05d9\u05e9\u05d5\u05dd','\u05e4\u05e2\u05d9\u05dc']);
+    var dSheet = getOrCreateSheet(ss, '\u05de\u05db\u05e9\u05d9\u05e8\u05d9\u05dd', ['deviceId','\u05e9\u05dd','\u05d8\u05d5\u05e7\u05df','UA','\u05ea\u05d0\u05e8\u05d9\u05da \u05e8\u05d9\u05e9\u05d5\u05dd','\u05e4\u05e2\u05d9\u05dc','\u05d4\u05e8\u05e9\u05d0\u05d4']);
     var dRows = dSheet.getDataRange().getValues();
     var found = false;
     for (var i = 1; i < dRows.length; i++) {
       if (String(dRows[i][0]) === data.deviceId) {
         dSheet.getRange(i+1, 2).setValue(data.name);
         dSheet.getRange(i+1, 4).setValue(data.ua);
+        dSheet.getRange(i+1, 6).setValue('\u05db\u05df');
+        if (data.permType) dSheet.getRange(i+1, 7).setValue(data.permType);
         found = true;
         break;
       }
     }
     if (!found) {
-      dSheet.appendRow([data.deviceId, data.name, data.token, data.ua, new Date(), '\u05db\u05df']);
+      dSheet.appendRow([data.deviceId, data.name, data.token, data.ua, new Date(), '\u05db\u05df', data.permType || '']);
     }
     return ContentService.createTextOutput(JSON.stringify({status:'ok'})).setMimeType(ContentService.MimeType.JSON);
   }
@@ -211,9 +213,10 @@ function doGet(e) {
         var dRows = dSheet.getDataRange().getValues();
         for (var i = 1; i < dRows.length; i++) {
           if (String(dRows[i][0]) === did && String(dRows[i][5]).trim() === '\u05db\u05df') {
-            // Look up permType from auth sheet using token
+            // Read permType from device record first, fallback to auth lookup
+            var storedPerm = String(dRows[i][6]||'').trim();
             var devToken = String(dRows[i][2]||'').replace(/[\s\-()]/g,'').toLowerCase();
-            var permType = 'phone';
+            var permType = storedPerm || '';
             var aSheet = ss.getSheetByName('\u05d4\u05e8\u05e9\u05d0\u05d5\u05ea');
             if (aSheet) {
               var aRows = aSheet.getDataRange().getValues();
