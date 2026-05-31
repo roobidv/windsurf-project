@@ -2635,6 +2635,18 @@
             }
         }
 
+        // Restrict phone fields to digits 0-9 and dash only
+        document.addEventListener('input', e => {
+            const t = e.target;
+            if (!t || !(t.classList.contains('phone-input') || t.id === 'loginPhone')) return;
+            const cleaned = t.value.replace(/[^0-9-]/g, '');
+            if (cleaned === t.value) return;
+            const pos = t.selectionStart;
+            const removed = t.value.length - cleaned.length;
+            t.value = cleaned;
+            try { t.setSelectionRange(pos - removed, pos - removed); } catch (_) {}
+        }, true);
+
         // Enter key on login inputs
         ['loginPhone','loginEmail','loginCode'].forEach(id => {
             document.getElementById(id).addEventListener('keydown', e => {
