@@ -271,6 +271,14 @@
         .mgr-table th, .mgr-table td { border: 1px solid #ddd; padding: 4px 8px; text-align: center; font-size: 12px; }
         .mgr-table th { background: #f1f5f9; font-weight: 700; }
         .mgr-table tr:last-child { background: #fef9c3; font-weight: 700; }
+        #mgrCallLogTable tr:last-child { background: none; font-weight: normal; }
+        .mgr-toggle {
+            display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+            font-size: 13px; font-weight: 600; color: var(--primary);
+            padding: 6px 12px; border: 1.5px dashed var(--primary);
+            border-radius: 8px; background: var(--primary-light);
+        }
+        .mgr-toggle input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary); }
         .mgr-report-footer { padding: 12px 18px; border-top: 1px solid #eee; text-align: center; }
         .mgr-print-btn {
             font-size: 14px; font-weight: 700; padding: 8px 20px;
@@ -284,7 +292,7 @@
             #mgrReportOverlay { display: flex !important; position: fixed; top: 0; left: 0; width: 100%; height: auto; overflow: visible; }
             .mgr-report-dialog { max-height: none; box-shadow: none; width: 100%; max-width: 100%; border-radius: 0; overflow: visible; }
             .mgr-close-btn, .mgr-print-btn { display: none !important; }
-            .mgr-report-footer { display: none !important; }
+            .mgr-report-footer, .mgr-calllog-toggle { display: none !important; }
             .mgr-report-body { padding: 4px 10px; overflow: visible; }
             .mgr-section { margin-bottom: 4px; }
             .mgr-section h4 { font-size: 12px; margin: 0 0 2px; }
@@ -1127,6 +1135,16 @@
                     <canvas id="mgrPieGeneral" width="220" height="220"></canvas>
                     <div class="chart-legend" id="mgrLegendGeneral"></div>
                 </div>
+                <div class="mgr-section mgr-calllog-toggle">
+                    <label class="mgr-toggle"><input type="checkbox" id="mgrCallLogToggle" onchange="toggleMgrCallLog()"> צרף יומן שיחות מפורט לימים שנבחרו</label>
+                </div>
+                <div class="mgr-section" id="mgrCallLogSection" style="display:none">
+                    <h4>יומן שיחות מפורט — <span id="mgrCallLogDays">7</span> ימים אחרונים</h4>
+                    <table class="mgr-table" id="mgrCallLogTable">
+                        <thead><tr><th>תאריך</th><th>רשות</th><th>מוסד</th><th>איש מכירות</th><th>סטטוס</th></tr></thead>
+                        <tbody><tr><td colspan="5">טוען...</td></tr></tbody>
+                    </table>
+                </div>
             </div>
             <div class="mgr-signature">נכתב על ידי רובי דביר roobid@gmail.com</div>
             <div class="mgr-report-footer">
@@ -1734,6 +1752,8 @@
             if (!days || !days.trim()) return;
             const d = parseInt(days.trim()) || 7;
             document.getElementById('mgrDays').value = d;
+            document.getElementById('mgrCallLogToggle').checked = false;
+            document.getElementById('mgrCallLogSection').style.display = 'none';
             document.getElementById('mgrReportOverlay').classList.add('visible');
             renderMgrReport();
         }
@@ -1829,6 +1849,41 @@
             const iritAll = allNonMisradi.filter(r=>r.salesperson.includes('אירית')).length;
             html += `<tr><td>סה"כ</td><td>${rubiT} / ${rubiAll}</td><td>${iritT} / ${iritAll}</td><td>${rubiT+iritT} / ${rubiAll+iritAll}</td></tr>`;
             tbody.innerHTML = html;
+            // Refresh detailed call log if it is currently shown
+            if (document.getElementById('mgrCallLogToggle').checked) renderMgrCallLog();
+        }
+
+        function toggleMgrCallLog() {
+            const on = document.getElementById('mgrCallLogToggle').checked;
+            document.getElementById('mgrCallLogSection').style.display = on ? '' : 'none';
+            if (on) renderMgrCallLog();
+        }
+
+        function renderMgrCallLog() {
+            const days = parseInt(document.getElementById('mgrDays').value) || 7;
+            document.getElementById('mgrCallLogDays').textContent = days;
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - days);
+            cutoff.setHours(0,0,0,0);
+            const entries = allRows
+                .filter(r => !r.purchaseType.includes('משרדי'))
+                .map(r => {
+                    const bk = r.code + '_' + r.level.replace(/"/g,'');
+                    const st = localStorage.getItem('status_' + bk) || r.status || '';
+                    const ds = localStorage.getItem('status_date_' + bk) || r.status_date || '';
+                    const d = ds ? new Date(ds) : null;
+                    return { r, st, d };
+                })
+                .filter(e => e.st && e.d && !isNaN(e.d) && e.d >= cutoff)
+                .sort((a, b) => b.d - a.d);
+            const tbody = document.querySelector('#mgrCallLogTable tbody');
+            if (entries.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5">אין שיחות בתקופה שנבחרה</td></tr>';
+                return;
+            }
+            tbody.innerHTML = entries.map(e =>
+                `<tr><td>${e.d.toLocaleDateString('he-IL')}</td><td>${esc(e.r.authority)}</td><td>${esc(e.r.name)}</td><td>${esc(e.r.salesperson)}</td><td>${esc(e.st)}</td></tr>`
+            ).join('');
         }
 
         function drawPersonPie(canvasId, legendId, stats, total) {
