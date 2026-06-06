@@ -203,6 +203,7 @@
         .btn-copy { background: #e0e0e0; }
         .btn-mail { background: #bbdefb; }
         .btn-mail-copy { background: #e0e0e0; }
+        .btn-send { background: #fff3e0; }
 
         .card-details {
             display: none;
@@ -222,12 +223,26 @@
         .detail-value { font-weight: 500; }
 
         .expand-hint {
-            text-align: center;
-            font-size: 10px;
-            color: var(--text-muted);
-            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary);
+            background: var(--primary-light);
+            border-radius: 12px;
+            padding: 4px 14px;
+            margin: 6px auto 0;
+            width: fit-content;
+            opacity: 0.85;
         }
-        .card.expanded .expand-hint { display: none; }
+        .expand-hint::before {
+            content: '\25BC   לחץ לפרטים';
+        }
+        .card.expanded .expand-hint::before {
+            content: '\25B2   סגור';
+        }
 
         /* WhatsApp SVG */
         .wa-icon {
@@ -674,7 +689,7 @@
                     ${cusHtml}
                 </div>
                 <div class="card-phones">${phoneChips.join('')}</div>
-                <div class="expand-hint">לחץ לפרטים נוספים</div>
+                <div class="expand-hint"></div>
                 <div class="card-details" onclick="event.stopPropagation()">
                     ${r.email ? `<div class="detail-row"><span class="detail-label">דוא"ל</span><span class="detail-value"><a href="mailto:${esc(r.email)}">${esc(r.email)}</a></span></div>` : ''}
                     ${r.address ? `<div class="detail-row"><span class="detail-label">כתובת</span><span class="detail-value">${esc(r.address)}</span></div>` : ''}
@@ -685,6 +700,7 @@
                         ${r.phone ? `<button class="action-btn btn-copy" onclick="copyText('${esc(r.phone)}')">📋</button>` : ''}
                         ${r.email ? `<button class="action-btn btn-mail" onclick="window.open('mailto:${esc(r.email)}')">📧</button>` : ''}
                         ${r.email ? `<button class="action-btn btn-mail-copy" onclick="copyText('${esc(r.email)}')" title="העתק מייל">📋</button>` : ''}
+                        <button class="action-btn btn-send" onclick="sendContact('${esc(r.id)}')" title="שלח פרטי איש קשר">📤</button>
                     </div>
                     <div class="notes-section">
                         <div class="notes-label">📝 הערות <button class="notes-report-btn" onclick="openReport('${baseKey}','${esc(fullName)}')">📊 דו"ח</button></div>
@@ -745,6 +761,49 @@
     function esc(s) {
         if (!s) return '';
         return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    // === Send Contact via email with VCF ===
+    function sendContact(contactId) {
+        const r = allRows.find(c => c.id === contactId);
+        if (!r) { showToast('איש קשר לא נמצא'); return; }
+
+        const fullName = (r.name + ' ' + r.family + ' ' + r.title).trim();
+
+        // Build vCard 3.0 (UTF-8)
+        let vcf = 'BEGIN:VCARD\r\nVERSION:3.0\r\n';
+        vcf += 'N:' + (r.family||'') + ';' + (r.name||'') + ';;' + (r.title||'') + ';\r\n';
+        vcf += 'FN:' + fullName + '\r\n';
+        if (r.phone) vcf += 'TEL;TYPE=CELL:' + r.phone + '\r\n';
+        if (r.landline) vcf += 'TEL;TYPE=WORK:' + r.landline + '\r\n';
+        if (r.email) vcf += 'EMAIL:' + r.email + '\r\n';
+        if (r.address) vcf += 'ADR;TYPE=HOME:;;' + r.address + ';;;;\r\n';
+        if (r.notes) vcf += 'NOTE:' + r.notes.replace(/\n/g,'\\n') + '\r\n';
+        vcf += 'END:VCARD\r\n';
+
+        // Download VCF file
+        const blob = new Blob([vcf], {type: 'text/vcard;charset=utf-8'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = (r.name + '_' + (r.family||'') + '.vcf').replace(/\s+/g,'_');
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+
+        // Build email body
+        let body = 'לבקשתך פרטי קשר של: ' + fullName + '\n\n';
+        if (r.phone) body += 'נייד: ' + r.phone + '\n';
+        if (r.landline) body += 'קווי: ' + r.landline + '\n';
+        if (r.email) body += 'מייל: ' + r.email + '\n';
+        if (r.address) body += 'כתובת: ' + r.address + '\n';
+        if (r.notes) body += 'הערות: ' + r.notes + '\n';
+        body += '\nכרטיס קשר מצורף למייל זה';
+
+        const subject = 'לבקשתך פרטי קשר של: ' + fullName;
+        window.open('mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body));
+        showToast('קובץ VCF הורד + מייל נפתח');
     }
 
     // === CUS_NUMBER save ===
