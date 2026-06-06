@@ -330,6 +330,32 @@
             cursor: pointer;
             margin-right: 8px;
         }
+        .global-report-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 16px 8px;
+        }
+        .global-report-btn {
+            font-size: 13px;
+            font-weight: 700;
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1.5px solid var(--primary);
+            background: var(--primary-light);
+            color: var(--primary);
+            cursor: pointer;
+        }
+        .global-report-btn:active { transform: scale(0.95); }
+        .report-days-input {
+            width: 40px;
+            text-align: center;
+            font-weight: 700;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 4px;
+            font-size: 13px;
+        }
 
         /* Report overlay */
         .report-overlay {
@@ -538,6 +564,12 @@
     <input class="search-input" type="search" id="searchInput" placeholder="חיפוש לפי שם, טלפון, עיר, מייל, מס׳ לקוח...">
 </div>
 
+<div class="global-report-bar">
+    <button class="global-report-btn" onclick="openGlobalReport()">📊 דו"ח הערות</button>
+    <span style="font-size:12px;color:var(--text-muted)">ימים:</span>
+    <input type="number" class="report-days-input" id="reportDays" value="7" min="1" max="90">
+</div>
+
 <div class="stats-bar">
     <span id="visibleCount">0</span>
     <span id="totalCount">0</span>
@@ -703,7 +735,7 @@
                         <button class="action-btn btn-send" onclick="sendContact('${esc(r.id)}')" title="שלח פרטי איש קשר">📤</button>
                     </div>
                     <div class="notes-section">
-                        <div class="notes-label">📝 הערות <button class="notes-report-btn" onclick="openReport('${baseKey}','${esc(fullName)}')">📊 דו"ח</button></div>
+                        <div class="notes-label">📝 הערות</div>
                         <textarea class="notes-textarea" data-key="${baseKey}" data-cus="${esc(r.cus || r.id)}"
                             placeholder="כתוב הערה חדשה ולחץ Enter..."
                             onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addNote(this)}"></textarea>
@@ -763,7 +795,7 @@
         return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
 
-    // === Send Contact via email with VCF ===
+    // === Send Contact via share/WhatsApp/email with VCF ===
     function sendContact(contactId) {
         const r = allRows.find(c => c.id === contactId);
         if (!r) { showToast('איש קשר לא נמצא'); return; }
@@ -781,29 +813,45 @@
         if (r.notes) vcf += 'NOTE:' + r.notes.replace(/\n/g,'\\n') + '\r\n';
         vcf += 'END:VCARD\r\n';
 
-        // Download VCF file
-        const blob = new Blob([vcf], {type: 'text/vcard;charset=utf-8'});
-        const url = URL.createObjectURL(blob);
+        const fileName = (r.name + '_' + (r.family||'') + '.vcf').replace(/\s+/g,'_');
+        const file = new File([vcf], fileName, {type: 'text/vcard'});
+
+        // Try Web Share API (works on mobile - shares to WhatsApp, email, etc.)
+        if (navigator.share && navigator.canShare && navigator.canShare({files: [file]})) {
+            navigator.share({
+                title: 'כרטיס קשר: ' + fullName,
+                text: 'פרטי קשר של ' + fullName,
+                files: [file]
+            }).then(() => showToast('שותף בהצלחה'))
+              .catch(() => _fallbackSend(r, fullName, file));
+        } else {
+            _fallbackSend(r, fullName, file);
+        }
+    }
+
+    function _fallbackSend(r, fullName, file) {
+        // Download VCF
+        const url = URL.createObjectURL(file);
         const a = document.createElement('a');
         a.href = url;
-        a.download = (r.name + '_' + (r.family||'') + '.vcf').replace(/\s+/g,'_');
+        a.download = file.name;
         document.body.appendChild(a);
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
 
-        // Build email body
+        // Open mailto with body
         let body = 'לבקשתך פרטי קשר של: ' + fullName + '\n\n';
         if (r.phone) body += 'נייד: ' + r.phone + '\n';
         if (r.landline) body += 'קווי: ' + r.landline + '\n';
         if (r.email) body += 'מייל: ' + r.email + '\n';
         if (r.address) body += 'כתובת: ' + r.address + '\n';
         if (r.notes) body += 'הערות: ' + r.notes + '\n';
-        body += '\nכרטיס קשר מצורף למייל זה';
+        body += '\nכרטיס VCF הורד - צרף אותו למייל';
 
         const subject = 'לבקשתך פרטי קשר של: ' + fullName;
         window.open('mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body));
-        showToast('קובץ VCF הורד + מייל נפתח');
+        showToast('VCF הורד - צרף למייל או שלח בווצאפ');
     }
 
     // === CUS_NUMBER save ===
@@ -900,18 +948,60 @@
         el._timer = setTimeout(() => el.classList.remove('show'), 2000);
     }
 
-    // === Report ===
-    function openReport(baseKey, name) {
-        const notes = getNotesForKey(baseKey);
-        let body = '';
-        if (notes.length === 0) {
-            body = 'אין הערות עבור ' + name;
-        } else {
-            body = notes.map(n => n.meta + '\n' + n.text).join('\n───────────\n');
+    // === Global Report (all notes from last N days) ===
+    function openGlobalReport() {
+        const days = parseInt(document.getElementById('reportDays').value) || 7;
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - days);
+
+        let allNotes = [];
+        // Gather notes from all contacts
+        for (const r of allRows) {
+            const baseKey = 'c_' + r.id;
+            const raw = localStorage.getItem('notes_' + baseKey);
+            if (!raw) continue;
+            try {
+                const arr = JSON.parse(raw);
+                const fullName = (r.name + ' ' + (r.family||'')).trim();
+                arr.forEach(n => {
+                    // Parse date like "6.6.25 14:30"
+                    const noteDate = _parseNoteDate(n.date);
+                    if (noteDate && noteDate >= cutoff) {
+                        allNotes.push({name: fullName, text: n.text, user: n.user||'', date: n.date||'', dateObj: noteDate});
+                    }
+                });
+            } catch(e) {}
         }
-        document.getElementById('reportTitle').textContent = 'דו"ח הערות: ' + name;
+
+        // Sort by date descending
+        allNotes.sort((a,b) => b.dateObj - a.dateObj);
+
+        let body = '';
+        if (allNotes.length === 0) {
+            body = 'אין הערות ב-' + days + ' הימים האחרונים';
+        } else {
+            body = allNotes.map(n =>
+                n.date + ' | ' + n.name + (n.user ? ' (' + n.user + ')' : '') + '\n' + n.text
+            ).join('\n───────────\n');
+        }
+        document.getElementById('reportTitle').textContent = '📊 דו"ח הערות - ' + days + ' ימים אחרונים (' + allNotes.length + ')';
         document.getElementById('reportBody').textContent = body;
         document.getElementById('reportOverlay').classList.add('visible');
+    }
+
+    function _parseNoteDate(dateStr) {
+        if (!dateStr) return null;
+        try {
+            // Format: "6.6.25 14:30"
+            const parts = dateStr.split(' ');
+            const dParts = parts[0].split('.');
+            const day = parseInt(dParts[0]);
+            const month = parseInt(dParts[1]) - 1;
+            let year = parseInt(dParts[2]);
+            if (year < 100) year += 2000;
+            const tParts = (parts[1]||'0:0').split(':');
+            return new Date(year, month, day, parseInt(tParts[0]), parseInt(tParts[1]));
+        } catch(e) { return null; }
     }
 
     function closeReport() {
