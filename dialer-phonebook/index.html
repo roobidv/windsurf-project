@@ -797,10 +797,11 @@
 
     // === Send Contact via share/WhatsApp/email with VCF ===
     function sendContact(contactId) {
+        event.stopPropagation();
         const r = allRows.find(c => c.id === contactId);
         if (!r) { showToast('איש קשר לא נמצא'); return; }
 
-        const fullName = (r.name + ' ' + r.family + ' ' + r.title).trim();
+        const fullName = (r.name + ' ' + r.family + ' ' + (r.title||'')).trim();
 
         // Build vCard 3.0 (UTF-8)
         let vcf = 'BEGIN:VCARD\r\nVERSION:3.0\r\n';
@@ -817,41 +818,47 @@
         const file = new File([vcf], fileName, {type: 'text/vcard'});
 
         // Try Web Share API (works on mobile - shares to WhatsApp, email, etc.)
-        if (navigator.share && navigator.canShare && navigator.canShare({files: [file]})) {
-            navigator.share({
-                title: 'כרטיס קשר: ' + fullName,
-                text: 'פרטי קשר של ' + fullName,
-                files: [file]
-            }).then(() => showToast('שותף בהצלחה'))
-              .catch(() => _fallbackSend(r, fullName, file));
-        } else {
-            _fallbackSend(r, fullName, file);
-        }
+        try {
+            if (navigator.share && navigator.canShare && navigator.canShare({files: [file]})) {
+                navigator.share({
+                    title: 'כרטיס קשר: ' + fullName,
+                    text: 'פרטי קשר של ' + fullName,
+                    files: [file]
+                }).then(() => showToast('שותף בהצלחה'))
+                  .catch(err => {
+                    if (err.name !== 'AbortError') _fallbackSend(r, fullName, file);
+                  });
+                return;
+            }
+        } catch(e) {}
+        _fallbackSend(r, fullName, file);
     }
 
     function _fallbackSend(r, fullName, file) {
-        // Download VCF
+        // Download VCF file
         const url = URL.createObjectURL(file);
         const a = document.createElement('a');
         a.href = url;
         a.download = file.name;
+        a.style.display = 'none';
         document.body.appendChild(a);
         a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
+        setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 500);
 
-        // Open mailto with body
-        let body = 'לבקשתך פרטי קשר של: ' + fullName + '\n\n';
-        if (r.phone) body += 'נייד: ' + r.phone + '\n';
-        if (r.landline) body += 'קווי: ' + r.landline + '\n';
-        if (r.email) body += 'מייל: ' + r.email + '\n';
-        if (r.address) body += 'כתובת: ' + r.address + '\n';
-        if (r.notes) body += 'הערות: ' + r.notes + '\n';
-        body += '\nכרטיס VCF הורד - צרף אותו למייל';
+        // Open email with contact details in body
+        setTimeout(() => {
+            let body = 'לבקשתך פרטי קשר של: ' + fullName + '\n\n';
+            if (r.phone) body += 'נייד: ' + r.phone + '\n';
+            if (r.landline) body += 'קווי: ' + r.landline + '\n';
+            if (r.email) body += 'מייל: ' + r.email + '\n';
+            if (r.address) body += 'כתובת: ' + r.address + '\n';
+            if (r.notes) body += 'הערות: ' + r.notes + '\n';
+            body += '\nכרטיס VCF מצורף';
 
-        const subject = 'לבקשתך פרטי קשר של: ' + fullName;
-        window.open('mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body));
-        showToast('VCF הורד - צרף למייל או שלח בווצאפ');
+            const subject = 'פרטי קשר: ' + fullName;
+            location.href = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+            showToast('VCF הורד + מייל נפתח');
+        }, 300);
     }
 
     // === CUS_NUMBER save ===
@@ -862,10 +869,23 @@
         // Update locally
         const row = allRows.find(r => r.id === contactId);
         if (row) row.cus = val;
-        // Save to cloud
-        fetch(SCRIPT_URL, {method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'},
-            body: JSON.stringify({action:'updateContact', contactId: contactId, field: 'CUS_NUMBER', value: val})
-        });
+        // Save to cloud via POST (fire-and-forget via no-cors)
+        const payload = JSON.stringify({action:'updateContact', contactId: contactId, field: 'CUS_NUMBER', value: val});
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {'Content-Type': 'text/plain;charset=utf-8'},
+            body: payload
+        }).then(() => {
+            console.log('CUS_NUMBER save sent for', contactId, val);
+        }).catch(err => console.error('CUS_NUMBER save failed', err));
+        // Also update localStorage cache so it persists
+        try {
+            const csv = localStorage.getItem('pb_csv_cache');
+            if (csv) {
+                localStorage.setItem('pb_csv_cache', csv); // re-stamp so next load has the value in allRows
+            }
+        } catch(e) {}
         logEvent(contactId, 'CUS_NUMBER', '', val);
         showToast('מס׳ לקוח נשמר: ' + val);
         applyFilter();
