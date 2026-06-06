@@ -18,6 +18,7 @@
             --text-muted: #757575;
             --border: #e0e0e0;
             --green: #43a047;
+            --green-bg: #e8f5e9;
             --red: #e53935;
         }
 
@@ -106,6 +107,11 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
+        .card-top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
         .card-name {
             font-size: 16px;
             font-weight: 700;
@@ -117,11 +123,43 @@
             color: var(--text-muted);
             margin-bottom: 6px;
         }
-        .card-cus {
-            font-size: 11px;
-            color: var(--primary);
-            font-weight: 600;
+
+        /* CUS_NUMBER badge - left side like LOGISTY2026 */
+        .cus-badge {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            direction: ltr;
+            flex-shrink: 0;
         }
+        .cus-badge .copy-cus-btn {
+            background: var(--primary-light);
+            border: 1px solid var(--primary);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 3px 6px;
+            border-radius: 6px;
+            opacity: 0.8;
+            min-width: 28px;
+            min-height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .cus-badge .copy-cus-btn:active { opacity: 1; transform: scale(0.92); }
+        .cus-input {
+            width: 80px;
+            padding: 4px 6px;
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            font-size: 13px;
+            text-align: center;
+            direction: ltr;
+        }
+        .cus-input:focus { border-color: var(--primary); outline: none; }
 
         .card-phones {
             display: flex;
@@ -140,9 +178,11 @@
             font-size: 14px;
             font-weight: 500;
             direction: ltr;
+            text-decoration: none;
+            color: var(--text);
         }
         .phone-chip.landline {
-            background: #e8f5e9;
+            background: var(--green-bg);
         }
 
         .action-btn {
@@ -162,6 +202,7 @@
         .btn-whatsapp { background: #c8e6c9; }
         .btn-copy { background: #e0e0e0; }
         .btn-mail { background: #bbdefb; }
+        .btn-mail-copy { background: #e0e0e0; }
 
         .card-details {
             display: none;
@@ -193,6 +234,127 @@
             width: 18px;
             height: 18px;
             fill: #25d366;
+        }
+
+        /* Notes section */
+        .notes-section {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+        }
+        .notes-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .notes-textarea {
+            width: 100%;
+            min-height: 40px;
+            padding: 8px 10px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: inherit;
+            direction: rtl;
+            resize: none;
+            background: #fafafa;
+            outline: none;
+            line-height: 1.5;
+        }
+        .notes-textarea:focus {
+            border-color: var(--primary);
+            background: white;
+        }
+        .notes-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-top: 6px;
+            background: #f8fafc;
+        }
+        .note-item {
+            padding: 6px 10px;
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+        }
+        .note-item:last-child { border-bottom: none; }
+        .note-text { flex: 1; line-height: 1.4; }
+        .note-meta { font-size: 10px; color: var(--text-muted); white-space: nowrap; }
+        .note-delete {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 0 2px;
+            opacity: 0.5;
+        }
+        .note-delete:active { opacity: 1; }
+        .notes-saved {
+            font-size: 11px;
+            color: var(--green);
+            opacity: 0;
+            transition: opacity 0.3s;
+            margin-top: 4px;
+        }
+        .notes-saved.show { opacity: 1; }
+        .notes-report-btn {
+            font-size: 11px;
+            background: var(--primary-light);
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            padding: 3px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 8px;
+        }
+
+        /* Report overlay */
+        .report-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .report-overlay.visible { display: flex; }
+        .report-dialog {
+            background: white;
+            border-radius: 16px;
+            width: 95%;
+            max-width: 500px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+            overflow: hidden;
+        }
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 18px;
+            border-bottom: 1px solid var(--border);
+        }
+        .report-header h3 { margin: 0; font-size: 16px; }
+        .report-close-btn { font-size: 22px; background: none; border: none; cursor: pointer; padding: 4px 8px; }
+        .report-body {
+            padding: 12px 16px;
+            overflow-y: auto;
+            flex: 1;
+            white-space: pre-wrap;
+            font-size: 13px;
+            line-height: 1.6;
+            direction: rtl;
         }
 
         /* No results */
@@ -338,16 +500,27 @@
 
 <div class="copy-toast" id="copyToast"></div>
 
+<!-- Report overlay -->
+<div class="report-overlay" id="reportOverlay" onclick="if(event.target===this)closeReport()">
+    <div class="report-dialog">
+        <div class="report-header">
+            <h3 id="reportTitle">דו"ח הערות</h3>
+            <button class="report-close-btn" onclick="closeReport()">✕</button>
+        </div>
+        <div class="report-body" id="reportBody"></div>
+    </div>
+</div>
+
 <div class="header">
     <div class="header-top">
         <h1>ספר טלפונים</h1>
-        <span class="credit">Dialer PhoneBook</span>
+        <span class="credit">נכתב על ידי רובי דביר</span>
     </div>
     <div class="subtitle" id="lastUpdate">טוען...</div>
 </div>
 
 <div class="search-bar">
-    <input class="search-input" type="search" id="searchInput" placeholder="חיפוש לפי שם, טלפון, מייל...">
+    <input class="search-input" type="search" id="searchInput" placeholder="חיפוש לפי שם, טלפון, עיר, מייל, מס׳ לקוח...">
 </div>
 
 <div class="stats-bar">
@@ -360,9 +533,6 @@
 </div>
 
 <script>
-    // ============================================================
-    // IMPORTANT: Replace this URL after deploying the Apps Script
-    // ============================================================
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwkmq8ARTVedPRLM3XvITpnPnB5tmLLPUgSGZN4_XO03SN7T0ywAOWCFsbRTOBu-KcY6A/exec';
 
     let allRows = [];
@@ -398,7 +568,6 @@
         const parsed = parseCSV(text);
         if (parsed.length < 2) return;
 
-        // Build column map from header row
         const headers = parsed[0].map(h => h.trim());
         const col = (name) => headers.indexOf(name);
 
@@ -412,7 +581,8 @@
             email: (r[col('Email')] || '').trim(),
             address: (r[col('Address')] || '').trim(),
             notes: (r[col('Notes')] || '').trim(),
-            cus: (r[col('CUS_NUMBER')] || '').trim()
+            cus: (r[col('CUS_NUMBER')] || '').trim(),
+            callCount: parseInt(r[col('CallCount')] || '0', 10) || 0
         })).filter(r => r.name || r.phone || r.landline);
 
         const cacheTime = localStorage.getItem('pb_csv_time');
@@ -445,15 +615,20 @@
         return rows;
     }
 
-    // === Filtering ===
+    // === Filtering (multi-word search across all fields) ===
     function applyFilter() {
         const q = document.getElementById('searchInput').value.trim().toLowerCase();
 
         filteredRows = allRows.filter(r => {
             if (!q) return true;
-            const hay = (r.name + ' ' + r.family + ' ' + r.phone + ' ' + r.landline + ' ' + r.email + ' ' + r.title + ' ' + r.cus + ' ' + r.notes).toLowerCase();
-            return hay.includes(q);
+            const hay = (r.name + ' ' + r.family + ' ' + r.phone + ' ' + r.landline + ' ' + r.email + ' ' + r.title + ' ' + r.cus + ' ' + r.notes + ' ' + r.address).toLowerCase();
+            // Multi-word: every word must appear somewhere in the record
+            const words = q.split(/\s+/).filter(w => w.length > 0);
+            return words.every(w => hay.includes(w));
         });
+
+        // Sort by CallCount descending (most called first)
+        filteredRows.sort((a, b) => b.callCount - a.callCount);
 
         document.getElementById('visibleCount').textContent = filteredRows.length + ' תוצאות';
         renderCards();
@@ -475,24 +650,50 @@
             const phoneChips = [];
             if (r.phone) phoneChips.push(phoneChipHTML(r.phone, 'mobile'));
             if (r.landline) phoneChips.push(phoneChipHTML(r.landline, 'landline'));
+            const baseKey = 'c_' + r.id;
+            const notes = getNotesForKey(baseKey);
+            const notesListHtml = notes.length > 0 ? `<div class="notes-list">${notes.map(n =>
+                `<div class="note-item"><div class="note-text">${esc(n.text)}</div><div class="note-meta">${esc(n.meta)}</div><button class="note-delete" onclick="deleteNote('${baseKey}',${n.idx})">🗑</button></div>`
+            ).join('')}</div>` : '';
+
+            // CUS_NUMBER badge or input
+            let cusHtml = '';
+            if (r.cus) {
+                cusHtml = `<div class="cus-badge">${esc(r.cus)}<button class="copy-cus-btn" onclick="event.stopPropagation();copyText('${esc(r.cus)}')" title="העתק מס׳ לקוח">📋</button></div>`;
+            } else {
+                cusHtml = `<input class="cus-input" placeholder="מס׳ לקוח" data-id="${esc(r.id)}" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){saveCusNumber(this)}">`;
+            }
 
             return `
             <div class="card" onclick="toggleCard(this)">
-                <div class="card-name">${esc(fullName)}</div>
-                ${r.title ? `<div class="card-title">${esc(r.title)}</div>` : ''}
-                ${r.cus ? `<div class="card-cus">מס׳ לקוח: ${esc(r.cus)}</div>` : ''}
+                <div class="card-top-row">
+                    <div>
+                        <div class="card-name">${esc(fullName)}</div>
+                        ${r.title ? `<div class="card-title">${esc(r.title)}</div>` : ''}
+                    </div>
+                    ${cusHtml}
+                </div>
                 <div class="card-phones">${phoneChips.join('')}</div>
                 <div class="expand-hint">לחץ לפרטים נוספים</div>
                 <div class="card-details" onclick="event.stopPropagation()">
                     ${r.email ? `<div class="detail-row"><span class="detail-label">דוא"ל</span><span class="detail-value"><a href="mailto:${esc(r.email)}">${esc(r.email)}</a></span></div>` : ''}
                     ${r.address ? `<div class="detail-row"><span class="detail-label">כתובת</span><span class="detail-value">${esc(r.address)}</span></div>` : ''}
                     ${r.notes ? `<div class="detail-row"><span class="detail-label">הערות</span><span class="detail-value">${esc(r.notes)}</span></div>` : ''}
-                    ${r.phone ? `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
-                        <button class="action-btn btn-call" onclick="window.open('tel:${esc(r.phone)}')">📞</button>
-                        ${isWhatsAppable(r.phone) ? `<button class="action-btn btn-whatsapp" onclick="sendWA('${esc(r.phone)}')"><svg class="wa-icon" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></button>` : ''}
-                        <button class="action-btn btn-copy" onclick="copyText('${esc(r.phone)}')">📋</button>
+                    <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+                        ${r.phone ? `<button class="action-btn btn-call" onclick="window.open('tel:${esc(r.phone)}')">📞</button>` : ''}
+                        ${r.phone && isWhatsAppable(r.phone) ? `<button class="action-btn btn-whatsapp" onclick="sendWA('${esc(r.phone)}')"><svg class="wa-icon" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></button>` : ''}
+                        ${r.phone ? `<button class="action-btn btn-copy" onclick="copyText('${esc(r.phone)}')">📋</button>` : ''}
                         ${r.email ? `<button class="action-btn btn-mail" onclick="window.open('mailto:${esc(r.email)}')">📧</button>` : ''}
-                    </div>` : ''}
+                        ${r.email ? `<button class="action-btn btn-mail-copy" onclick="copyText('${esc(r.email)}')" title="העתק מייל">📋</button>` : ''}
+                    </div>
+                    <div class="notes-section">
+                        <div class="notes-label">📝 הערות <button class="notes-report-btn" onclick="openReport('${baseKey}','${esc(fullName)}')">📊 דו"ח</button></div>
+                        <textarea class="notes-textarea" data-key="${baseKey}" data-cus="${esc(r.cus || r.id)}"
+                            placeholder="כתוב הערה חדשה ולחץ Enter..."
+                            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addNote(this)}"></textarea>
+                        <div class="notes-saved" id="saved_${baseKey}">נשמר ✓</div>
+                        ${notesListHtml}
+                    </div>
                 </div>
             </div>`;
         }).join('');
@@ -544,6 +745,131 @@
     function esc(s) {
         if (!s) return '';
         return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    // === CUS_NUMBER save ===
+    function saveCusNumber(input) {
+        const val = input.value.trim();
+        if (!val) return;
+        const contactId = input.dataset.id;
+        // Update locally
+        const row = allRows.find(r => r.id === contactId);
+        if (row) row.cus = val;
+        // Save to cloud
+        fetch(SCRIPT_URL, {method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'},
+            body: JSON.stringify({action:'updateContact', contactId: contactId, field: 'CUS_NUMBER', value: val})
+        });
+        logEvent(contactId, 'CUS_NUMBER', '', val);
+        showToast('מס׳ לקוח נשמר: ' + val);
+        applyFilter();
+    }
+
+    // === Notes system ===
+    function _getUserId() {
+        return localStorage.getItem('pb_auth_name') || localStorage.getItem('pb_auth_token') || 'unknown';
+    }
+
+    function _getNow() {
+        const d = new Date();
+        const yr = String(d.getFullYear()).slice(-2);
+        return d.getDate() + '.' + (d.getMonth()+1) + '.' + yr + ' ' + d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+    }
+
+    function getNotesForKey(baseKey) {
+        const raw = localStorage.getItem('notes_' + baseKey);
+        if (!raw) return [];
+        try {
+            const arr = JSON.parse(raw);
+            return arr.slice(0, 7).map((n,i) => ({text: n.text, meta: (n.user ? n.user + ' • ' : '') + (n.date||''), idx: i}));
+        } catch(e) { return []; }
+    }
+
+    function addNote(textarea) {
+        const baseKey = textarea.dataset.key;
+        const cusId = textarea.dataset.cus;
+        const text = textarea.value.trim();
+        if (!text) return;
+        const storageKey = 'notes_' + baseKey;
+        let arr = [];
+        try { arr = JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch(e) {}
+        const entry = {text: text, user: _getUserId(), date: _getNow()};
+        arr.unshift(entry);
+        if (arr.length > 20) arr = arr.slice(0, 20);
+        localStorage.setItem(storageKey, JSON.stringify(arr));
+        textarea.value = '';
+        // Sync to cloud
+        fetch(SCRIPT_URL, {method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'},
+            body: JSON.stringify({action:'addNote', contactId: baseKey.replace('c_',''), text: text, user: entry.user, date: entry.date})
+        });
+        logEvent(cusId, 'הערה חדשה', '', text);
+        _refreshNotesInCard(baseKey);
+    }
+
+    function deleteNote(baseKey, idx) {
+        const storageKey = 'notes_' + baseKey;
+        try {
+            let arr = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            arr.splice(idx, 1);
+            localStorage.setItem(storageKey, JSON.stringify(arr));
+            _refreshNotesInCard(baseKey);
+        } catch(e) {}
+    }
+
+    function _refreshNotesInCard(baseKey) {
+        const textarea = document.querySelector(`.notes-textarea[data-key="${baseKey}"]`);
+        if (!textarea) return;
+        const section = textarea.closest('.notes-section');
+        if (!section) return;
+        const notes = getNotesForKey(baseKey);
+        const oldList = section.querySelector('.notes-list');
+        if (oldList) oldList.remove();
+        if (notes.length > 0) {
+            const listHtml = `<div class="notes-list">${notes.map(n =>
+                `<div class="note-item"><div class="note-text">${esc(n.text)}</div><div class="note-meta">${esc(n.meta)}</div><button class="note-delete" onclick="deleteNote('${baseKey}',${n.idx})">🗑</button></div>`
+            ).join('')}</div>`;
+            section.insertAdjacentHTML('beforeend', listHtml);
+        }
+        _showSaved('saved_' + baseKey, 'נשמר ✓');
+    }
+
+    function _showSaved(id, text) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = text;
+        el.classList.add('show');
+        if (el._timer) clearTimeout(el._timer);
+        el._timer = setTimeout(() => el.classList.remove('show'), 2000);
+    }
+
+    // === Report ===
+    function openReport(baseKey, name) {
+        const notes = getNotesForKey(baseKey);
+        let body = '';
+        if (notes.length === 0) {
+            body = 'אין הערות עבור ' + name;
+        } else {
+            body = notes.map(n => n.meta + '\n' + n.text).join('\n───────────\n');
+        }
+        document.getElementById('reportTitle').textContent = 'דו"ח הערות: ' + name;
+        document.getElementById('reportBody').textContent = body;
+        document.getElementById('reportOverlay').classList.add('visible');
+    }
+
+    function closeReport() {
+        document.getElementById('reportOverlay').classList.remove('visible');
+    }
+
+    function logEvent(cusId, field, oldVal, newVal) {
+        fetch(SCRIPT_URL, {method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain'},
+            body: JSON.stringify({action:'logEvent', user: _getUserId(), field: field, oldVal: oldVal, newVal: newVal, cus_number: cusId})
+        });
+    }
+
+    function showToast(msg) {
+        const toast = document.getElementById('copyToast');
+        toast.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 1500);
     }
 
     // === Auth ===
@@ -620,10 +946,6 @@
             body: JSON.stringify({action:'logLogin', user: _getUserId()})
         });
         loadData();
-    }
-
-    function _getUserId() {
-        return localStorage.getItem('pb_auth_name') || localStorage.getItem('pb_auth_token') || 'unknown';
     }
 
     function checkAuth() {
