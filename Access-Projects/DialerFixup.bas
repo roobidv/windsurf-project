@@ -10,6 +10,32 @@ Option Explicit
 Private Const MSG_SCRIPT_URL As String = "https://script.google.com/macros/s/AKfycbyPxl8dPRSbmz-pdCEwf1Hs1MzmhvQOA7XpfTGbGheelWRmQp2JZXaW_gOqzPXD2U-J/exec"
 
 ' ---------------------------------------------------------------------------
+' ScheduleCloudMessages - sets a 2-second timer; after form is visible, fires CheckCloudMessages
+' Call this from Form_Load instead of CheckCloudMessages directly
+' ---------------------------------------------------------------------------
+Public Sub ScheduleCloudMessages()
+    On Error Resume Next
+    Dim frm As Form
+    Set frm = Screen.ActiveForm
+    If frm Is Nothing Then Set frm = Forms("frmContactsDialer")
+    If frm Is Nothing Then Exit Sub
+    frm.OnTimer = "=FireCloudCheck()"
+    frm.TimerInterval = 2000
+End Sub
+
+Public Function FireCloudCheck() As Variant
+    On Error Resume Next
+    Dim frm As Form
+    Set frm = Screen.ActiveForm
+    ' Restore original timer
+    frm.OnTimer = "=StartMonitoring()"
+    frm.TimerInterval = 100
+    ' Now check messages
+    CheckCloudMessages
+    FireCloudCheck = True
+End Function
+
+' ---------------------------------------------------------------------------
 ' CheckCloudMessages - checks Google Sheet for messages to this PC
 ' Target = ComputerName or "ALL"
 ' ---------------------------------------------------------------------------
