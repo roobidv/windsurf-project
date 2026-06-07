@@ -10,6 +10,7 @@
  *   - הרשאות (טלפון/מייל/קוד + שם + הרשאה)
  *   - מכשירים (device_id, name, token, ua, lastSeen, permType)
  *   - ארועים (תאריך, משתמש, פעולה, שדה, ערך קודם, ערך חדש, CUS_NUMBER)
+ *   - הודעות (ID, Target, MSG, CreatedDate, ReadDate)
  */
 
 function doGet(e) {
@@ -18,6 +19,7 @@ function doGet(e) {
   if (action === 'getCSV') return getCSV_();
   if (action === 'auth') return doAuth_(e.parameter);
   if (action === 'deviceAuth') return doDeviceAuth_(e.parameter);
+  if (action === 'checkMessages') return checkMessages_(e.parameter);
 
   // Default: return notes/fields (like loadCloudNotes in LOGISTY2026)
   return ContentService.createTextOutput('{}').setMimeType(ContentService.MimeType.JSON);
@@ -33,6 +35,7 @@ function doPost(e) {
     if (action === 'logEvent') return logEvent_(data);
     if (action === 'updateContact') return updateContact_(data);
     if (action === 'addNote') return addNote_(data);
+    if (action === 'markMessageRead') return markMessageRead_(data);
 
     return ContentService.createTextOutput('{"ok":true}').setMimeType(ContentService.MimeType.JSON);
   } catch(ex) {
@@ -219,6 +222,46 @@ function addNote_(data) {
     data.text || '',
     data.contactId || ''
   ]);
+  return jsonOut_({ok: true});
+}
+
+// === checkMessages: בדיקת הודעות למחשב מסוים ===
+function checkMessages_(params) {
+  var target = (params.target || '').trim();
+  if (!target) return jsonOut_({messages: []});
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('הודעות');
+  if (!sheet) return jsonOut_({messages: []});
+
+  var data = sheet.getDataRange().getValues();
+  // הודעות: A=ID, B=Target, C=MSG, D=CreatedDate, E=ReadDate
+  var results = [];
+  for (var i = 1; i < data.length; i++) {
+    var rowTarget = String(data[i][1] || '').trim().toUpperCase();
+    var msg = String(data[i][2] || '').trim();
+    var readDate = String(data[i][4] || '').trim();
+
+    // הודעה לא נקראה + מיועדת למחשב הזה או לכולם
+    if (msg && !readDate && (rowTarget === target.toUpperCase() || rowTarget === 'ALL')) {
+      results.push({id: String(data[i][0] || i), msg: msg, row: i + 1});
+    }
+  }
+
+  return jsonOut_({messages: results});
+}
+
+// === markMessageRead: סימון הודעה כנקראה ===
+function markMessageRead_(data) {
+  var row = parseInt(data.row);
+  if (!row || row < 2) return jsonOut_({ok: false});
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('הודעות');
+  if (!sheet) return jsonOut_({ok: false});
+
+  // עמודה E = ReadDate
+  sheet.getRange(row, 5).setValue(new Date());
   return jsonOut_({ok: true});
 }
 
