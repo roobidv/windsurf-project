@@ -1,20 +1,20 @@
-Attribute VB_Name = "DialerFixup"
+п»їAttribute VB_Name = "DialerFixup"
 Option Compare Database
 Option Explicit
 
 ' ===========================================================================
-' оегем: DialerFixup
-' ъйаеш: ферчцйеъ ъйчеп ебрййд зг-фтойеъ миефс frmContactsDialer
-' дшцд: озмеп Immediate бмбг
+' пїЅпїЅпїЅпїЅпїЅ: DialerFixup
+' пїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ-пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ frmContactsDialer
+' пїЅпїЅпїЅпїЅ: пїЅпїЅпїЅпїЅпїЅ Immediate пїЅпїЅпїЅпїЅ
 ' ===========================================================================
 
 ' ---------------------------------------------------------------------------
 ' AddOutOfOfficeControls
-' ъйаеш: йецш аъ фчгй "озех мощшг" биефс frmContactsDialer
-'   - optOutOfOffice: лфъеш Toggle мсйоеп оцб "озех мощшг"
-'   - txtOOF: ъйбъ ичси доцйвд аъ оцб дрелзеъ
-' ойчен: оъзъ м-Box223 (лфъешй зйев одйш 10-18)
-' дшцд о-Immediate:  AddOutOfOfficeControls
+' пїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅ "пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ" пїЅпїЅпїЅпїЅпїЅ frmContactsDialer
+'   - optOutOfOffice: пїЅпїЅпїЅпїЅпїЅ Toggle пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ "пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ"
+'   - txtOOF: пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+' пїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅпїЅ пїЅ-Box223 (пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ 10-18)
+' пїЅпїЅпїЅпїЅ пїЅ-Immediate:  AddOutOfOfficeControls
 ' ---------------------------------------------------------------------------
 Public Sub AddOutOfOfficeControls()
     On Error GoTo ErrHandler
@@ -25,7 +25,7 @@ Public Sub AddOutOfOfficeControls()
     Dim frm As Form
     Set frm = Forms("frmContactsDialer")
     
-    ' чшйаъ ойчен Box223 (олйм лфъешй зйев одйш 10-18)
+    ' пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ Box223 (пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ 10-18)
     Dim boxL As Long, boxT As Long, boxW As Long, boxH As Long, boxSec As Long
     boxL = frm.Controls("Box223").Left
     boxT = frm.Controls("Box223").Top
@@ -33,32 +33,32 @@ Public Sub AddOutOfOfficeControls()
     boxH = frm.Controls("Box223").Height
     boxSec = frm.Controls("Box223").Section
     
-    ' ойчен оъзъ м-Box223
+    ' пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅ-Box223
     Dim ctlTop As Long
     ctlTop = boxT + boxH + 120
     
-    ' озйчъ фчгйн йщрйн ан чййойн
+    ' пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
     On Error Resume Next
     DeleteControl "frmContactsDialer", "optOutOfOffice"
     DeleteControl "frmContactsDialer", "txtOOF"
     On Error GoTo ErrHandler
     
-    ' йцйшъ лфъеш Toggle - озех мощшг / бощшг
+    ' пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ Toggle - пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ / пїЅпїЅпїЅпїЅпїЅ
     Dim tgl As Control
     Set tgl = CreateControl("frmContactsDialer", acToggleButton, CLng(boxSec), "", "", _
         boxL, ctlTop, boxW, 420)
     tgl.Name = "optOutOfOffice"
     
-    ' йцйшъ ъйбъ ичси - ъцевъ оцб релзеъ
+    ' пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ - пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
     ctlTop = ctlTop + 420 + 60
     Dim txt As Control
     Set txt = CreateControl("frmContactsDialer", acTextBox, CLng(boxSec), "", "", _
         boxL, ctlTop, boxW, 380)
     txt.Name = "txtOOF"
     
-    ' щойшд есвйшд
+    ' пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
     DoCmd.Close acForm, "frmContactsDialer", acSaveYes
-    Debug.Print "AddOutOfOfficeControls: дфчгйн рецше бдцмзд!"
+    Debug.Print "AddOutOfOfficeControls: пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ!"
     If wasOpen Then DoCmd.OpenForm "frmContactsDialer", acNormal
     Exit Sub
 ErrHandler:
@@ -72,7 +72,7 @@ End Sub
 ' Manager writes messages directly in Google Sheets sheet "Ч”Ч•Ч“ЧўЧ•ЧЄ"
 ' Columns: ID | Target | MSG | CreatedDate | ReadDate
 ' ---------------------------------------------------------------------------
-Private Const MSG_SCRIPT_URL As String = "https://script.google.com/macros/s/AKfycbwkmq8ARTVedPRLM3XvITpnPnB5tmLLPUgSGZN4_XO03SN7T0ywAOWCFsbRTOBu-KcY6A/exec"
+Private Const MSG_SCRIPT_URL As String = "https://script.google.com/macros/s/AKfycbyPxl8dPRSbmz-pdCEwf1Hs1MzmhvQOA7XpfTGbGheelWRmQp2JZXaW_gOqzPXD2U-J/exec"
 
 Public Sub CheckCloudMessages()
     On Error Resume Next
