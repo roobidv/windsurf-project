@@ -53,8 +53,6 @@ ErrHandler:
     MsgBox "AddOutOfOfficeControls: " & Err.Description, vbCritical
 End Sub
 
-Private m_outOfOffice As Boolean
-
 ' ---------------------------------------------------------------------------
 ' WireOutOfOffice - call from Form_Load to set up Out of Office controls
 ' ---------------------------------------------------------------------------
@@ -81,14 +79,14 @@ Public Function ContactsDialer_OptOutOfOffice_AfterUpdate() As Variant
         frm.txtOOF.BackColor = RGB(220, 40, 40)
         frm.txtOOF.ForeColor = RGB(255, 255, 255)
         frm.optOutOfOffice.caption = ChrW(1502) & ChrW(1495) & ChrW(1493) & ChrW(1509) & " " & ChrW(1500) & ChrW(1502) & ChrW(1513) & ChrW(1512) & ChrW(1491)
-        m_outOfOffice = True
+        mdlPhone.m_outOfOffice = True
         Debug.Print "OutOfOffice: ON"
     Else
         frm.txtOOF.Value = ChrW(1489) & ChrW(1502) & ChrW(1513) & ChrW(1512) & ChrW(1491)
         frm.txtOOF.BackColor = RGB(144, 238, 144)
         frm.txtOOF.ForeColor = RGB(0, 80, 0)
         frm.optOutOfOffice.caption = ChrW(1489) & ChrW(1502) & ChrW(1513) & ChrW(1512) & ChrW(1491)
-        m_outOfOffice = False
+        mdlPhone.m_outOfOffice = False
         Debug.Print "OutOfOffice: OFF"
     End If
     ContactsDialer_OptOutOfOffice_AfterUpdate = True
