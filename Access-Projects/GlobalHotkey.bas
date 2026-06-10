@@ -28,6 +28,13 @@ Private Declare PtrSafe Function LoadKeyboardLayout Lib "user32" Alias "LoadKeyb
     ByVal pwszKLID As String, ByVal Flags As Long) As LongPtr
 Private Declare PtrSafe Function ActivateKeyboardLayout Lib "user32" ( _
     ByVal hkl As LongPtr, ByVal Flags As Long) As LongPtr
+
+Private Declare PtrSafe Sub keybd_event Lib "user32" ( _
+    ByVal bVk As Byte, ByVal bScan As Byte, _
+    ByVal dwFlags As Long, ByVal dwExtraInfo As LongPtr)
+Private Const VK_MENU As Long = &H12
+Private Const KEYEVENTF_EXTENDEDKEY As Long = &H1
+Private Const KEYEVENTF_KEYUP As Long = &H2
 Private Const SW_RESTORE As Long = 9
 Private Const VK_F2 As Long = &H71        ' F2 key
 
@@ -51,6 +58,9 @@ Public Sub CheckHotkey()
     If IsIconic(hWndTarget) <> 0 Then
         ShowWindow hWndTarget, SW_RESTORE
     End If
+    ' ALT trick to bypass Windows foreground restriction
+    keybd_event CByte(VK_MENU), 0, KEYEVENTF_EXTENDEDKEY, 0
+    keybd_event CByte(VK_MENU), 0, KEYEVENTF_EXTENDEDKEY Or KEYEVENTF_KEYUP, 0
     SetForegroundWindow hWndTarget
     
     ' Set focus to search box (without clearing content)
