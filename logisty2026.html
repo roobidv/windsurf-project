@@ -800,6 +800,11 @@
             background: var(--primary-light);
             color: var(--primary);
         }
+        .phone-btn.map {
+            background: #e8f5e9;
+            color: #1b5e20;
+            font-size: 16px;
+        }
         .phone-btn:active {
             transform: scale(0.9);
         }
@@ -1495,6 +1500,7 @@
                             <div class="contact-row-label">📍 כתובת</div>
                             <div class="email-row">
                                 <input class="email-input rtl" type="text" data-field="address" data-key="${baseKey}" value="${esc(gV('address'))}" placeholder="כתובת בית הספר" oninput="saveFieldLocal(this)" onblur="saveFieldCloud(this)">
+                                <button class="phone-btn map" onclick="openInGoogleMaps(this)" title="מסלול במפות גוגל">🗺️</button>
                                 <button class="phone-btn copy" onclick="copyEmail(this)">📋</button>
                             </div>
                         </div>
@@ -2320,6 +2326,13 @@
             const email = input.value.trim();
             if (!email) return;
             _copyText(email);
+        }
+
+        function openInGoogleMaps(btn) {
+            const input = btn.closest('.email-row').querySelector('.email-input');
+            const address = input.value.trim();
+            if (!address) { alert('אין כתובת'); return; }
+            window.open('https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(address), '_blank');
         }
 
         function _copyText(text) {
