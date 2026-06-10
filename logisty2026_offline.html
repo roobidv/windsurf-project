@@ -637,6 +637,15 @@
             background: var(--green-bg);
             color: var(--green);
         }
+        .phone-btn.maps {
+            background: #e8f5e9;
+            color: #1b5e20;
+            width: 28px;
+            height: 28px;
+            font-size: 14px;
+            margin-right: 6px;
+            flex-shrink: 0;
+        }
         .phone-btn.copy {
             background: var(--primary-light);
             color: var(--primary);
@@ -1203,7 +1212,7 @@
                 <div class="card${hasNotes}${typeClass}" onclick="toggleCard(event, this)">
                     <div class="authority-name">${esc(r.authority)}</div>
                     <div class="card-header">
-                        <div class="institution-name">${esc(r.name)}</div>
+                        <div class="institution-name">${esc(r.name)}<button class="phone-btn maps" onclick="event.stopPropagation();openMaps('${esc(r.name)}','${esc(gV('address'))}')" title="נווט בגוגל מפות">📍</button></div>
                         <div class="institution-code">${esc(r.code)}<button class="copy-code-btn" onclick="event.stopPropagation();_copyText('${esc(r.code)}')" title="העתק סמל">📋</button>${r.salesperson ? `<span class="salesperson-inline">${esc(r.salesperson)}</span>` : ''}</div>
                     </div>
                     <div class="card-tags">
@@ -1749,6 +1758,11 @@
             inputs.forEach(el => { if (el.value.trim()) hasData = true; });
             if (hasData) card.classList.add('has-notes');
             else card.classList.remove('has-notes');
+        }
+
+        function openMaps(name, address) {
+            const query = address ? (name + ' ' + address) : name;
+            window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(query), '_blank');
         }
 
         function callPhone(btn) {
