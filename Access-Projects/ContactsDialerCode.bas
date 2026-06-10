@@ -1,25 +1,25 @@
-﻿Attribute VB_Name = "ContactsDialerCode"
+Attribute VB_Name = "ContactsDialerCode"
 Option Explicit
 
 ' ===========================================================================
-' ����� ����: ContactsDialerCode
-' �����: ������ ����� ����� frmContactsDialer
-' ������:
-'   - ����� ���� ��� (txtSearch)
-'   - ����� ���� ��� ��� + �������
-'   - ��������� ����� (sfrmCallHistory)
-'   - ���� ���� (btnSpeed1..18)
-'   - ����� �-Excel
-'   - ������ ���� (#�����#, #����#, #���#, #�����#)
-' ������: Contacts, CallHistory, tblSettings
+' ????? ????: ContactsDialerCode
+' ?????: ?????? ????? ????? frmContactsDialer
+' ??????:
+'   - ????? ???? ??? (txtSearch)
+'   - ????? ???? ??? ??? + ???????
+'   - ????????? ????? (sfrmCallHistory)
+'   - ???? ???? (btnSpeed1..18)
+'   - ????? ?-Excel
+'   - ?????? ???? (#?????#, #????#, #???#, #?????#)
+' ??????: Contacts, CallHistory, tblSettings
 ' ===========================================================================
 
 Private Declare PtrSafe Function GetAsyncKeyState Lib "user32" (ByVal vKey As Long) As Integer
-' �����-������ �� ����� � ������ ���� Excel ������ (�� ���� ����)
+' ?????-?????? ?? ????? ? ?????? ???? Excel ?????? (?? ???? ????)
 Private Declare PtrSafe Sub DragAcceptFiles Lib "shell32.dll" (ByVal hWnd As LongPtr, ByVal fAccept As Long)
 Private Declare PtrSafe Function DragQueryFile Lib "shell32.dll" Alias "DragQueryFileW" (ByVal hDrop As LongPtr, ByVal iFile As Long, ByVal lpszFile As LongPtr, ByVal cch As Long) As Long
 Private Declare PtrSafe Sub DragFinish Lib "shell32.dll" (ByVal hDrop As LongPtr)
-' Subclassing � ����� ������ Windows ����� (�� ���� ���� � �� ����)
+' Subclassing ? ????? ?????? Windows ????? (?? ???? ???? ? ?? ????)
 Private Declare PtrSafe Function SetWindowSubclass Lib "comctl32.dll" (ByVal hWnd As LongPtr, ByVal pfnSubclass As LongPtr, ByVal uIdSubclass As LongPtr, ByVal dwRefData As LongPtr) As Long
 Private Declare PtrSafe Function RemoveWindowSubclass Lib "comctl32.dll" (ByVal hWnd As LongPtr, ByVal pfnSubclass As LongPtr, ByVal uIdSubclass As LongPtr) As Long
 Private Declare PtrSafe Function DefSubclassProc Lib "comctl32.dll" (ByVal hWnd As LongPtr, ByVal uMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
@@ -36,11 +36,11 @@ Private Declare PtrSafe Function GetWindowRect Lib "user32" (ByVal hWnd As LongP
 Private Declare PtrSafe Function SetWindowPos Lib "user32" (ByVal hWnd As LongPtr, ByVal hWndInsertAfter As LongPtr, ByVal X As Long, ByVal Y As Long, ByVal cx As Long, ByVal cy As Long, ByVal uFlags As Long) As Long
 Private Declare PtrSafe Function MoveWindow Lib "user32" (ByVal hWnd As LongPtr, ByVal X As Long, ByVal Y As Long, ByVal nWidth As Long, ByVal nHeight As Long, ByVal bRepaint As Long) As Long
 
-' ��� ����� Windows ������ ����
+' ??? ????? Windows ?????? ????
 Private Const WM_DROPFILES As Long = &H233
 
-' --- ������ API ���� ������ (Clipboard) ---
-' ����� �� MSForms.DataObject ����� ���� ��� ������ Access
+' --- ?????? API ???? ?????? (Clipboard) ---
+' ????? ?? MSForms.DataObject ????? ???? ??? ?????? Access
 Private Declare PtrSafe Function OpenClipboard Lib "user32" (ByVal hWnd As LongPtr) As Long
 Private Declare PtrSafe Function CloseClipboard Lib "user32" () As Long
 Private Declare PtrSafe Function EmptyClipboard Lib "user32" () As Long
@@ -52,8 +52,8 @@ Private Declare PtrSafe Sub CopyMemory Lib "kernel32" Alias "RtlMoveMemory" (ByV
 Private Const CF_UNICODETEXT As Long = 13
 Private Const GMEM_MOVEABLE As Long = &H2
 
-' --- ����� API ������ ���� ����� ���� ����� ����� ---
-' ����� �� SendKeys ����� ����� ����� (Access) ����� �������
+' --- ????? API ?????? ???? ????? ???? ????? ????? ---
+' ????? ?? SendKeys ????? ????? ????? (Access) ????? ???????
 Private Declare PtrSafe Sub keybd_event Lib "user32" (ByVal bVk As Byte, ByVal bScan As Byte, ByVal dwFlags As Long, ByVal dwExtraInfo As LongPtr)
 Private Const KEYEVENTF_KEYUP As Long = &H2
 Private Const VK_F9 As Long = &H78
@@ -71,10 +71,10 @@ Private Const VK_DELETE As Long = &H2E     ' Delete
 Private Const VK_BACK As Long = &H8       ' Backspace
 Private Const VK_ESCAPE As Long = &H1B    ' Escape
 
-' --- ������ ���� ����� ---
-' m_rsContacts  = Recordset ����� �� �� ���� ���� (����� �-rsCards �-VB6)
-' m_rsCallHistory = Recordset ����� �� ��������� ����� (����� �����)
-' m_hWndDialer  = Handle �� ���� ����� (������ ����� �� Subclassing)
+' --- ?????? ???? ????? ---
+' m_rsContacts  = Recordset ????? ?? ?? ???? ???? (????? ?-rsCards ?-VB6)
+' m_rsCallHistory = Recordset ????? ?? ????????? ????? (????? ?????)
+' m_hWndDialer  = Handle ?? ???? ????? (?????? ????? ?? Subclassing)
 ' Module-level cached Recordset for all contacts (like VB6 global rsCards)
 Public m_lastUnknownNumber As String
 Private m_rsContacts As DAO.Recordset
@@ -83,11 +83,11 @@ Private m_rsCallHistory As DAO.Recordset
 Private m_hWndDialer As LongPtr
 Private m_skipGridNoteUpdate As Boolean
 Private m_logID As Long
-Private Const APP_VERSION As String = "1.0.0"  ' ���� ��������
+Private Const APP_VERSION As String = "1.0.0"  ' ???? ????????
 
 ' ---------------------------------------------------------------------------
 ' Form_Load: clears display when form opens
-' ����� ����: ���� �����, ���� ����� ���� ���, ���� ��������� �����, ����� ����� ����� �����.
+' ????? ????: ???? ?????, ???? ????? ???? ???, ???? ????????? ?????, ????? ????? ????? ?????.
 ' Form property: On Load = =ContactsDialer_Form_Load()
 ' ---------------------------------------------------------------------------
 Public Function ContactsDialer_Form_Load() As Variant
@@ -112,27 +112,27 @@ Public Function ContactsDialer_Form_Load() As Variant
     InitPhoneBook
     On Error GoTo 0
     Debug.Print "Form_Load: PhoneBook loaded, filling list..."
-    ' ������ ����� ������� �������� �� ����� ��� ���
+    ' ?????? ????? ??????? ???????? ?? ????? ??? ???
     frm.cmdPhoneNumber.Enabled = False
-    frm.cmdPhoneNumber.caption = ChrW(1500) & ChrW(1488) & " " & ChrW(1511) & ChrW(1497) & ChrW(1497) & ChrW(1501) & " " & ChrW(1502) & ChrW(1505) & ChrW(1508) & ChrW(1512)  ' �� ���� ����
+    frm.cmdPhoneNumber.caption = ChrW(1500) & ChrW(1488) & " " & ChrW(1511) & ChrW(1497) & ChrW(1497) & ChrW(1501) & " " & ChrW(1502) & ChrW(1505) & ChrW(1508) & ChrW(1512)  ' ?? ???? ????
     frm.cmdLandline.Enabled = False
-    frm.cmdLandline.caption = ChrW(1500) & ChrW(1488) & " " & ChrW(1511) & ChrW(1497) & ChrW(1497) & ChrW(1501) & " " & ChrW(1502) & ChrW(1505) & ChrW(1508) & ChrW(1512)  ' �� ���� ����
-    ' ������ �����/�����/����� ������� �� ����� ��� ���
+    frm.cmdLandline.caption = ChrW(1500) & ChrW(1488) & " " & ChrW(1511) & ChrW(1497) & ChrW(1497) & ChrW(1501) & " " & ChrW(1502) & ChrW(1505) & ChrW(1508) & ChrW(1512)  ' ?? ???? ????
+    ' ?????? ?????/?????/????? ??????? ?? ????? ??? ???
     frm.btnEditCus.Enabled = False
     frm.btnSendCus.Enabled = False
     frm.btnSaveCall.Enabled = False
-    ContactsDialer_ClearDisplay                    ' ����� �� ���� ������
-    ContactsDialer_FillContactsList frm, ""         ' ����� ����� ���� ��� (��� �����)
-    ContactsDialer_RefreshAllCallHistory frm         ' ����� �� ������ �����
+    ContactsDialer_ClearDisplay                    ' ????? ?? ???? ??????
+    ContactsDialer_FillContactsList frm, ""         ' ????? ????? ???? ??? (??? ?????)
+    ContactsDialer_RefreshAllCallHistory frm         ' ????? ?? ?????? ?????
     Debug.Print "Form_Load: Done, ListCount=" & frm.lstContacts.ListCount
-    frm.lstContacts.ControlTipText = ChrW(1504) & ChrW(1497) & ChrW(1493) & ChrW(1493) & ChrW(1496) & " " & ChrW(1502) & ChrW(1506) & ChrW(1500) & ChrW(1492) & " " & ChrW(1502) & ChrW(1496) & ChrW(1492) & " " & ChrW(1506) & ChrW(1501) & " " & ChrW(1499) & ChrW(1508) & ChrW(1514) & ChrW(1493) & ChrW(1512) & ChrW(1497) & " " & ChrW(1492) & ChrW(1495) & ChrW(1497) & ChrW(1510) & ChrW(1497) & ChrW(1501)  ' ����� ���� ��� �� ������ ������
-    frm.txtSearch.ControlTipText = ChrW(1499) & ChrW(1491) & ChrW(1497) & " " & ChrW(1500) & ChrW(1495) & ChrW(1494) & ChrW(1493) & ChrW(1512) & " " & ChrW(1500) & ChrW(1514) & ChrW(1488) & " " & ChrW(1495) & ChrW(1497) & ChrW(1508) & ChrW(1493) & ChrW(1513) & " " & ChrW(1504) & ChrW(1511) & ChrW(1497) & " " & ChrW(1500) & ChrW(1495) & ChrW(1509) & vbCrLf & "ESC"  ' ��� ����� ��� ����� ��� ���  (���� ����)  ESC
+    frm.lstContacts.ControlTipText = ChrW(1504) & ChrW(1497) & ChrW(1493) & ChrW(1493) & ChrW(1496) & " " & ChrW(1502) & ChrW(1506) & ChrW(1500) & ChrW(1492) & " " & ChrW(1502) & ChrW(1496) & ChrW(1492) & " " & ChrW(1506) & ChrW(1501) & " " & ChrW(1499) & ChrW(1508) & ChrW(1514) & ChrW(1493) & ChrW(1512) & ChrW(1497) & " " & ChrW(1492) & ChrW(1495) & ChrW(1497) & ChrW(1510) & ChrW(1497) & ChrW(1501)  ' ????? ???? ??? ?? ?????? ??????
+    frm.txtSearch.ControlTipText = ChrW(1499) & ChrW(1491) & ChrW(1497) & " " & ChrW(1500) & ChrW(1495) & ChrW(1494) & ChrW(1493) & ChrW(1512) & " " & ChrW(1500) & ChrW(1514) & ChrW(1488) & " " & ChrW(1495) & ChrW(1497) & ChrW(1508) & ChrW(1493) & ChrW(1513) & " " & ChrW(1504) & ChrW(1511) & ChrW(1497) & " " & ChrW(1500) & ChrW(1495) & ChrW(1509) & vbCrLf & "ESC"  ' ??? ????? ??? ????? ??? ???  (???? ????)  ESC
     frm.btnNewCus.ControlTipText = "Ctrl+N"
     frm.btnEditCus.ControlTipText = "Ctrl+E"
-    frm.lblNoteNow.ControlTipText = ChrW(1492) & ChrW(1511) & ChrW(1500) & ChrW(1511) & " " & ChrW(1508) & ChrW(1506) & ChrW(1502) & ChrW(1497) & ChrW(1497) & ChrW(1501) & " " & ChrW(1500) & ChrW(1506) & ChrW(1512) & ChrW(1497) & ChrW(1499) & ChrW(1514) & " " & ChrW(1513) & ChrW(1497) & ChrW(1495) & ChrW(1492) & " " & ChrW(1504) & ChrW(1489) & ChrW(1495) & ChrW(1512) & ChrW(1514)   ' ���� ������ ������ ���� �����
-    frm.txtSearch.SetFocus                          ' ����� ������ �� ���� �����
+    frm.lblNoteNow.ControlTipText = ChrW(1492) & ChrW(1511) & ChrW(1500) & ChrW(1511) & " " & ChrW(1508) & ChrW(1506) & ChrW(1502) & ChrW(1497) & ChrW(1497) & ChrW(1501) & " " & ChrW(1500) & ChrW(1506) & ChrW(1512) & ChrW(1497) & ChrW(1499) & ChrW(1514) & " " & ChrW(1513) & ChrW(1497) & ChrW(1495) & ChrW(1492) & " " & ChrW(1504) & ChrW(1489) & ChrW(1495) & ChrW(1512) & ChrW(1514)   ' ???? ?????? ?????? ???? ?????
+    frm.txtSearch.SetFocus                          ' ????? ?????? ?? ???? ?????
     On Error Resume Next
-    Application.Run "StartHotkey"                     ' Ctrl+` ������ ������ ����� �-Access
+    Application.Run "StartHotkey"                     ' Ctrl+` ?????? ?????? ????? ?-Access
     On Error GoTo 0
     ' --- Right-click copy menu ---
     CreateCopyShortcutMenu
@@ -166,13 +166,13 @@ Public Function ContactsDialer_Form_Load() As Variant
     On Error Resume Next
     frm.OnActivate = "=ContactsDialer_Form_Activate()"
     frm.OnTimer = "=StartMonitoring()"
-    frm.TimerInterval = 100  ' 100ms for F12 hotkey responsiveness
+    frm.TimerInterval = 100  ' 100ms for F2 hotkey responsiveness
     frm.txtSearch.OnGotFocus = "=ContactsDialer_TxtSearch_GotFocus()"
     frm.txtEmail.OnGotFocus = "=ContactsDialer_TxtEmail_GotFocus()"
     On Error GoTo 0
 
     ' --- Auto Backup ---
-    AutoBackupRotation "#����#"
+    AutoBackupRotation "#????#"
     LogAppOpen
     On Error Resume Next
     Application.Run "LogEvent", "AppOpen", CurrentDb.Name
@@ -195,8 +195,8 @@ End Function
 ' Sets focus to txtSearch which triggers Hebrew keyboard
 ' Form property: On Activate = =ContactsDialer_Form_Activate()
 ' ---------------------------------------------------------------------------
-' ����� ���� �� ����� - ����� ����� ����� ����� ������ ����� ������
-' ���� ������� ���� ����� (���� ���� �����/�����)
+' ????? ???? ?? ????? - ????? ????? ????? ????? ?????? ????? ??????
+' ???? ??????? ???? ????? (???? ???? ?????/?????)
 Public Function ContactsDialer_Form_Activate() As Variant
     On Error Resume Next
     DoEvents
@@ -211,8 +211,8 @@ End Function
 
 ' ---------------------------------------------------------------------------
 ' lstContacts AfterUpdate: loads selected contact details + call history grid
-' ���� ����� ����� ������: ���� ���� ��� ��� + ����� ���� ����� + ����� lblSearch.
-' ����� �� �� �� ����/��� ������ ��� �� ����� ����.
+' ???? ????? ????? ??????: ???? ???? ??? ??? + ????? ???? ????? + ????? lblSearch.
+' ????? ?? ?? ?? ????/??? ?????? ??? ?? ????? ????.
 ' lstContacts property: After Update = =ContactsDialer_LstContacts_AfterUpdate()
 ' ---------------------------------------------------------------------------
 Public Function ContactsDialer_LstContacts_AfterUpdate() As Variant
@@ -227,13 +227,13 @@ Public Function ContactsDialer_LstContacts_AfterUpdate() As Variant
     Set frm = Screen.ActiveForm
 
     If IsNull(frm.lstContacts.Value) Then
-        ContactsDialer_ClearDisplay                ' ��� ����� � ��� �����
+        ContactsDialer_ClearDisplay                ' ??? ????? ? ??? ?????
         GoTo Done
     End If
 
-    ContactsDialer_LoadSelectedContact frm, CLng(frm.lstContacts.Value)    ' ����� ���� ��� ���
-    ContactsDialer_RefreshCallHistoryGrid frm, CLng(frm.lstContacts.Value) ' ����� ���� �����
-    frm.lblSearch.caption = Nz(frm.lstContacts.Column(1), "")             ' ����� ����� �����
+    ContactsDialer_LoadSelectedContact frm, CLng(frm.lstContacts.Value)    ' ????? ???? ??? ???
+    ContactsDialer_RefreshCallHistoryGrid frm, CLng(frm.lstContacts.Value) ' ????? ???? ?????
+    frm.lblSearch.caption = Nz(frm.lstContacts.Column(1), "")             ' ????? ????? ?????
 
 Done:
     ContactsDialer_LstContacts_AfterUpdate = True
@@ -246,35 +246,35 @@ End Function
 
 ' ---------------------------------------------------------------------------
 ' cmdPhoneNumber Click: copies digits-only phone to clipboard, then sends F8
-' ����� �� ����� ���� � ����� ����� ���� ���� ������, ��"� ���� F8
+' ????? ?? ????? ???? ? ????? ????? ???? ???? ??????, ??"? ???? F8
 ' cmdPhoneNumber property: On Click = =ContactsDialer_CmdPhoneNumber_Click()
 ' ---------------------------------------------------------------------------
 Public Function ContactsDialer_CmdPhoneNumber_Click() As Variant
     On Error Resume Next
     Dim frm As Access.Form
     Set frm = Screen.ActiveForm
-    ' ����� ���� ������ ������ ������ �� ������ (Caption)
+    ' ????? ???? ?????? ?????? ?????? ?? ?????? (Caption)
     Dim cap As String
     cap = Nz(frm.cmdPhoneNumber.caption, "")
     Dim pos As Long
     pos = InStr(cap, vbCrLf)
     If pos > 0 Then cap = Mid$(cap, pos + 2)
-    ' ����� ����� ���� ���� ������
+    ' ????? ????? ???? ???? ??????
     ContactsDialer_CopyToClipboard DigitsOnly(cap)
-    ' ������ ����� �� ��� ����� ����� 3CX
+    ' ?????? ????? ?? ??? ????? ????? 3CX
     DialerGetFocus
     Sleep 300
     ' ESC - clear dialer field
     keybd_event VK_ESCAPE, 0, 0, 0
     keybd_event VK_ESCAPE, 0, KEYEVENTF_KEYUP, 0
     Sleep 200
-    ' CTRL+V � ����� �����
+    ' CTRL+V ? ????? ?????
     keybd_event VK_CONTROL, 0, 0, 0
     keybd_event VK_V, 0, 0, 0
     keybd_event VK_V, 0, KEYEVENTF_KEYUP, 0
     keybd_event VK_CONTROL, 0, KEYEVENTF_KEYUP, 0
     Sleep 100
-    ' ENTER � �����/����
+    ' ENTER ? ?????/????
     keybd_event VK_RETURN, 0, 0, 0
     keybd_event VK_RETURN, 0, KEYEVENTF_KEYUP, 0
     ' ????? ? CallHistory + CallCount (???? ?????)
@@ -284,35 +284,35 @@ End Function
 
 ' ---------------------------------------------------------------------------
 ' cmdLandline Click: copies digits-only landline to clipboard, then sends F9
-' ����� �� ����� ���� � ����� ����� ���� ���� ������, ��"� ���� F9
+' ????? ?? ????? ???? ? ????? ????? ???? ???? ??????, ??"? ???? F9
 ' cmdLandline property: On Click = =ContactsDialer_CmdLandline_Click()
 ' ---------------------------------------------------------------------------
 Public Function ContactsDialer_CmdLandline_Click() As Variant
     On Error Resume Next
     Dim frm As Access.Form
     Set frm = Screen.ActiveForm
-    ' ����� ���� ������ ������ ������ �� ������ (Caption)
+    ' ????? ???? ?????? ?????? ?????? ?? ?????? (Caption)
     Dim cap As String
     cap = Nz(frm.cmdLandline.caption, "")
     Dim pos As Long
     pos = InStr(cap, vbCrLf)
     If pos > 0 Then cap = Mid$(cap, pos + 2)
-    ' ����� ����� ���� ���� ������
+    ' ????? ????? ???? ???? ??????
     ContactsDialer_CopyToClipboard DigitsOnly(cap)
-    ' ������ ����� �� ��� ����� ����� 3CX
+    ' ?????? ????? ?? ??? ????? ????? 3CX
     DialerGetFocus
     Sleep 300
     ' ESC - clear dialer field
     keybd_event VK_ESCAPE, 0, 0, 0
     keybd_event VK_ESCAPE, 0, KEYEVENTF_KEYUP, 0
     Sleep 200
-    ' CTRL+V � ����� �����
+    ' CTRL+V ? ????? ?????
     keybd_event VK_CONTROL, 0, 0, 0
     keybd_event VK_V, 0, 0, 0
     keybd_event VK_V, 0, KEYEVENTF_KEYUP, 0
     keybd_event VK_CONTROL, 0, KEYEVENTF_KEYUP, 0
     Sleep 100
-    ' ENTER � �����/����
+    ' ENTER ? ?????/????
     keybd_event VK_RETURN, 0, 0, 0
     keybd_event VK_RETURN, 0, KEYEVENTF_KEYUP, 0
     ' ????? ? CallHistory + CallCount (???? ?????)
@@ -321,8 +321,8 @@ Public Function ContactsDialer_CmdLandline_Click() As Variant
 End Function
 
 ' ---------------------------------------------------------------------------
-' InsertCallHistoryRecord: ����� ����� ���� ����� CallHistory ������ �� �����
-' ���� ���� CmdPhoneNumber_Click �-CmdLandline_Click
+' InsertCallHistoryRecord: ????? ????? ???? ????? CallHistory ?????? ?? ?????
+' ???? ???? CmdPhoneNumber_Click ?-CmdLandline_Click
 ' ---------------------------------------------------------------------------
 Private Sub InsertCallHistoryRecord(ByRef frm As Access.Form, ByVal phoneNumber As String)
     On Error GoTo ErrHandler
@@ -334,7 +334,7 @@ Private Sub InsertCallHistoryRecord(ByRef frm As Access.Form, ByVal phoneNumber 
     Dim contactName As String
     contactName = Nz(frm.lblContactName.caption, "")
 
-    ' ����� ����� �-tblSettings ��� �� ����
+    ' ????? ????? ?-tblSettings ??? ?? ????
     Dim ext As String: ext = ""
     Dim rsExt As DAO.Recordset
     Set rsExt = CurrentDb.OpenRecordset("SELECT TOP 1 Extension FROM tblSettings", dbOpenSnapshot)
@@ -385,11 +385,11 @@ Private Sub InsertCallHistoryRecord(ByRef frm As Access.Form, ByVal phoneNumber 
         Debug.Print "CallCount SKIP: contactId=0"
     End If
 
-    ' ����� ���� ����� (��� ��� ��-OnCurrent �� ����� �� ������)
+    ' ????? ???? ????? (??? ??? ??-OnCurrent ?? ????? ?? ??????)
     m_skipGridNoteUpdate = True
     ContactsDialer_RefreshCallHistoryGrid frm, contactId, True
-    ' ����� ������ ���� �� ����� + ��� ����
-    frm.lblNoteNow.caption = ChrW(1500) & ChrW(1514) & ChrW(1497) & ChrW(1506) & ChrW(1493) & ChrW(1491) & " " & ChrW(1492) & ChrW(1513) & ChrW(1497) & ChrW(1495) & ChrW(1492) & " " & ChrW(1492) & ChrW(1511) & ChrW(1500) & ChrW(1511) & " " & ChrW(1508) & ChrW(1506) & ChrW(1502) & ChrW(1497) & ChrW(1497) & ChrW(1501) & " " & ChrW(1499) & ChrW(1488) & ChrW(1503)   ' ������ ����� ���� ������ ���
+    ' ????? ?????? ???? ?? ????? + ??? ????
+    frm.lblNoteNow.caption = ChrW(1500) & ChrW(1514) & ChrW(1497) & ChrW(1506) & ChrW(1493) & ChrW(1491) & " " & ChrW(1492) & ChrW(1513) & ChrW(1497) & ChrW(1495) & ChrW(1492) & " " & ChrW(1492) & ChrW(1511) & ChrW(1500) & ChrW(1511) & " " & ChrW(1508) & ChrW(1506) & ChrW(1502) & ChrW(1497) & ChrW(1497) & ChrW(1501) & " " & ChrW(1499) & ChrW(1488) & ChrW(1503)   ' ?????? ????? ???? ?????? ???
     frm.lblNoteNow.BackColor = RGB(255, 255, 0)
     frm.lblNoteNow.BackStyle = 1   ' Normal (opaque)
     Exit Sub
@@ -399,7 +399,7 @@ End Sub
 
 ' ---------------------------------------------------------------------------
 ' ---------------------------------------------------------------------------
-' btnNewMail Click: ����� ���� ��� ������ ���� ����� ����� ��� ����
+' btnNewMail Click: ????? ???? ??? ?????? ???? ????? ????? ??? ????
 ' ---------------------------------------------------------------------------
 Public Function ContactsDialer_BtnNewMail_Click() As Variant
     On Error GoTo ErrorHandler
@@ -417,7 +417,7 @@ Public Function ContactsDialer_BtnNewMail_Click() As Variant
         Set OutlookApp = CreateObject("Outlook.Application")
         Set OutlookMail = OutlookApp.CreateItem(0)
         
-        ' �� ������� ������ �����
+        ' ?? ??????? ?????? ?????
         Dim strRTL As String
         strRTL = ChrW(&H200F)
         
@@ -433,7 +433,7 @@ Public Function ContactsDialer_BtnNewMail_Click() As Variant
             sigHtml = .HTMLBody  ' contains signature from Display
             Dim greeting As String
             greeting = "<div dir='rtl' style='font-family: Calibri, Arial; font-size: 11pt;'>" & _
-                        "���� ��,<br><br></div>"
+                        "???? ??,<br><br></div>"
             
             ' Insert greeting before <body> content or at start
             Dim bodyPos As Long
@@ -450,25 +450,25 @@ Public Function ContactsDialer_BtnNewMail_Click() As Variant
             .Subject = ChrW(&H200F)
         End With
         
-        ' ��� 3: ����� ���� ����� ����� (��� ����� ������)
+        ' ??? 3: ????? ???? ????? ????? (??? ????? ??????)
         DoEvents
         
     Else
-        MsgBox "�� ����� ����� ������.", vbInformation, "����� ����"
+        MsgBox "?? ????? ????? ??????.", vbInformation, "????? ????"
     End If
     
     ContactsDialer_BtnNewMail_Click = True
     Exit Function
 
 ErrorHandler:
-    MsgBox "��� �����: " & Err.Description, vbCritical
+    MsgBox "??? ?????: " & Err.Description, vbCritical
     ContactsDialer_BtnNewMail_Click = False
 End Function
 
 ' ---------------------------------------------------------------------------
 ' txtSearch GotFocus: switch to Hebrew keyboard
 ' ---------------------------------------------------------------------------
-' ���� ����� ����� ����� - ����� ����� ������
+' ???? ????? ????? ????? - ????? ????? ??????
 Public Function ContactsDialer_TxtSearch_GotFocus() As Variant
     On Error Resume Next
     LoadKeyboardLayout "0000040D", KLF_ACTIVATE
@@ -478,7 +478,7 @@ End Function
 ' ---------------------------------------------------------------------------
 ' txtEmail GotFocus: switch to English keyboard
 ' ---------------------------------------------------------------------------
-' ���� ����� ���� ������ - ����� ����� �������
+' ???? ????? ???? ?????? - ????? ????? ???????
 Public Function ContactsDialer_TxtEmail_GotFocus() As Variant
     On Error Resume Next
     LoadKeyboardLayout "00000409", KLF_ACTIVATE
@@ -487,8 +487,8 @@ End Function
 
 ' ---------------------------------------------------------------------------
 ' txtSearch Change: filters lstContacts from cached Recordset
-' ����� ����� �����: ����� Recordset ����� ���� �� ����� ���� ����
-' ��� ����� ������. ����� ��� ���� (�� �� �� ��������).
+' ????? ????? ?????: ????? Recordset ????? ???? ?? ????? ???? ????
+' ??? ????? ??????. ????? ??? ???? (?? ?? ?? ????????).
 ' txtSearch property: On Change = =ContactsDialer_TxtSearch_Change()
 ' ---------------------------------------------------------------------------
 Public Function ContactsDialer_TxtSearch_Change() As Variant
@@ -496,8 +496,8 @@ Public Function ContactsDialer_TxtSearch_Change() As Variant
     Dim frm As Access.Form
     Set frm = Screen.ActiveForm
     m_inChange = True
-    ContactsDialer_RefreshRecordset                 ' ����� Recordset ��� ��� ���� ����� ����
-    ContactsDialer_FillContactsList frm, Nz(frm.txtSearch.Text, "")  ' ����� ����� �����
+    ContactsDialer_RefreshRecordset                 ' ????? Recordset ??? ??? ???? ????? ????
+    ContactsDialer_FillContactsList frm, Nz(frm.txtSearch.Text, "")  ' ????? ????? ?????
     ' Load selected contact details (phone buttons)
     If frm.lstContacts.ListCount > 0 Then
         If Not IsNull(frm.lstContacts.Value) Then
@@ -513,20 +513,20 @@ End Function
 
 ' ---------------------------------------------------------------------------
 ' Form_Unload: closes cached Recordset
-' ����� ����: ���� �� �� �-Recordsets �������� ��� ����� ����� ������.
+' ????? ????: ???? ?? ?? ?-Recordsets ???????? ??? ????? ????? ??????.
 ' Form property: On Unload = =ContactsDialer_Form_Unload()
 ' ---------------------------------------------------------------------------
 Public Function ContactsDialer_Form_Unload() As Variant
     On Error Resume Next
-    If Not m_rsContacts Is Nothing Then              ' ����� Recordset ���� ���
+    If Not m_rsContacts Is Nothing Then              ' ????? Recordset ???? ???
         m_rsContacts.Close
         Set m_rsContacts = Nothing
     End If
-    If Not m_rsCallHistory Is Nothing Then            ' ����� Recordset ��������� �����
+    If Not m_rsCallHistory Is Nothing Then            ' ????? Recordset ????????? ?????
         m_rsCallHistory.Close
         Set m_rsCallHistory = Nothing
     End If
-    ' --- ����� ����� ---
+    ' --- ????? ????? ---
     If LCase(Right$(CurrentDb.Name, 6)) = ".accde" Then ShowAccessFrame
     Application.Run "LogEvent", "AppClose", CurrentDb.Name
     LogAppClose
@@ -534,26 +534,26 @@ Public Function ContactsDialer_Form_Unload() As Variant
 End Function
 
 ' ---------------------------------------------------------------------------
-' btnExit Click: ����� �� ������� ������ ���������
-' ����� Recordsets, ���� ���� ����, ���� ���� ����, ���� �-Access.
+' btnExit Click: ????? ?? ??????? ?????? ?????????
+' ????? Recordsets, ???? ???? ????, ???? ???? ????, ???? ?-Access.
 ' btnExit property: On Click = =ContactsDialer_BtnExit_Click()
 ' ---------------------------------------------------------------------------
 Public Function ContactsDialer_BtnExit_Click() As Variant
     On Error Resume Next
 
-    ' 1. ����� Recordset ���� ���
+    ' 1. ????? Recordset ???? ???
     If Not m_rsContacts Is Nothing Then
         m_rsContacts.Close
         Set m_rsContacts = Nothing
     End If
 
-    ' 2. ����� Recordset ��������� �����
+    ' 2. ????? Recordset ????????? ?????
     If Not m_rsCallHistory Is Nothing Then
         m_rsCallHistory.Close
         Set m_rsCallHistory = Nothing
     End If
 
-    ' 3. ����� Recordset ����� (�� ����)
+    ' 3. ????? Recordset ????? (?? ????)
     Dim frm As Access.Form
     Set frm = Forms("frmContactsDialer")
     If Not frm Is Nothing Then
@@ -562,17 +562,17 @@ Public Function ContactsDialer_BtnExit_Click() As Variant
         End If
     End If
 
-    ' 4. ����� �����
+    ' 4. ????? ?????
     DoCmd.Close acForm, "frmContactsDialer", acSaveNo
 
-    ' 5. ����� �-Access
+    ' 5. ????? ?-Access
     Application.Quit acQuitSaveNone
 
     ContactsDialer_BtnExit_Click = True
 End Function
 
 ' ---------------------------------------------------------------------------
-' btnNewCus Click: ����� ���� ����� ������ ����
+' btnNewCus Click: ????? ???? ????? ?????? ????
 ' btnNewCus property: On Click = =ContactsDialer_BtnNewCus_Click()
 ' ---------------------------------------------------------------------------
 Public Function ContactsDialer_BtnNewCus_Click() As Variant
@@ -636,7 +636,7 @@ ErrorHandler:
 End Function
 
 ' ---------------------------------------------------------------------------
-' btnEditCus Click: ����� ���� ����� ������ ������
+' btnEditCus Click: ????? ???? ????? ?????? ??????
 ' btnEditCus property: On Click = =ContactsDialer_BtnEditCus_Click()
 ' ---------------------------------------------------------------------------
 Public Function ContactsDialer_BtnEditCus_Click() As Variant
@@ -644,17 +644,17 @@ Public Function ContactsDialer_BtnEditCus_Click() As Variant
     Dim frm As Access.Form
     Set frm = Forms("frmContactsDialer")
 
-    ' ����� ����� ��� ���
+    ' ????? ????? ??? ???
     Dim contactId As String
     contactId = Nz(frm.lblContactID.Value, "")
     If Len(contactId) = 0 Or contactId = "0" Then
         MsgBox ChrW(1489) & ChrW(1495) & ChrW(1512) & " " & ChrW(1488) & ChrW(1497) & ChrW(1513) & " " & ChrW(1511) & ChrW(1513) & ChrW(1512) & " " & ChrW(1502) & ChrW(1492) & ChrW(1512) & ChrW(1513) & ChrW(1497) & ChrW(1502) & ChrW(1492), _
-               vbInformation, "frmContactsDialer"   ' ��� ��� ��� �������
+               vbInformation, "frmContactsDialer"   ' ??? ??? ??? ???????
         GoTo Done
     End If
 
     DoCmd.OpenForm "frmContactEdit", acNormal, , , , acDialog, contactId
-    ' ���� ����� ������� � ����� ����� ���� ���
+    ' ???? ????? ??????? ? ????? ????? ???? ???
     ContactsDialer_RefreshAfterEdit
 Done:
     ContactsDialer_BtnEditCus_Click = True
@@ -665,7 +665,7 @@ ErrorHandler:
 End Function
 
 ' ---------------------------------------------------------------------------
-' cmdSetings Click: ����� ���� ������
+' cmdSetings Click: ????? ???? ??????
 ' cmdSetings property: On Click = =ContactsDialer_CmdSetings_Click()
 ' ---------------------------------------------------------------------------
 Public Function ContactsDialer_CmdSetings_Click() As Variant
@@ -683,7 +683,7 @@ ErrorHandler:
 End Function
 
 ' ---------------------------------------------------------------------------
-' btnSendCus Click: ����� ����� ���������� 3CX
+' btnSendCus Click: ????? ????? ?????????? 3CX
 ' btnSendCus property: On Click = =ContactsDialer_BtnSendCus_Click()
 ' ---------------------------------------------------------------------------
 Public Function ContactsDialer_BtnSendCus_Click() As Variant
@@ -776,7 +776,7 @@ ErrorHandler:
 End Function
 
 ' ---------------------------------------------------------------------------
-' ����� ����� ����� ���� �����/����� �� �����
+' ????? ????? ????? ???? ?????/????? ?? ?????
 ' ---------------------------------------------------------------------------
 Private Sub ContactsDialer_RefreshAfterEdit()
     On Error Resume Next
@@ -833,8 +833,8 @@ End Sub
 
 ' ---------------------------------------------------------------------------
 ' Refresh cached Recordset (call after adding/editing contacts)
-' ����� Recordset ����� � ���� �� ���� ��� ������� ���� ����� ��� �� ������ �������.
-' ��� ���� �����/����� �� ���� ���, �� ��� ���� ����� �����.
+' ????? Recordset ????? ? ???? ?? ???? ??? ??????? ???? ????? ??? ?? ?????? ???????.
+' ??? ???? ?????/????? ?? ???? ???, ?? ??? ???? ????? ?????.
 ' ---------------------------------------------------------------------------
 Public Sub ContactsDialer_RefreshRecordset()
     On Error Resume Next
@@ -846,7 +846,7 @@ End Sub
 
 
 ' ---------------------------------------------------------------------------
-' btnImportVCF Click: ����� ����� VCF - ����� ������ ����� ����
+' btnImportVCF Click: ????? ????? VCF - ????? ?????? ????? ????
 ' ---------------------------------------------------------------------------
 Public Function ContactsDialer_BtnImportVCF_Click() As Variant
     On Error GoTo ErrorHandler
@@ -937,12 +937,12 @@ ErrorHandler:
 End Function
 ' ---------------------------------------------------------------------------
 ' Form KeyDown: keyboard navigation (KeyPreview = True)
-' ����� ����� ����� (KeyPreview = True � ����� ���� ����� ���� ������).
-' ����� ������:
-'   �� ��� �-txtSearch  ? ����� ����� ������, ���� ���� �����, ���� ����� + ����
-'   Enter �-txtSearch   ? ���� ���� �����, ����, �� ��� ����� �����, ����� ������ �����
-'   Enter �-lstContacts ? ���� ��� ���, �� ������, ����� ������ �����
-'   ESC ��� ����      ? ����� �����, ����� ���, ���� �� ������
+' ????? ????? ????? (KeyPreview = True ? ????? ???? ????? ???? ??????).
+' ????? ??????:
+'   ?? ??? ?-txtSearch  ? ????? ????? ??????, ???? ???? ?????, ???? ????? + ????
+'   Enter ?-txtSearch   ? ???? ???? ?????, ????, ?? ??? ????? ?????, ????? ?????? ?????
+'   Enter ?-lstContacts ? ???? ??? ???, ?? ??????, ????? ?????? ?????
+'   ESC ??? ????      ? ????? ?????, ????? ???, ???? ?? ??????
 ' Form property: On Key Down = =ContactsDialer_Form_KeyDown()
 ' ---------------------------------------------------------------------------
 Public Function ContactsDialer_Form_KeyDown() As Variant
@@ -967,7 +967,7 @@ Public Function ContactsDialer_Form_KeyDown() As Variant
         End If
     End If
 
-    ' �� ��� ����� ����� ? ����� ����� ������, ���� ���� �����, ���� ����� �����
+    ' ?? ??? ????? ????? ? ????? ????? ??????, ???? ???? ?????, ???? ????? ?????
     ' Down arrow in txtSearch -> move focus to lstContacts, select first item
     If ctlName = "txtSearch" And kDown Then
         If frm.lstContacts.ListCount > 0 Then
@@ -981,7 +981,7 @@ Public Function ContactsDialer_Form_KeyDown() As Variant
         Exit Function
     End If
 
-    ' Enter ����� ����� ? ���� ���� �����, ����, �� ��� ����� �����, ����� ������ �����
+    ' Enter ????? ????? ? ???? ???? ?????, ????, ?? ??? ????? ?????, ????? ?????? ?????
     ' Enter in txtSearch -> select first item, load it, put full name in search box
     ' Enter in txtSearch: if content is a phone number (digits/- #* only, 4+ chars) -> dial it
     If ctlName = "txtSearch" And kEnter Then
@@ -993,18 +993,18 @@ Public Function ContactsDialer_Form_KeyDown() As Variant
             Dim cmdText As String
             cmdText = Mid$(searchVal, 2, Len(searchVal) - 2)
             Select Case cmdText
-                Case "�����", "����"
+                Case "?????", "????"
                     AutoBackupRotation searchVal
                     frm.txtSearch.Value = ""
-                    MsgBox "����� ����!", vbInformation, "�����"
-                Case "����", "������"
+                    MsgBox "????? ????!", vbInformation, "?????"
+                Case "????", "??????"
                     frm.txtSearch.Value = ""
                     RestoreTablesFromBackup
-                Case "���"
+                Case "???"
                     frm.txtSearch.Value = ""
                     ViewErrorLog
                 Case Else
-                    MsgBox "����� ���� �� �����", vbExclamation
+                    MsgBox "????? ???? ?? ?????", vbExclamation
                     frm.txtSearch.Value = ""
             End Select
             ContactsDialer_Form_KeyDown = True
@@ -1046,15 +1046,15 @@ Public Function ContactsDialer_Form_KeyDown() As Variant
             cId = CLng(frm.lstContacts.Value)
             ContactsDialer_LoadSelectedContact frm, cId
             ContactsDialer_RefreshCallHistoryGrid frm, cId
-            frm.txtSearch.Value = frm.lstContacts.Column(1, 0)  ' �� ��� ����� �����
+            frm.txtSearch.Value = frm.lstContacts.Column(1, 0)  ' ?? ??? ????? ?????
             frm.lblSearch.caption = Nz(frm.lstContacts.Column(1, 0), "")
-            frm.cmdPhoneNumber.SetFocus                         ' ����� ������ ����� ������ �����
+            frm.cmdPhoneNumber.SetFocus                         ' ????? ?????? ????? ?????? ?????
         End If
         ContactsDialer_Form_KeyDown = True
         Exit Function
     End If
 
-    ' Enter ������ ? ���� ��� ���, �� ������, ����� ������ �����
+    ' Enter ?????? ? ???? ??? ???, ?? ??????, ????? ?????? ?????
     ' Enter in lstContacts -> load contact, put name in search box, focus cmdPhoneNumber
     If ctlName = "lstContacts" And kEnter Then
         If Not IsNull(frm.lstContacts.Value) Then
@@ -1068,7 +1068,7 @@ Public Function ContactsDialer_Form_KeyDown() As Variant
         Exit Function
     End If
 
-    ' F8 ��� ���� ? ����� ����� �� cmdPhoneNumber (���� �����)
+    ' F8 ??? ???? ? ????? ????? ?? cmdPhoneNumber (???? ?????)
     ' F8 from anywhere -> triggers cmdPhoneNumber click (dial mobile)
     If GetAsyncKeyState(vbKeyF8) < 0 Then
         If frm.cmdPhoneNumber.Enabled Then
@@ -1078,7 +1078,7 @@ Public Function ContactsDialer_Form_KeyDown() As Variant
         Exit Function
     End If
 
-    ' F9 ��� ���� ? ����� ����� �� cmdLandline (���� �����)
+    ' F9 ??? ???? ? ????? ????? ?? cmdLandline (???? ?????)
     ' F9 from anywhere -> triggers cmdLandline click (dial landline)
     If GetAsyncKeyState(vbKeyF9) < 0 Then
         If frm.cmdLandline.Enabled Then
@@ -1088,14 +1088,14 @@ Public Function ContactsDialer_Form_KeyDown() As Variant
         Exit Function
     End If
 
-    ' Ctrl+N ��� ���� ? ����� ����
+    ' Ctrl+N ??? ???? ? ????? ????
     If GetAsyncKeyState(vbKeyN) < 0 And GetAsyncKeyState(vbKeyControl) < 0 Then
         ContactsDialer_BtnNewCus_Click
         ContactsDialer_Form_KeyDown = True
         Exit Function
     End If
 
-    ' Ctrl+E ��� ���� ? ����� �����
+    ' Ctrl+E ??? ???? ? ????? ?????
     If GetAsyncKeyState(vbKeyE) < 0 And GetAsyncKeyState(vbKeyControl) < 0 Then
         If frm.btnEditCus.Enabled Then
             ContactsDialer_BtnEditCus_Click
@@ -1127,7 +1127,7 @@ Public Function ContactsDialer_Form_KeyDown() As Variant
         Next altKey
     End If
 
-        ' ESC ��� ���� ? ����� �����, ����� ���, ���� �� ������, ����� ������
+        ' ESC ??? ???? ? ????? ?????, ????? ???, ???? ?? ??????, ????? ??????
         ' ESC from anywhere -> clear txtSearch, focus it, refresh full list + all calls
     If kEsc Then
         frm.txtSearch.SetFocus
@@ -1149,8 +1149,8 @@ End Function
 ' ---------------------------------------------------------------------------
 ' DialSpeedNumber - shared dialing procedure for speed call
 ' ---------------------------------------------------------------------------
-' ���� ���� - ���� ���� ����� ������� ������ ���� �����
-' ���� ���� �-CallHistory, ����� ���� ������, ������ ��� 3CX
+' ???? ???? - ???? ???? ????? ??????? ?????? ???? ?????
+' ???? ???? ?-CallHistory, ????? ???? ??????, ?????? ??? 3CX
 Private Sub DialSpeedNumber(ByRef frm As Access.Form, ByVal phoneNum As String, ByVal speedName As String)
     If Len(phoneNum) = 0 Then Exit Sub
     On Error Resume Next
@@ -1217,7 +1217,7 @@ End Sub
 ' ContactsDialer_SpeedCall_Click - handles click on any btnSpeed1..9
 ' Phone number stored in button .Tag
 ' ---------------------------------------------------------------------------
-' ����� �� ����� ���� ����� (btnSpeed1..18) - ���� ���� �-Tag ������
+' ????? ?? ????? ???? ????? (btnSpeed1..18) - ???? ???? ?-Tag ??????
 Public Function ContactsDialer_SpeedCall_Click() As Variant
     On Error Resume Next
     Dim frm As Access.Form
@@ -1240,12 +1240,12 @@ End Function
 ' LoadSpeedCallButtons - reads tblSettings, sets button captions + tags
 ' Called from Form_Load
 ' ---------------------------------------------------------------------------
-' ����� ������ ���� ����� - ���� ���� ������� �-tblSettings ����� ��������
-' ���� �-Form_Load ����� ����� ������
+' ????? ?????? ???? ????? - ???? ???? ??????? ?-tblSettings ????? ????????
+' ???? ?-Form_Load ????? ????? ??????
 Public Sub LoadSpeedCallButtons(ByRef frm As Access.Form)
     On Error Resume Next
     Dim rs As DAO.Recordset
-    ' ����� ��� �� ����, �� ��� ����� - ����� ������
+    ' ????? ??? ?? ????, ?? ??? ????? - ????? ??????
     DBEngine.Idle dbRefreshCache
     Set rs = CurrentDb.OpenRecordset("SELECT TOP 1 * FROM tblSettings", dbOpenSnapshot)
     If rs.EOF Then rs.Close: Set rs = Nothing: Exit Sub
@@ -1275,7 +1275,7 @@ Public Sub LoadSpeedCallButtons(ByRef frm As Access.Form)
         btn.TabStop = False
 NextSpeedBtn:
     Next i
-    ' --- ����� ����� ������ ---
+    ' --- ????? ????? ?????? ---
     ' --- close recordset ---
     If Not rs Is Nothing Then rs.Close: Set rs = Nothing
     ' --- check cloud messages (from DialerFixup module) ---
@@ -1284,25 +1284,25 @@ End Sub
 ' ---------------------------------------------------------------------------
 ' SETUP: Run from Immediate window to wire all properties + layout + titles:
 '   SetupContactsDialerForm
-' ����� ������� �� �����: ������ ��� ������ ������, ����� ������, �������, ������.
-' ������ ����� Immediate:  SetupContactsDialerForm
-' ���������:
-'   1. ����� �� ���� ����� frmCallHistoryGrid (����� ������ ����)
-'   2. ����� �� frmContactsDialer ���� ����� (Design View)
-'   3. ����� ������ ����� ����� (ttlPhone, ttlNotes ���')
-'   4. ����� ������ ���� (�����, �������, KeyPreview)
-'   5. ����� �� �� ���: ������ �����, ����, �����, �������
-'   6. ����� ������
+' ????? ??????? ?? ?????: ?????? ??? ?????? ??????, ????? ??????, ???????, ??????.
+' ?????? ????? Immediate:  SetupContactsDialerForm
+' ?????????:
+'   1. ????? ?? ???? ????? frmCallHistoryGrid (????? ?????? ????)
+'   2. ????? ?? frmContactsDialer ???? ????? (Design View)
+'   3. ????? ?????? ????? ????? (ttlPhone, ttlNotes ???')
+'   4. ????? ?????? ???? (?????, ???????, KeyPreview)
+'   5. ????? ?? ?? ???: ?????? ?????, ????, ?????, ???????
+'   6. ????? ??????
 ' ---------------------------------------------------------------------------
 
 ' ---------------------------------------------------------------------------
-' LogAppOpen - ����� ����� �������� �-tblAppLog
+' LogAppOpen - ????? ????? ???????? ?-tblAppLog
 ' ---------------------------------------------------------------------------
 Private Sub LogAppOpen()
     On Error Resume Next
     Dim db As DAO.Database
     Set db = CurrentDb
-    ' ����� �� ���� ��� �� ���� �-tblSettings
+    ' ????? ?? ???? ??? ?? ???? ?-tblSettings
     Dim empName As String
     Dim rsEmp As DAO.Recordset
     Set rsEmp = db.OpenRecordset("SELECT TOP 1 EmployeeName FROM tblSettings", dbOpenSnapshot)
@@ -1317,7 +1317,7 @@ Private Sub LogAppOpen()
         """" & empName & """," & _
         """" & APP_VERSION & """)"
     db.Execute sql, dbFailOnError
-    ' ����� LogID ������ ������
+    ' ????? LogID ?????? ??????
     Dim rs As DAO.Recordset
     Set rs = db.OpenRecordset("SELECT MAX(LogID) FROM tblAppLog", dbOpenSnapshot)
     If Not rs.EOF Then m_logID = Nz(rs.Fields(0).Value, 0)
@@ -1326,19 +1326,19 @@ Private Sub LogAppOpen()
 End Sub
 
 ' ---------------------------------------------------------------------------
-' LogAppClose - ����� ��� ����� �-tblAppLog
+' LogAppClose - ????? ??? ????? ?-tblAppLog
 ' ---------------------------------------------------------------------------
 Private Sub LogAppClose()
     On Error Resume Next
     If m_logID = 0 Then Exit Sub
-    ' ����� ����� �-BE ��� ������ ������� ����� ���� Application.Quit
+    ' ????? ????? ?-BE ??? ?????? ??????? ????? ???? Application.Quit
     CurrentDb.Execute "UPDATE tblAppLog SET CloseTime = #" & Format(Now, "yyyy-mm-dd hh:nn:ss") & "# WHERE LogID = " & m_logID, dbFailOnError
     Debug.Print "AppLog: Close - LogID=" & m_logID & " " & Now
 End Sub
 
 ' ---------------------------------------------------------------------------
 ' ContactsDialer_BtnExport2Outlook_Click
-' ����� ��� ��� ����� �-Outlook ����� ���� �����
+' ????? ??? ??? ????? ?-Outlook ????? ???? ?????
 ' ---------------------------------------------------------------------------
 Public Function ContactsDialer_BtnExport2Outlook_Click() As Variant
     On Error GoTo ErrorHandler
@@ -1346,7 +1346,7 @@ Public Function ContactsDialer_BtnExport2Outlook_Click() As Variant
     Set frm = Screen.ActiveForm
 
     If IsNull(frm.lblContactID.Value) Or frm.lblContactID.Value = "" Then
-        MsgBox "�� ���� ��� ���", vbExclamation, "Outlook"
+        MsgBox "?? ???? ??? ???", vbExclamation, "Outlook"
         GoTo Done
     End If
 
@@ -1355,7 +1355,7 @@ Public Function ContactsDialer_BtnExport2Outlook_Click() As Variant
     If rs Is Nothing Then GoTo Done
     rs.FindFirst "ContactID = " & CLng(frm.lblContactID.Value)
     If rs.NoMatch Then
-        MsgBox "��� ��� �� ����", vbExclamation, "Outlook"
+        MsgBox "??? ??? ?? ????", vbExclamation, "Outlook"
         GoTo Done
     End If
 
@@ -1391,16 +1391,16 @@ Done:
     Exit Function
 
 ErrorHandler:
-    MsgBox "����� ������ �-Outlook: " & Err.Description, vbExclamation, "Outlook"
+    MsgBox "????? ?????? ?-Outlook: " & Err.Description, vbExclamation, "Outlook"
     ContactsDialer_BtnExport2Outlook_Click = True
 End Function
 
 ' ---------------------------------------------------------------------------
-' GetMyExtension - ����� ����� �-tblSettings ��� �� ����
+' GetMyExtension - ????? ????? ?-tblSettings ??? ?? ????
 ' ---------------------------------------------------------------------------
 ' ---------------------------------------------------------------------------
-' HideAccessFrame - ����� ����� Access, ���� ���� �� ����
-' ����� �-Form_Load
+' HideAccessFrame - ????? ????? Access, ???? ???? ?? ????
+' ????? ?-Form_Load
 ' ---------------------------------------------------------------------------
 ' ---------------------------------------------------------------------------
 ' RemoveMaximizeButton
@@ -1423,7 +1423,7 @@ End Sub
 ' ---------------------------------------------------------------------------
 ' AdjustFormWidth - +5%
 ' ---------------------------------------------------------------------------
-' ����� ���� ���� - ������ ���� ���� ��� ������
+' ????? ???? ???? - ?????? ???? ???? ??? ??????
 Public Sub AdjustFormWidth(frm As Access.Form)
     On Error Resume Next
     Dim w As Long
@@ -1434,7 +1434,7 @@ End Sub
 ' ---------------------------------------------------------------------------
 ' CenterChildForm
 ' ---------------------------------------------------------------------------
-' ����� ����-�� - ���� ���� ���-�� ����� ����
+' ????? ????-?? - ???? ???? ???-?? ????? ????
 Public Sub CenterChildForm(childFrm As Access.Form)
     On Error Resume Next
     Dim parentFrm As Access.Form
@@ -1460,7 +1460,7 @@ Public Sub CenterChildForm(childFrm As Access.Form)
     SetWindowPos childFrm.hWnd, 0, newX, newY, 0, 0, &H1 Or &H4  ' SWP_NOSIZE Or SWP_NOZORDER
 End Sub
 
-' ����� ����� Access - ����� �� ����� ����� �-ACCDE
+' ????? ????? Access - ????? ?? ????? ????? ?-ACCDE
 Public Sub HideAccessFrame()
     On Error Resume Next
     Dim hWnd As LongPtr
@@ -1469,8 +1469,8 @@ Public Sub HideAccessFrame()
 End Sub
 
 ' ---------------------------------------------------------------------------
-' ShowAccessFrame - ���� ����� Access �����
-' ����� �-Form_Unload
+' ShowAccessFrame - ???? ????? Access ?????
+' ????? ?-Form_Unload
 ' ---------------------------------------------------------------------------
 Public Sub ShowAccessFrame()
     On Error Resume Next
@@ -1480,7 +1480,7 @@ Public Sub ShowAccessFrame()
     MoveWindow hWnd, 100, 100, 800, 600, 1
 End Sub
 
-' ���� ����� - ����� �� ���� ������ �-tblSettings
+' ???? ????? - ????? ?? ???? ?????? ?-tblSettings
 Private Function GetMyExtension() As String
     On Error Resume Next
     Dim rs As DAO.Recordset
@@ -1489,12 +1489,12 @@ Private Function GetMyExtension() As String
     rs.Close: Set rs = Nothing
 End Function
 
-' ========================== �������� ��� ������� / Private Helpers ==================================
+' ========================== ???????? ??? ??????? / Private Helpers ==================================
 
 ' ---------------------------------------------------------------------------
 ' Get or create cached Recordset on Contacts table
-' ����� �� �-Recordset ������ �� ���� ���, �� ���� ��� �� �� ����.
-' ����� ���: CallCount ���� (������� ����� ����), ��"� ��� ContactName.
+' ????? ?? ?-Recordset ?????? ?? ???? ???, ?? ???? ??? ?? ?? ????.
+' ????? ???: CallCount ???? (??????? ????? ????), ??"? ??? ContactName.
 ' ---------------------------------------------------------------------------
 Private Function GetContactsRecordset() As DAO.Recordset
     On Error GoTo ErrorHandler
@@ -1514,10 +1514,10 @@ End Function
 
 ' ---------------------------------------------------------------------------
 ' Fill lstContacts from cached Recordset (like VB6 fnRS2PapoletOnForm)
-' ���� �� ����� ���� ���� ���� �-Recordset ������.
-' ����� searchText ���� �� ������ � ����� * ������ ������ (Wildcard).
-' ��� ����� ������ = ContactName + FamlyName + Tital ��������.
-' ���� ������ � ���� �������� �� ����� ������ ������� lblSearch.
+' ???? ?? ????? ???? ???? ???? ?-Recordset ??????.
+' ????? searchText ???? ?? ?????? ? ????? * ?????? ?????? (Wildcard).
+' ??? ????? ?????? = ContactName + FamlyName + Tital ????????.
+' ???? ?????? ? ???? ???????? ?? ????? ?????? ??????? lblSearch.
 ' ---------------------------------------------------------------------------
 Private Sub ContactsDialer_FillContactsList(ByRef frm As Access.Form, ByVal searchText As String)
     On Error GoTo ErrorHandler
@@ -1584,9 +1584,9 @@ End Sub
 
 ' ---------------------------------------------------------------------------
 ' Load contact details from cached Recordset (FindFirst instead of new query)
-' ���� ���� ��� ��� ����� ����� ���� �-Recordset ������.
-' ����� �-FindFirst ����� ������ ���� � ���� ���� �������.
-' ����� ��������: lblContactName, lblContactID, cmdPhoneNumber, cmdLandline, txtEmail, txtNotes.
+' ???? ???? ??? ??? ????? ????? ???? ?-Recordset ??????.
+' ????? ?-FindFirst ????? ?????? ???? ? ???? ???? ???????.
+' ????? ????????: lblContactName, lblContactID, cmdPhoneNumber, cmdLandline, txtEmail, txtNotes.
 ' ---------------------------------------------------------------------------
 Private Sub ContactsDialer_LoadSelectedContact(ByRef frm As Access.Form, ByVal contactId As Long)
     On Error GoTo ErrorHandler
@@ -1603,7 +1603,7 @@ Private Sub ContactsDialer_LoadSelectedContact(ByRef frm As Access.Form, ByVal c
     frm.lblContactID.Value = Nz(rs!contactId, "")
     frm.lblContactName.caption = Trim$(Nz(rs!contactName, "") & " " & Nz(rs!famlyName, "") & " " & Nz(rs!tital, ""))
 
-    ' --- cmdPhoneNumber: ���� ---
+    ' --- cmdPhoneNumber: ???? ---
     Dim phoneNum As String
     phoneNum = Trim$(Nz(rs!phoneNumber, ""))
     If Len(phoneNum) > 0 Then
@@ -1614,7 +1614,7 @@ Private Sub ContactsDialer_LoadSelectedContact(ByRef frm As Access.Form, ByVal c
         frm.cmdPhoneNumber.Enabled = False
     End If
 
-    ' --- cmdLandline: ���� ---
+    ' --- cmdLandline: ???? ---
     Dim landNum As String
     landNum = Trim$(Nz(rs!landline, ""))
     If Len(landNum) > 0 Then
@@ -1627,7 +1627,7 @@ Private Sub ContactsDialer_LoadSelectedContact(ByRef frm As Access.Form, ByVal c
 
     frm.txtEmail.Value = Nz(rs!email, "")
     frm.txtNotes.Value = Nz(rs!notes, "")
-    ' ����� ������ �����/�����/����� ���� ��� ��� ����
+    ' ????? ?????? ?????/?????/????? ???? ??? ??? ????
     frm.btnEditCus.Enabled = True
     frm.btnSendCus.Enabled = True
     frm.btnSaveCall.Enabled = True
@@ -1639,8 +1639,8 @@ End Sub
 
 ' ---------------------------------------------------------------------------
 ' Clear all display controls (labels, buttons, grid)
-' ����� �� ���� ������: ��, �����, ����, ����, �����, ����.
-' ���� ����� �����, �� �� ESC, �� ������ ����.
+' ????? ?? ???? ??????: ??, ?????, ????, ????, ?????, ????.
+' ???? ????? ?????, ?? ?? ESC, ?? ?????? ????.
 ' ---------------------------------------------------------------------------
 Private Sub ContactsDialer_ClearDisplay()
     On Error Resume Next
@@ -1651,13 +1651,13 @@ Private Sub ContactsDialer_ClearDisplay()
     frm.lblContactID.Value = ""
     frm.lblContactName.caption = ""
 
-    ' ������ �����/���� � ������� ������� "�� ���� ����"
+    ' ?????? ?????/???? ? ??????? ??????? "?? ???? ????"
     frm.cmdPhoneNumber.caption = ChrW(1500) & ChrW(1488) & " " & ChrW(1511) & ChrW(1497) & ChrW(1497) & ChrW(1501) & " " & ChrW(1502) & ChrW(1505) & ChrW(1508) & ChrW(1512)
     frm.cmdPhoneNumber.Enabled = False
     frm.cmdLandline.caption = ChrW(1500) & ChrW(1488) & " " & ChrW(1511) & ChrW(1497) & ChrW(1497) & ChrW(1501) & " " & ChrW(1502) & ChrW(1505) & ChrW(1508) & ChrW(1512)
     frm.cmdLandline.Enabled = False
 
-    ' ������ �����/�����/����� ������� ����� �����
+    ' ?????? ?????/?????/????? ??????? ????? ?????
     frm.btnEditCus.Enabled = False
     frm.btnSendCus.Enabled = False
     frm.btnSaveCall.Enabled = False
@@ -1671,10 +1671,10 @@ End Sub
 
 ' ---------------------------------------------------------------------------
 ' Refresh subform grid with TOP 5 recent calls for the selected contact
-' ����� ���� ����� ���� ��� ��� ����.
-' SQL: ���� ����� ��� ContactID, ����� �� ������ �� ����� ����� �������, ��"� ��� ����� ����.
-' ����� �� �-Recordset ���-����� sfrmCallHistory.
-' ����� �� lblHistory �� ����� ����� ������ ������.
+' ????? ???? ????? ???? ??? ??? ????.
+' SQL: ???? ????? ??? ContactID, ????? ?? ?????? ?? ????? ????? ???????, ??"? ??? ????? ????.
+' ????? ?? ?-Recordset ???-????? sfrmCallHistory.
+' ????? ?? lblHistory ?? ????? ????? ?????? ??????.
 ' ---------------------------------------------------------------------------
 Private Sub ContactsDialer_RefreshCallHistoryGrid(ByRef frm As Access.Form, ByVal contactId As Long, Optional ByVal newestFirst As Boolean = False)
     On Error GoTo ErrorHandler
@@ -1685,10 +1685,10 @@ Private Sub ContactsDialer_RefreshCallHistoryGrid(ByRef frm As Access.Form, ByVa
         Set m_rsCallHistory = Nothing
     End If
 
-    ' �� ��� ���: �� ���� ����� Contacts ���� ����, ���� ���� ��� ����� �-CallHistory
+    ' ?? ??? ???: ?? ???? ????? Contacts ???? ????, ???? ???? ??? ????? ?-CallHistory
     Dim sql As String
     If newestFirst Then
-        ' ���� ���� ����� � ���� ��� CallID ���� ��� ������ ����� �� ������ �������
+        ' ???? ???? ????? ? ???? ??? CallID ???? ??? ?????? ????? ?? ?????? ???????
         sql = "SELECT H.CallID, H.PhoneNumber, H.CallDate, H.CallTime, H.Notes, IIf(Len(Nz(C.ContactName,''))>0,C.ContactName,H.ContactName) AS ContactName " & _
               "FROM CallHistory AS H LEFT JOIN Contacts AS C ON H.ContactID = C.ContactID " & _
               "WHERE H.ContactID = " & contactId & " " & _
@@ -1724,9 +1724,9 @@ ErrorHandler:
 End Sub
 
 ' ---------------------------------------------------------------------------
-' Load ALL calls (no contact filter) sorted newest first � for Form_Load & ESC
-' ���� �� �� ������ (��� ����� ��� ���) ����� ����� ����.
-' ���� ������ ���� (Form_Load) ������� ESC.
+' Load ALL calls (no contact filter) sorted newest first ? for Form_Load & ESC
+' ???? ?? ?? ?????? (??? ????? ??? ???) ????? ????? ????.
+' ???? ?????? ???? (Form_Load) ??????? ESC.
 ' ---------------------------------------------------------------------------
 Private Sub ContactsDialer_RefreshAllCallHistory(ByRef frm As Access.Form)
     On Error GoTo ErrorHandler
@@ -1737,7 +1737,7 @@ Private Sub ContactsDialer_RefreshAllCallHistory(ByRef frm As Access.Form)
         Set m_rsCallHistory = Nothing
     End If
 
-    ' �� ��� ���: �� ���� ����� Contacts ���� ����, ���� ���� ��� ����� �-CallHistory
+    ' ?? ??? ???: ?? ???? ????? Contacts ???? ????, ???? ???? ??? ????? ?-CallHistory
     Dim sql As String
     sql = "SELECT H.CallID, H.PhoneNumber, H.CallDate, H.CallTime, H.Notes, IIf(Len(Nz(C.ContactName,''))>0,C.ContactName,H.ContactName) AS ContactName " & _
           "FROM CallHistory AS H LEFT JOIN Contacts AS C ON H.ContactID = C.ContactID " & _
@@ -1766,9 +1766,9 @@ End Sub
 
 ' ---------------------------------------------------------------------------
 ' Update lblHistory with last date and record count from current Recordset
-' ����� ����� lblHistory �� ����� ���� ������ ������ ������ ��-Recordset ������.
-' �����: "���� ������  dd/mm/yyyy || ������  N || "
-' ���� ���� �� ����� �� �����.
+' ????? ????? lblHistory ?? ????? ???? ?????? ?????? ?????? ??-Recordset ??????.
+' ?????: "???? ??????  dd/mm/yyyy || ??????  N || "
+' ???? ???? ?? ????? ?? ?????.
 ' ---------------------------------------------------------------------------
 Private Sub UpdateHistoryLabel(ByRef frm As Access.Form)
     On Error Resume Next
@@ -1791,7 +1791,7 @@ End Sub
 
 ' ---------------------------------------------------------------------------
 ' Grid On Current: dynamic tooltip showing Notes from the current row
-' �������� ���� ��� ����� ����� � ����� �� ������� �� ���� ��� �����.
+' ???????? ???? ??? ????? ????? ? ????? ?? ??????? ?? ???? ??? ?????.
 ' frmCallHistoryGrid property: On Current = =ContactsDialer_Grid_Current()
 ' ---------------------------------------------------------------------------
 Public Function ContactsDialer_Grid_Current() As Variant
@@ -1807,25 +1807,25 @@ Public Function ContactsDialer_Grid_Current() As Variant
 
     Dim notes As String
     notes = Trim$(Nz(gridFrm.Recordset!notes, ""))
-    ' ���� ����� ����� ���� (Status Bar) ������ ���� Access
+    ' ???? ????? ????? ???? (Status Bar) ?????? ???? Access
     If Len(notes) > 0 Then
-        SysCmd acSysCmdSetStatus, ChrW(1492) & ChrW(1506) & ChrW(1512) & ChrW(1492) & ": " & notes   ' ����:
+        SysCmd acSysCmdSetStatus, ChrW(1492) & ChrW(1506) & ChrW(1512) & ChrW(1492) & ": " & notes   ' ????:
     Else
         SysCmd acSysCmdSetStatus, " "
     End If
-    ' ���� ���� ������ lblNoteNow (����� �� ���� ����)
+    ' ???? ???? ?????? lblNoteNow (????? ?? ???? ????)
     If m_skipGridNoteUpdate Then
         m_skipGridNoteUpdate = False
     Else
         frm.lblNoteNow.caption = notes
-        frm.lblNoteNow.BackStyle = 0   ' Transparent (����� ��� ����)
+        frm.lblNoteNow.BackStyle = 0   ' Transparent (????? ??? ????)
     End If
 Done:
     ContactsDialer_Grid_Current = True
 End Function
 
 ' ---------------------------------------------------------------------------
-' lblNoteNow DblClick: ���� ���� ����� ����� ���� ���� ����� ������� �����
+' lblNoteNow DblClick: ???? ???? ????? ????? ???? ???? ????? ??????? ?????
 ' lblNoteNow property: On Dbl Click = =ContactsDialer_LblNoteNow_DblClick()
 ' ---------------------------------------------------------------------------
 Public Function ContactsDialer_LblNoteNow_DblClick() As Variant
@@ -1839,7 +1839,7 @@ Public Function ContactsDialer_LblNoteNow_DblClick() As Variant
     If gridFrm.Recordset Is Nothing Then GoTo Done
     If gridFrm.Recordset.RecordCount = 0 Then GoTo Done
 
-    ' ����� CallID ������ �������
+    ' ????? CallID ?????? ???????
     Dim callId As Long
     callId = Nz(gridFrm.Recordset!callId, 0)
     If callId = 0 Then GoTo Done
@@ -1847,7 +1847,7 @@ Public Function ContactsDialer_LblNoteNow_DblClick() As Variant
     On Error GoTo ErrHandler
     DoCmd.OpenForm "frmCallHistoryEdit", , , , , acDialog, CStr(callId)
 
-    ' ���� ����� ����� � ����� �����
+    ' ???? ????? ????? ? ????? ?????
     Dim contactId As Long
     contactId = Val(Nz(frm.lblContactID.Value, "0"))
     If contactId > 0 Then
@@ -1865,12 +1865,12 @@ End Function
 
 ' ---------------------------------------------------------------------------
 ' Create frmCallHistoryGrid (Datasheet form) if it does not already exist
-' ���� �� ���� ����� frmCallHistoryGrid (����� Datasheet).
-' ���� ���� ����� ���� ��� ������ ���� ������ ����.
+' ???? ?? ???? ????? frmCallHistoryGrid (????? Datasheet).
+' ???? ???? ????? ???? ??? ?????? ???? ?????? ????.
 ' ---------------------------------------------------------------------------
 ' DigitsOnly: returns only digit characters (0-9) from a string
-' ����� �� ����� ���� ������ � ���� ������, �����, ��� �� ����� ����.
-' ���� ������ ���� ����� ���� ����� ���� ������.
+' ????? ?? ????? ???? ?????? ? ???? ??????, ?????, ??? ?? ????? ????.
+' ???? ?????? ???? ????? ???? ????? ???? ??????.
 ' ---------------------------------------------------------------------------
 Private Function DigitsOnly(ByVal s As String) As String
     Dim i As Long
@@ -1886,8 +1886,8 @@ End Function
 
 ' ---------------------------------------------------------------------------
 ' Copy text to clipboard using Windows API (Unicode)
-' ����� ���� ���� ������ ������� Windows API (����� Unicode).
-' ���� ������ ���� �����/���� ������ �� ������.
+' ????? ???? ???? ?????? ??????? Windows API (????? Unicode).
+' ???? ?????? ???? ?????/???? ?????? ?? ??????.
 
 
 
@@ -1895,7 +1895,7 @@ End Function
 ' ---------------------------------------------------------------------------
 ' CreateCopyShortcutMenu: creates permanent right-click menu for copy
 ' ---------------------------------------------------------------------------
-' ����� ����� ���� ���� ������ - ����� ����� ������� �����
+' ????? ????? ???? ???? ?????? - ????? ????? ??????? ?????
 Private Sub CreateCopyShortcutMenu()
     On Error Resume Next
     CommandBars("DialerCopyMenu").Delete
@@ -1919,7 +1919,7 @@ End Sub
 ' ---------------------------------------------------------------------------
 ' DoCopyFromMenu: called by DialerCopyMenu button, reads TempVar
 ' ---------------------------------------------------------------------------
-' ����� ����� ������ ���� ���� - ����� ���� ���� ������
+' ????? ????? ?????? ???? ???? - ????? ???? ???? ??????
 Public Function ContactsDialer_DoCopyFromMenu() As Variant
     On Error Resume Next
     Dim txt As String
@@ -1931,7 +1931,7 @@ End Function
 ' ---------------------------------------------------------------------------
 ' ShowCopyPopup: stores text in TempVar and shows the copy menu
 ' ---------------------------------------------------------------------------
-' ���� ����� ����� - ���� ���-�� �� ������ ����� ���� ������
+' ???? ????? ????? - ???? ???-?? ?? ?????? ????? ???? ??????
 Private Sub ShowCopyPopup(ByVal textToCopy As String)
     On Error Resume Next
     TempVars.Add "clipText", ""
@@ -1960,7 +1960,7 @@ End Sub
 ' Right-click handlers for 4 controls
 ' ---------------------------------------------------------------------------
 
-' ���� ���� �� ����� ���� ��� - ���� ����� �����
+' ???? ???? ?? ????? ???? ??? - ???? ????? ?????
 Public Function ContactsDialer_LstContacts_RClick() As Variant
     If GetAsyncKeyState(&H2) < 0 Then
         On Error Resume Next
@@ -1974,7 +1974,7 @@ Public Function ContactsDialer_LstContacts_RClick() As Variant
     ContactsDialer_LstContacts_RClick = True
 End Function
 
-' ���� ���� �� ����� ���� - ���� ����� ����� ����
+' ???? ???? ?? ????? ???? - ???? ????? ????? ????
 Public Function ContactsDialer_CmdPhoneNumber_RClick() As Variant
     If GetAsyncKeyState(&H2) < 0 Then
         Dim cap As String
@@ -1987,7 +1987,7 @@ Public Function ContactsDialer_CmdPhoneNumber_RClick() As Variant
     ContactsDialer_CmdPhoneNumber_RClick = True
 End Function
 
-' ���� ���� �� ����� ���� - ���� ����� ����� ����
+' ???? ???? ?? ????? ???? - ???? ????? ????? ????
 Public Function ContactsDialer_CmdLandline_RClick() As Variant
     If GetAsyncKeyState(&H2) < 0 Then
         Dim cap As String
@@ -2000,7 +2000,7 @@ Public Function ContactsDialer_CmdLandline_RClick() As Variant
     ContactsDialer_CmdLandline_RClick = True
 End Function
 
-' ���� ���� �� ��� ����� - ���� ����� �����
+' ???? ???? ?? ??? ????? - ???? ????? ?????
 Public Function ContactsDialer_TxtNotes_RClick() As Variant
     If GetAsyncKeyState(&H2) < 0 Then
         Dim txt As String
@@ -2010,7 +2010,7 @@ Public Function ContactsDialer_TxtNotes_RClick() As Variant
     ContactsDialer_TxtNotes_RClick = True
 End Function
 
-' ���� ���� �� ��� ������ - ���� ����� ����� ����� ����
+' ???? ???? ?? ??? ?????? - ???? ????? ????? ????? ????
 Public Function ContactsDialer_TxtEmail_RClick() As Variant
     If GetAsyncKeyState(&H2) < 0 Then
         Dim txt As String
@@ -2020,7 +2020,7 @@ Public Function ContactsDialer_TxtEmail_RClick() As Variant
     ContactsDialer_TxtEmail_RClick = True
 End Function
 
-' ���� ���� �� ����� ����� - ���� ����� ����� ��
+' ???? ???? ?? ????? ????? - ???? ????? ????? ??
 Public Function ContactsDialer_LblSearch_RClick() As Variant
     On Error Resume Next
     Dim txt As String
@@ -2036,7 +2036,7 @@ Public Function ContactsDialer_LblSearch_RClick() As Variant
 End Function
 
 ' ---------------------------------------------------------------------------
-' ����� ���� ������ - ����� ���� �-Clipboard ������� Windows API
+' ????? ???? ?????? - ????? ???? ?-Clipboard ??????? Windows API
 Private Sub ContactsDialer_CopyToClipboard(ByVal s As String)
     On Error GoTo ErrorHandler
 
@@ -2070,9 +2070,9 @@ End Sub
 
 ' ---------------------------------------------------------------------------
 ' Subclass callback: intercepts WM_DROPFILES for drag-and-drop Excel import
-' �������� Subclass callback: ������ ����� WM_DROPFILES ������ Excel ������.
-' �����: �� ������ ���� Break �-VBA ������� ���� (���� ������ Access)!
-' �� ���� ���� � ����� ������ btnImportExcel.
+' ???????? Subclass callback: ?????? ????? WM_DROPFILES ?????? Excel ??????.
+' ?????: ?? ?????? ???? Break ?-VBA ??????? ???? (???? ?????? Access)!
+' ?? ???? ???? ? ????? ?????? btnImportExcel.
 ' WARNING: Do NOT enter VBA break mode while form is open (may crash Access)
 ' ---------------------------------------------------------------------------
 Public Function DialerSubclassProc(ByVal hWnd As LongPtr, ByVal uMsg As Long, _
@@ -2091,7 +2091,7 @@ Public Function DialerSubclassProc(ByVal hWnd As LongPtr, ByVal uMsg As Long, _
         If ext = ".xlsx" Or ext = ".xls" Then
             ImportContactsFromExcel buf
         Else
-            MsgBox "�� ����� ���� Excel ���� (.xlsx / .xls)", vbExclamation, "����� ���� ���"
+            MsgBox "?? ????? ???? Excel ???? (.xlsx / .xls)", vbExclamation, "????? ???? ???"
         End If
         DialerSubclassProc = 0
         Exit Function
@@ -2101,13 +2101,13 @@ End Function
 
 ' ---------------------------------------------------------------------------
 ' Import contacts from Excel file into Contacts table via ADODB
-' ����� ���� ��� ����� Excel ����� Contacts ��� ADODB.
-' �����:
-'   1. ����� ����� ADODB ����� (.xlsx / .xls)
-'   2. ����� ������� �� �� ������ ������
-'   3. ����� �� ������ ������ �����
-'   4. ����� �������� ��� ContactName + PhoneNumber
-'   5. ����� �� ����� ����� (��� ContactName)
+' ????? ???? ??? ????? Excel ????? Contacts ??? ADODB.
+' ?????:
+'   1. ????? ????? ADODB ????? (.xlsx / .xls)
+'   2. ????? ??????? ?? ?? ?????? ??????
+'   3. ????? ?? ?????? ?????? ?????
+'   4. ????? ???????? ??? ContactName + PhoneNumber
+'   5. ????? ?? ????? ????? (??? ContactName)
 ' ---------------------------------------------------------------------------
 ' optOutOfOffice AfterUpdate: toggle red background
 ' ---------------------------------------------------------------------------
@@ -2140,7 +2140,7 @@ End Function
 ' CheckSpeedButtons - diagnostic: shows position of BoxSpeedCall and buttons
 ' Run from Immediate:  CheckSpeedButtons
 ' ---------------------------------------------------------------------------
-' ����� ����� - ������ �� ��� ������ ����� ������ �-Immediate Window
+' ????? ????? - ?????? ?? ??? ?????? ????? ?????? ?-Immediate Window
 Public Sub CheckSpeedButtons()
     On Error Resume Next
     DoCmd.OpenForm "frmContactsDialer", acDesign
@@ -2177,7 +2177,7 @@ End Sub
 ' FixFormOnOpen - clears stale On Open event from form
 ' Run from Immediate:  FixFormOnOpen
 ' ---------------------------------------------------------------------------
-' ����� ���� ������ - ����� ��� ������ ����� ������� ����
+' ????? ???? ?????? - ????? ??? ?????? ????? ??????? ????
 Public Sub FixFormOnOpen()
     On Error Resume Next
     Dim wasOpen As Boolean
@@ -2196,15 +2196,15 @@ End Sub
 ' ---------------------------------------------------------------------------
 
 ' ---------------------------------------------------------------------------
-' SetupAccdeProperties - ������ ������ �� ACCDE
-' ���� ��� ��� �-Immediate
+' SetupAccdeProperties - ?????? ?????? ?? ACCDE
+' ???? ??? ??? ?-Immediate
 ' ---------------------------------------------------------------------------
 Public Sub SetupAccdeProperties()
     On Error Resume Next
     Dim db As DAO.Database
     Set db = CurrentDb
 
-    ' ������ Startup
+    ' ?????? Startup
     SetDbProp db, "StartupForm", dbText, "frmContactsDialer"
     SetDbProp db, "StartupShowDBWindow", dbBoolean, False
     SetDbProp db, "StartupShowStatusBar", dbBoolean, False
@@ -2214,10 +2214,10 @@ Public Sub SetupAccdeProperties()
     SetDbProp db, "AllowBreakIntoCode", dbBoolean, False
     SetDbProp db, "AllowSpecialKeys", dbBoolean, False
 
-    MsgBox "������ ACCDE �����", vbInformation, "Setup"
+    MsgBox "?????? ACCDE ?????", vbInformation, "Setup"
 End Sub
 
-' ����� ������ ��� ������ - ���� ��� �������� �-DB
+' ????? ?????? ??? ?????? - ???? ??? ???????? ?-DB
 Private Sub SetDbProp(ByRef db As DAO.Database, ByVal propName As String, ByVal propType As Long, ByVal propVal As Variant)
     On Error Resume Next
     db.Properties(propName) = propVal
@@ -2230,49 +2230,49 @@ Private Sub SetDbProp(ByRef db As DAO.Database, ByVal propName As String, ByVal 
 End Sub
 
 
-' ���� ���� ����� - ���� ����� �� �� ������ ����� frmContactsDialer
-' �����: ���� ����� ����! ����� ��-����� ����
+' ???? ???? ????? - ???? ????? ?? ?? ?????? ????? frmContactsDialer
+' ?????: ???? ????? ????! ????? ??-????? ????
 Public Sub SetupContactsDialerForm()
     Dim frmName As String
     frmName = "frmContactsDialer"
     Dim frm As Access.Form
     Dim ctl As Control
-    Dim stepName As String              ' �� ���� ������ (������ ������)
-    Dim errCount As Long                ' ���� ������
-    Dim errLog As String                ' ���� ������
-    Dim sec As Long                     ' ���� ���� (0=Detail, 1=Header)
-    Dim hTop As Long, dTop As Long, curTop As Long  ' ����� ���� ����� ��� ����
+    Dim stepName As String              ' ?? ???? ?????? (?????? ??????)
+    Dim errCount As Long                ' ???? ??????
+    Dim errLog As String                ' ???? ??????
+    Dim sec As Long                     ' ???? ???? (0=Detail, 1=Header)
+    Dim hTop As Long, dTop As Long, curTop As Long  ' ????? ???? ????? ??? ????
     Dim i As Long
 
-    ' ����� ����� (������� twips: 1 ����' = 1440, 1 �"� = 567)
+    ' ????? ????? (??????? twips: 1 ????' = 1440, 1 ?"? = 567)
     ' Layout constants (twips: 1 inch = 1440, 1 cm = 567)
     Dim formW As Long, margin As Long, colW As Long, gap As Long
     Dim halfW As Long, halfLeft As Long, secGap As Long
     formW = 11400: margin = 200: colW = 8000: gap = 100: secGap = 200
-    halfW = 3900: halfLeft = 4100       ' ��� ���� ������� �����/���� �� ��� ��
-    ' ����� ���� ���� / Right sidebar constants
+    halfW = 3900: halfLeft = 4100       ' ??? ???? ??????? ?????/???? ?? ??? ??
+    ' ????? ???? ???? / Right sidebar constants
     Dim sidebarLeft As Long, sidebarW As Long, sidebarBtnH As Long, sidebarGap As Long
     sidebarLeft = 8600: sidebarW = 2400: sidebarBtnH = 560: sidebarGap = 200
-    ' ��� ����� / Color palette
+    ' ??? ????? / Color palette
     Dim clrBg As Long, clrCard As Long, clrCyan As Long, clrTextDark As Long
     Dim clrTextMuted As Long, clrBorder As Long, clrYellow As Long
-    clrBg = RGB(243, 244, 246)           ' ��� ���� ���� / light gray background
-    clrCard = RGB(255, 255, 255)          ' ����� ��� / white card
-    clrCyan = RGB(0, 200, 210)           ' ����/������ ��� �������� / cyan for all buttons
-    clrTextDark = RGB(17, 24, 39)         ' ���� ��� / near-black text
-    clrTextMuted = RGB(107, 114, 128)     ' ���� ������ / gray muted text
-    clrBorder = RGB(209, 213, 219)        ' ���� ���� / subtle border
-    clrYellow = RGB(255, 255, 0)          ' ��� ���� ��� ��� ��� / yellow highlight
+    clrBg = RGB(243, 244, 246)           ' ??? ???? ???? / light gray background
+    clrCard = RGB(255, 255, 255)          ' ????? ??? / white card
+    clrCyan = RGB(0, 200, 210)           ' ????/?????? ??? ???????? / cyan for all buttons
+    clrTextDark = RGB(17, 24, 39)         ' ???? ??? / near-black text
+    clrTextMuted = RGB(107, 114, 128)     ' ???? ?????? / gray muted text
+    clrBorder = RGB(209, 213, 219)        ' ???? ???? / subtle border
+    clrYellow = RGB(255, 255, 0)          ' ??? ???? ??? ??? ??? / yellow highlight
 
     On Error Resume Next
 
     DoCmd.Close acForm, frmName, acSaveNo: Err.Clear
 
-    ' ����� ���� ���� (frmCallHistoryGrid) �� �� ���� / Create frmCallHistoryGrid if it does not exist yet
+    ' ????? ???? ???? (frmCallHistoryGrid) ?? ?? ???? / Create frmCallHistoryGrid if it does not exist yet
     EnsureCallHistoryGridForm
     Err.Clear
 
-    ' ����� ����� ����� ���� �����
+    ' ????? ????? ????? ???? ?????
     DoCmd.OpenForm frmName, acDesign
     If Err.number <> 0 Then
         MsgBox "Setup: " & Err.Description, vbCritical: Exit Sub
@@ -2284,7 +2284,7 @@ Public Sub SetupContactsDialerForm()
 
     errCount = 0: errLog = "": hTop = 100: dTop = 100
 
-    ' ===== ����� ������ ����� ����� ������ ������ =====
+    ' ===== ????? ?????? ????? ????? ?????? ?????? =====
     ' ===== Delete old title labels from previous runs =====
     Dim titles As Variant
     titles = Array("ttlPhone", "ttlLandline", "ttlEmail", "ttlDateAdded", "ttlNotes", "ttlHistory")
@@ -2292,7 +2292,7 @@ Public Sub SetupContactsDialerForm()
         DeleteControl frmName, CStr(titles(i)): Err.Clear
     Next i
 
-    ' ===== ������ ���� ������ / Form properties =====
+    ' ===== ?????? ???? ?????? / Form properties =====
     Err.Clear: stepName = "Form properties"
     frm.Width = formW
     frm.caption = "Contacts Dialer"
@@ -2304,8 +2304,8 @@ Public Sub SetupContactsDialerForm()
     frm.ScrollBars = 0
     If Err.number <> 0 Then errLog = errLog & stepName & ": " & Err.Description & vbCrLf: errCount = errCount + 1: Err.Clear
 
-    ' ===== ���� ����� ���� ����� / txtSearch (search box at top) =====
-    ' RTL, ����� ����, ���� Segoe UI, ����� OnChange ������ ��� ����
+    ' ===== ???? ????? ???? ????? / txtSearch (search box at top) =====
+    ' RTL, ????? ????, ???? Segoe UI, ????? OnChange ?????? ??? ????
     CreateCopyShortcutMenu
 
     Err.Clear: stepName = "txtSearch"
@@ -2320,14 +2320,14 @@ Public Sub SetupContactsDialerForm()
         .ForeColor = clrTextDark
         .OnChange = "=ContactsDialer_TxtSearch_Change()"
         .OnGotFocus = "=ContactsDialer_TxtSearch_GotFocus()"
-        .ControlTipText = ChrW(1500) & ChrW(1495) & ChrW(1509) & " ESC " & ChrW(1500) & ChrW(1488) & ChrW(1497) & ChrW(1508) & ChrW(1493) & ChrW(1505) & " " & ChrW(1495) & ChrW(1497) & ChrW(1508) & ChrW(1493) & ChrW(1513) & " " & ChrW(1493) & ChrW(1500) & ChrW(1495) & ChrW(1494) & ChrW(1493) & ChrW(1512) & " " & ChrW(1500) & ChrW(1514) & ChrW(1497) & ChrW(1489) & ChrW(1514) & " " & ChrW(1495) & ChrW(1497) & ChrW(1508) & ChrW(1493) & ChrW(1513)  ' ��� ESC ������ ����� ������ ����� �����
+        .ControlTipText = ChrW(1500) & ChrW(1495) & ChrW(1509) & " ESC " & ChrW(1500) & ChrW(1488) & ChrW(1497) & ChrW(1508) & ChrW(1493) & ChrW(1505) & " " & ChrW(1495) & ChrW(1497) & ChrW(1508) & ChrW(1493) & ChrW(1513) & " " & ChrW(1493) & ChrW(1500) & ChrW(1495) & ChrW(1494) & ChrW(1493) & ChrW(1512) & " " & ChrW(1500) & ChrW(1514) & ChrW(1497) & ChrW(1489) & ChrW(1514) & " " & ChrW(1495) & ChrW(1497) & ChrW(1508) & ChrW(1493) & ChrW(1513)  ' ??? ESC ?????? ????? ?????? ????? ?????
     End With
     curTop = curTop + 440 + gap
     If sec = 1 Then hTop = curTop Else dTop = curTop
     If Err.number <> 0 Then errLog = errLog & stepName & ": " & Err.Description & vbCrLf: errCount = errCount + 1: Err.Clear
 
-    ' ===== ����� ����� ���� ����� ������ / lblSearch (label right below search box) =====
-    ' ����� �� �� ��� ���� ����� ������. ������� ��� ����� �����.
+    ' ===== ????? ????? ???? ????? ?????? / lblSearch (label right below search box) =====
+    ' ????? ?? ?? ??? ???? ????? ??????. ??????? ??? ????? ?????.
     Err.Clear: stepName = "lblSearch"
     sec = frm.lblSearch.section
     If sec = 1 Then curTop = hTop Else curTop = dTop
@@ -2361,7 +2361,7 @@ Public Sub SetupContactsDialerForm()
     If sec = 1 Then hTop = curTop Else dTop = curTop
     If Err.number <> 0 Then errLog = errLog & stepName & ": " & Err.Description & vbCrLf: errCount = errCount + 1: Err.Clear
 
-    ' ===== �� ��� ��� ���� ����� / lblContactName (big bold name, right-aligned) =====
+    ' ===== ?? ??? ??? ???? ????? / lblContactName (big bold name, right-aligned) =====
     Err.Clear: stepName = "lblContactName"
     sec = frm.lblContactName.section
     If sec = 1 Then curTop = hTop Else curTop = dTop
@@ -2376,17 +2376,17 @@ Public Sub SetupContactsDialerForm()
     If sec = 1 Then hTop = curTop Else dTop = curTop
     If Err.number <> 0 Then errLog = errLog & stepName & ": " & Err.Description & vbCrLf: errCount = errCount + 1: Err.Clear
 
-    ' ===== ���� ��� ��� ����� / lblContactID (hidden) =====
-    ' TextBox ����� ����� �� �-ContactID �� ��� ���� �����
+    ' ===== ???? ??? ??? ????? / lblContactID (hidden) =====
+    ' TextBox ????? ????? ?? ?-ContactID ?? ??? ???? ?????
     Err.Clear: stepName = "lblContactID"
     With frm.lblContactID
         .Left = margin: .Top = 0: .Width = 100: .Height = 100: .Visible = False
     End With
     If Err.number <> 0 Then errLog = errLog & stepName & ": " & Err.Description & vbCrLf: errCount = errCount + 1: Err.Clear
 
-    ' ===== ������ ����� + ���� (RTL: ����=�����, ����=����) =====
+    ' ===== ?????? ????? + ???? (RTL: ????=?????, ????=????) =====
     ' ===== Phone + Landline buttons (RTL: right=Phone, left=Landline) =====
-    ' ����� ������ ���� ����. ��� �������� �����.
+    ' ????? ?????? ???? ????. ??? ???????? ?????.
     Err.Clear: stepName = "Phone buttons"
     sec = frm.cmdPhoneNumber.section
     If sec = 1 Then curTop = hTop Else curTop = dTop
@@ -2412,8 +2412,8 @@ Public Sub SetupContactsDialerForm()
     If sec = 1 Then hTop = curTop Else dTop = curTop
     If Err.number <> 0 Then errLog = errLog & stepName & ": " & Err.Description & vbCrLf: errCount = errCount + 1: Err.Clear
 
-    ' ===== ���"�: ����� ����� + ��� ����� / Email (btnNewMail + txtEmail) =====
-    ' ����� Send Mail ���� ����� ���"�. ��� txtEmail ����� ����, ����� ����� (������).
+    ' ===== ???"?: ????? ????? + ??? ????? / Email (btnNewMail + txtEmail) =====
+    ' ????? Send Mail ???? ????? ???"?. ??? txtEmail ????? ????, ????? ????? (??????).
     Err.Clear: stepName = "Email"
     sec = frm.txtEmail.section
     If sec = 1 Then curTop = hTop Else curTop = dTop
@@ -2438,8 +2438,8 @@ Public Sub SetupContactsDialerForm()
     If sec = 1 Then hTop = curTop Else dTop = curTop
     If Err.number <> 0 Then errLog = errLog & stepName & ": " & Err.Description & vbCrLf: errCount = errCount + 1: Err.Clear
 
-    ' ===== �����: ����� + ���� ���� ��-������ / Notes (title + multiline read-only textbox) =====
-    ' ��� txtNotes ����� ����, ����� ����, �� ����� ����.
+    ' ===== ?????: ????? + ???? ???? ??-?????? / Notes (title + multiline read-only textbox) =====
+    ' ??? txtNotes ????? ????, ????? ????, ?? ????? ????.
     Err.Clear: stepName = "Notes"
     sec = frm.txtNotes.section
     If sec = 1 Then curTop = hTop Else curTop = dTop
@@ -2464,8 +2464,8 @@ Public Sub SetupContactsDialerForm()
     If sec = 1 Then hTop = curTop Else dTop = curTop
     If Err.number <> 0 Then errLog = errLog & stepName & ": " & Err.Description & vbCrLf: errCount = errCount + 1: Err.Clear
 
-    ' ===== ��������� �����: ����� + ��-���� ���� / Call History (title + subform) =====
-    ' sfrmCallHistory ���� �� frmCallHistoryGrid (Datasheet) �� 5 ������.
+    ' ===== ????????? ?????: ????? + ??-???? ???? / Call History (title + subform) =====
+    ' sfrmCallHistory ???? ?? frmCallHistoryGrid (Datasheet) ?? 5 ??????.
     Err.Clear: stepName = "CallHistory"
     sec = frm.sfrmCallHistory.section
     If sec = 1 Then curTop = hTop Else curTop = dTop
@@ -2486,8 +2486,8 @@ Public Sub SetupContactsDialerForm()
     If sec = 1 Then hTop = curTop Else dTop = curTop
     If Err.number <> 0 Then errLog = errLog & stepName & ": " & Err.Description & vbCrLf: errCount = errCount + 1: Err.Clear
 
-    ' ===== ������ ���� ���� / Right sidebar buttons =====
-    ' btnNewCus, btnEditCus, btnSendCus, btnSaveCall � ����, ������� �����
+    ' ===== ?????? ???? ???? / Right sidebar buttons =====
+    ' btnNewCus, btnEditCus, btnSendCus, btnSaveCall ? ????, ??????? ?????
     Err.Clear: stepName = "Sidebar buttons"
     Dim sbTop As Long: sbTop = 100
     Dim sbNames As Variant, sb As Long
@@ -2505,7 +2505,7 @@ Public Sub SetupContactsDialerForm()
     Next sb
     If Err.number <> 0 Then errLog = errLog & stepName & ": " & Err.Description & vbCrLf: errCount = errCount + 1: Err.Clear
 
-    ' ===== btnExit (����� ����� � ���� ����) =====
+    ' ===== btnExit (????? ????? ? ???? ????) =====
     Err.Clear: stepName = "btnExit"
     Set ctl = Nothing: Set ctl = frm.Controls("btnExit")
     If Not ctl Is Nothing Then
@@ -2515,7 +2515,7 @@ Public Sub SetupContactsDialerForm()
         ctl.OnClick = "=ContactsDialer_BtnExit_Click()"
     End If: Err.Clear
 
-    ' ===== ����� ����� �-Excel (����� ���� ����) =====
+    ' ===== ????? ????? ?-Excel (????? ???? ????) =====
     ' ===== btnImportExcel (bottom of right sidebar) =====
     Err.Clear: stepName = "btnImportExcel"
     Set ctl = Nothing: Set ctl = frm.Controls("btnImportExcel")
@@ -2528,7 +2528,7 @@ Public Sub SetupContactsDialerForm()
         ctl.TabStop = False
     End If: Err.Clear
 
-    ' ===== ���� ������ + ��� ��� / Section heights + BackColor =====
+    ' ===== ???? ?????? + ??? ??? / Section heights + BackColor =====
     Err.Clear: stepName = "Sections"
     If hTop > 100 Then
         frm.section(acHeader).Height = hTop + 100
@@ -2543,12 +2543,12 @@ Public Sub SetupContactsDialerForm()
     frm.section(acDetail).BackColor = clrBg
     If Err.number <> 0 Then Err.Clear
 
-    ' ===== ����� ������ / Save & Close =====
+    ' ===== ????? ?????? / Save & Close =====
     Err.Clear
     DoCmd.Save acForm, frmName
     DoCmd.Close acForm, frmName, acSaveYes
 
-    ' ����� �����: ����� �� ����� ������
+    ' ????? ?????: ????? ?? ????? ??????
     If errCount = 0 Then
         MsgBox frmName & ": Setup completed successfully." & vbCrLf & _
                "Open the form to test.", vbInformation, "Setup"
@@ -2558,10 +2558,10 @@ Public Sub SetupContactsDialerForm()
 End Sub
 
 
-' ����� ����� ���� � �����, ������, �����, �����.
-' �� ����/���� �����, �� ���� ������� �� ������ ������.
-' ���� ����� ���� ������� ������ ����� � �� ���� ����.
-' Visual styling ONLY � colors, fonts, sizes, positions.
+' ????? ????? ???? ? ?????, ??????, ?????, ?????.
+' ?? ????/???? ?????, ?? ???? ??????? ?? ?????? ??????.
+' ???? ????? ???? ??????? ?????? ????? ? ?? ???? ????.
+' Visual styling ONLY ? colors, fonts, sizes, positions.
 ' Does NOT create/delete controls, does NOT change events or data properties.
 ' Safe to run after manual form changes without overwriting them.
 ' ---------------------------------------------------------------------------
@@ -2570,7 +2570,7 @@ Public Sub StyleContactsDialerForm()
     Dim frm As Access.Form
     Dim sec As Long, curTop As Long, hTop As Long, dTop As Long
 
-    ' ����� ����� (twips) / Layout constants (twips)
+    ' ????? ????? (twips) / Layout constants (twips)
     Dim formW As Long, margin As Long, colW As Long, gap As Long
     Dim halfW As Long, halfLeft As Long, secGap As Long
     formW = 11400: margin = 200: colW = 8000: gap = 100: secGap = 200
@@ -2702,7 +2702,7 @@ Public Sub StyleContactsDialerForm()
     ' ===== Notes =====
     sec = frm.txtNotes.section
     If sec = 1 Then curTop = hTop Else curTop = dTop
-    ' Title label (ttlNotes) � style only if it exists
+    ' Title label (ttlNotes) ? style only if it exists
     Dim ttl As Control
     Set ttl = Nothing: Set ttl = frm.Controls("ttlNotes")
     If Not ttl Is Nothing Then
@@ -2740,7 +2740,7 @@ Public Sub StyleContactsDialerForm()
     If sec = 1 Then hTop = curTop Else dTop = curTop
     Err.Clear
 
-    ' ===== ������ ���� ���� (����� ����, ��� ����� ����� �� ������) =====
+    ' ===== ?????? ???? ???? (????? ????, ??? ????? ????? ?? ??????) =====
     Dim sbCtl As Control, sbNames As Variant, sb As Long
     sbNames = Array("btnNewCus", "btnEditCus", "btnSendCus", "btnSaveCall")
     For sb = 0 To UBound(sbNames)
@@ -2751,7 +2751,7 @@ Public Sub StyleContactsDialerForm()
         End If: Err.Clear
     Next sb
 
-    ' ===== btnExit (����� ����) =====
+    ' ===== btnExit (????? ????) =====
     Dim btnExit As Control
     Set btnExit = Nothing: Set btnExit = frm.Controls("btnExit")
     If Not btnExit Is Nothing Then
@@ -2772,7 +2772,7 @@ Public Sub StyleContactsDialerForm()
     Dim btnExp As Control
     Set btnExp = Nothing: Set btnExp = frm.Controls("btnExport2Outlook")
     If Not btnExp Is Nothing Then
-        btnExp.caption = "����� �-Outlook"
+        btnExp.caption = "????? ?-Outlook"
         btnExp.FontSize = 11: btnExp.FontBold = True: btnExp.FontName = "Segoe UI"
         btnExp.ForeColor = RGB(255, 255, 255)
         btnExp.BackColor = clrCyan: btnExp.UseTheme = False
@@ -2801,17 +2801,17 @@ End Sub
 
 
 ' SetDialerAsStartupForm
-' ����� �� frmContactsDialer ����� ����� �������� ������ ����.
-' ���� ��-����� �-Immediate:  SetDialerAsStartupForm
+' ????? ?? frmContactsDialer ????? ????? ???????? ?????? ????.
+' ???? ??-????? ?-Immediate:  SetDialerAsStartupForm
 ' ---------------------------------------------------------------------------
 Public Sub SetDialerAsStartupForm()
     On Error Resume Next
     Dim db As DAO.Database
     Set db = CurrentDb
-    ' ������ ����� Property ����
+    ' ?????? ????? Property ????
     db.Properties("StartupForm") = "frmContactsDialer"
     If Err.number <> 0 Then
-        ' Property �� ���� � ���� ���
+        ' Property ?? ???? ? ???? ???
         Err.Clear
         Dim prp As DAO.Property
         Set prp = db.CreateProperty("StartupForm", dbText, "frmContactsDialer")
@@ -2826,9 +2826,9 @@ End Sub
 
 
 ' ClearNewButtonEvents
-' ����� ����� OnClick ���� �-4 ������� ������ �����-����.
-' �� ���� �����, �����, ����� �� �� ����� ����.
-' ���� �-Immediate:  ClearNewButtonEvents
+' ????? ????? OnClick ???? ?-4 ??????? ?????? ?????-????.
+' ?? ???? ?????, ?????, ????? ?? ?? ????? ????.
+' ???? ?-Immediate:  ClearNewButtonEvents
 ' ---------------------------------------------------------------------------
 Public Sub ClearNewButtonEvents()
     Const frmName As String = "frmContactsDialer"
@@ -2853,8 +2853,8 @@ Public Sub ClearNewButtonEvents()
 End Sub
 
 
-' 5 ������: ���� (�����), �����, ���, ����, ��.
-' ������ ������ ������ (������� ��� ctl.Name).
+' 5 ??????: ???? (?????), ?????, ???, ????, ??.
+' ?????? ?????? ?????? (??????? ??? ctl.Name).
 ' ---------------------------------------------------------------------------
 Private Sub EnsureCallHistoryGridForm()
     On Error Resume Next
@@ -2886,17 +2886,17 @@ Private Sub EnsureCallHistoryGridForm()
     newFrm.DatasheetFontName = "Segoe UI"
     newFrm.DatasheetFontHeight = 10
 
-    ' Add bound TextBox controls � 5 columns (Hebrew names = Datasheet column headers)
+    ' Add bound TextBox controls ? 5 columns (Hebrew names = Datasheet column headers)
     Set ctl = Application.CreateControl(tmpName, acTextBox, acDetail, "", "PhoneNumber", 0, 0, 1800, 300)
-    ctl.name = ChrW(1502) & ChrW(1505) & ChrW(1508) & ChrW(1512)  ' ����
+    ctl.name = ChrW(1502) & ChrW(1505) & ChrW(1508) & ChrW(1512)  ' ????
     Set ctl = Application.CreateControl(tmpName, acTextBox, acDetail, "", "CallDate", 1900, 0, 1440, 300)
-    ctl.name = ChrW(1514) & ChrW(1488) & ChrW(1512) & ChrW(1497) & ChrW(1498): ctl.Format = "dd/mm/yyyy"  ' �����
+    ctl.name = ChrW(1514) & ChrW(1488) & ChrW(1512) & ChrW(1497) & ChrW(1498): ctl.Format = "dd/mm/yyyy"  ' ?????
     Set ctl = Application.CreateControl(tmpName, acTextBox, acDetail, "", "CallTime", 3400, 0, 720, 300)
-    ctl.name = ChrW(1513) & ChrW(1506) & ChrW(1492): ctl.Format = "hh:nn:ss"  ' ���
+    ctl.name = ChrW(1513) & ChrW(1506) & ChrW(1492): ctl.Format = "hh:nn:ss"  ' ???
     Set ctl = Application.CreateControl(tmpName, acTextBox, acDetail, "", "Notes", 4200, 0, 2880, 300)
-    ctl.name = ChrW(1492) & ChrW(1506) & ChrW(1512) & ChrW(1492): ctl.TextAlign = 3  ' ����, Right
+    ctl.name = ChrW(1492) & ChrW(1506) & ChrW(1512) & ChrW(1492): ctl.TextAlign = 3  ' ????, Right
     Set ctl = Application.CreateControl(tmpName, acTextBox, acDetail, "", "ContactName", 7200, 0, 2000, 300)
-    ctl.name = ChrW(1513) & ChrW(1501): ctl.TextAlign = 1  ' ��, Left
+    ctl.name = ChrW(1513) & ChrW(1501): ctl.TextAlign = 1  ' ??, Left
 
     DoCmd.Save acForm, tmpName
     DoCmd.Close acForm, tmpName, acSaveYes
@@ -2912,8 +2912,8 @@ CreateErr:
 End Sub
 
 
-'   6. ����� �����: ����� / �������� / �������
-'   7. ����� ����� ���� ���
+'   6. ????? ?????: ????? / ???????? / ???????
+'   7. ????? ????? ???? ???
 ' ---------------------------------------------------------------------------
 Public Sub ImportContactsFromExcel(ByVal filePath As String)
     On Error GoTo ErrorHandler
@@ -3079,8 +3079,8 @@ End Sub
 
 ' ---------------------------------------------------------------------------
 ' Safe field reader: returns field value or "" if field does not exist
-' ���� ��� ��� ����� ���� � ����� "" �� ���� �� ����.
-' ����� ������ �������� ����� Excel �� ������ �� ���� ����� �������.
+' ???? ??? ??? ????? ???? ? ????? "" ?? ???? ?? ????.
+' ????? ?????? ???????? ????? Excel ?? ?????? ?? ???? ????? ???????.
 ' ---------------------------------------------------------------------------
 Private Function ExcelField(rs As Object, fieldName As String) As Variant
     On Error Resume Next
@@ -3091,7 +3091,7 @@ End Function
 
 ' ---------------------------------------------------------------------------
 ' Browse for Excel file and import (fallback button / Immediate window)
-' ����� �� ����� ����� � ���� ���� ����� ���� Excel ������ �� ���� ����.
+' ????? ?? ????? ????? ? ???? ???? ????? ???? Excel ?????? ?? ???? ????.
 ' Call: ContactsDialer_BrowseImportExcel
 ' ---------------------------------------------------------------------------
 Public Function ContactsDialer_BtnImportExcel_Click() As Variant
@@ -3124,7 +3124,7 @@ End Function
 ' ---------------------------------------------------------------------------
 ' ImportContactFromVCF: parse VCF file and open frmContactEdit
 ' ---------------------------------------------------------------------------
-' ����� ��� ��� ����� VCF - ����� ����� ����� ������ ����� Contacts
+' ????? ??? ??? ????? VCF - ????? ????? ????? ?????? ????? Contacts
 Public Sub ImportContactFromVCF(ByVal filePath As String)
     On Error GoTo ErrHandler
 

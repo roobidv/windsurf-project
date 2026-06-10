@@ -23,41 +23,54 @@ Private Declare PtrSafe Function IsIconic Lib "user32" ( _
 Private Declare PtrSafe Function ShowWindow Lib "user32" ( _
     ByVal hWnd As LongPtr, ByVal nCmdShow As Long) As Long
 
+
+Private Declare PtrSafe Function LoadKeyboardLayout Lib "user32" Alias "LoadKeyboardLayoutA" ( _
+    ByVal pwszKLID As String, ByVal Flags As Long) As LongPtr
+Private Declare PtrSafe Function ActivateKeyboardLayout Lib "user32" ( _
+    ByVal hkl As LongPtr, ByVal Flags As Long) As LongPtr
 Private Const SW_RESTORE As Long = 9
-Private Const VK_CONTROL As Long = &H11
-Private Const VK_OEM_3 As Long = &HC0     ' ` ~ key
+Private Const VK_F2 As Long = &H71        ' F2 key
 
 ' ---------------------------------------------------------------------------
-' CheckHotkey - called from Form_Timer, checks Ctrl+` and brings Access to front
+' CheckHotkey - called from Form_Timer, checks F2 and brings Access to front
 ' ---------------------------------------------------------------------------
+' בדיקת מקש קיצור Ctrl+ להעברת פוקוס
 Public Sub CheckHotkey()
     On Error Resume Next
     
-    Dim ctrlDown As Boolean
-    Dim tildeDown As Boolean
-    ctrlDown = (GetAsyncKeyState(VK_CONTROL) And &H8000) <> 0
-    tildeDown = (GetAsyncKeyState(VK_OEM_3) And &H8000) <> 0
-    If Not tildeDown Then tildeDown = (GetAsyncKeyState(&HDF) And &H8000) <> 0
+    Dim f2Down As Boolean
+    f2Down = (GetAsyncKeyState(VK_F2) And &H8001) <> 0  ' check both: key down OR was pressed since last check
     
-    If Not (ctrlDown And tildeDown) Then Exit Sub
+    If Not f2Down Then Exit Sub
     
-    Dim hWndAccess As LongPtr
-    hWndAccess = Application.hWndAccessApp
-    If hWndAccess = 0 Then Exit Sub
+    ' Bring form window to front (works for both ACCDB and ACCDE)
+    Dim hWndTarget As LongPtr
+    hWndTarget = Forms("frmContactsDialer").hWnd
+    If hWndTarget = 0 Then Exit Sub
     
-    If IsIconic(hWndAccess) <> 0 Then
-        ShowWindow hWndAccess, SW_RESTORE
+    If IsIconic(hWndTarget) <> 0 Then
+        ShowWindow hWndTarget, SW_RESTORE
     End If
-    SetForegroundWindow hWndAccess
+    SetForegroundWindow hWndTarget
+    
+    ' Set focus to search box (without clearing content)
+    Forms("frmContactsDialer").txtSearch.SetFocus
+    
+    ' Switch keyboard to Hebrew
+    Dim hkl As LongPtr
+    hkl = LoadKeyboardLayout("0000040D", 1)
+    ActivateKeyboardLayout hkl, 0
 End Sub
 
 ' ---------------------------------------------------------------------------
 ' StartHotkey / StopHotkey - kept for backward compatibility (no-ops)
 ' ---------------------------------------------------------------------------
+' הפעלת ניטור מקשי קיצור - מתחיל בדיקת Ctrl+ בטיימר
 Public Sub StartHotkey()
     Debug.Print "GlobalHotkey: Using Form_Timer (ACCDE compatible)"
 End Sub
 
+' עצירת ניטור מקשי קיצור - עוצר את בדיקת Ctrl+`r
 Public Sub StopHotkey()
     Debug.Print "GlobalHotkey: Stopped."
 End Sub
