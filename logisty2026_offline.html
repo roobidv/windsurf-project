@@ -641,6 +641,11 @@
             background: var(--primary-light);
             color: var(--primary);
         }
+        .phone-btn.map {
+            background: #e8f5e9;
+            color: #1b5e20;
+            font-size: 16px;
+        }
         .phone-btn:active {
             transform: scale(0.9);
         }
@@ -1203,7 +1208,7 @@
                 <div class="card${hasNotes}${typeClass}" onclick="toggleCard(event, this)">
                     <div class="authority-name">${esc(r.authority)}</div>
                     <div class="card-header">
-                        <div class="institution-name">${esc(r.name)}</div>
+                        <div class="institution-name">${esc(r.name)}<button class="phone-btn map" onclick="event.stopPropagation();openMaps('${esc(r.name)}','${esc(gV('address'))}')" title="נווט בגוגל מפות">📍</button></div>
                         <div class="institution-code">${esc(r.code)}<button class="copy-code-btn" onclick="event.stopPropagation();_copyText('${esc(r.code)}')" title="העתק סמל">📋</button>${r.salesperson ? `<span class="salesperson-inline">${esc(r.salesperson)}</span>` : ''}</div>
                     </div>
                     <div class="card-tags">
@@ -1267,6 +1272,7 @@
                             <div class="contact-row-label">📍 כתובת</div>
                             <div class="email-row">
                                 <input class="email-input rtl" type="text" data-field="address" data-key="${baseKey}" value="${esc(gV('address'))}" placeholder="כתובת בית הספר" oninput="saveFieldLocal(this)" onblur="saveFieldCloud(this)">
+                                <button class="phone-btn map" onclick="openDirections(this)" title="מסלול במפות גוגל">🗺</button>
                                 <button class="phone-btn copy" onclick="copyEmail(this)">📋</button>
                             </div>
                         </div>
@@ -1749,6 +1755,18 @@
             inputs.forEach(el => { if (el.value.trim()) hasData = true; });
             if (hasData) card.classList.add('has-notes');
             else card.classList.remove('has-notes');
+        }
+
+        function openMaps(name, address) {
+            const query = address ? (name + ' ' + address) : name;
+            window.open('https://www.google.com/maps?q=' + encodeURIComponent(query), '_blank');
+        }
+
+        function openDirections(btn) {
+            const input = btn.closest('.email-row').querySelector('.email-input');
+            const address = input.value.trim();
+            if (!address) { alert('אין כתובת'); return; }
+            window.open('https://www.google.com/maps?q=' + encodeURIComponent(address), '_blank');
         }
 
         function callPhone(btn) {
