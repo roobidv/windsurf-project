@@ -182,3 +182,25 @@ Public Sub CheckCloudMessages()
         pos = InStr(pos + 10, resp, """msg"":", vbTextCompare)
     Loop
 End Sub
+
+' ---------------------------------------------------------------------------
+' Hotkey stubs - replace GlobalHotkey module
+' F2 hotkey is handled by external PowerShell script (AccessHotkey.ps1)
+' ---------------------------------------------------------------------------
+Private Const HOTKEY_SCRIPT As String = "C:\Users\USER\Documents\unbound\dialer-google\AccessHotkey.ps1"
+
+Public Sub StartHotkey()
+    On Error Resume Next
+    Shell "powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File """ & HOTKEY_SCRIPT & """", vbHide
+    Debug.Print "Hotkey: F2 script launched"
+End Sub
+
+Public Sub CheckHotkey()
+    ' No-op: F2 handled by external PowerShell script
+End Sub
+
+Public Sub StopHotkey()
+    On Error Resume Next
+    Shell "powershell -Command ""Get-Process powershell | Where-Object { $_.CommandLine -match 'AccessHotkey' } | Stop-Process -Force""", vbHide
+    Debug.Print "Hotkey: F2 script stopped"
+End Sub
