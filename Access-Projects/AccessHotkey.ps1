@@ -18,6 +18,12 @@ public class AccessHotkey : Form {
     public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
     [DllImport("user32.dll")]
     public static extern bool IsIconic(IntPtr hWnd);
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+    [DllImport("user32.dll")]
+    public static extern bool OpenIcon(IntPtr hWnd);
+    [DllImport("user32.dll")]
+    public static extern void SwitchToThisWindow(IntPtr hWnd, bool fAltTab);
     [DllImport("user32.dll")]
     public static extern IntPtr LoadKeyboardLayout(string pwszKLID, uint Flags);
     [DllImport("user32.dll")]
@@ -53,18 +59,24 @@ public class AccessHotkey : Form {
 
     protected override void WndProc(ref Message m) {
         if (m.Msg == WM_HOTKEY) {
-            foreach (var p in Process.GetProcessesByName("MSACCESS")) {
-                IntPtr h = p.MainWindowHandle;
+            {
+                IntPtr h = IntPtr.Zero;
+                foreach (var p in Process.GetProcessesByName("MSACCESS")) {
+                    h = p.MainWindowHandle;
+                    break;
+                }
+                if (h == IntPtr.Zero) h = FindWindow("OMain", null);
                 if (h != IntPtr.Zero) {
-                    if (IsIconic(h)) ShowWindow(h, SW_RESTORE);
+                    ShowWindow(h, SW_RESTORE);
+                    ShowWindow(h, 3); // SW_MAXIMIZE - handles off-screen windows
                     SetForegroundWindow(h);
                     Thread.Sleep(150);
                     // Switch to Hebrew keyboard
                     IntPtr hkl = LoadKeyboardLayout("0000040D", 1);
                     ActivateKeyboardLayout(hkl, 0);
                     // Signal VBA to focus txtSearch
-                    System.IO.File.WriteAllText(@"C:\Users\USER\Documents\hotkey_flag.txt", "1");
-                    break;
+                    string flagPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "hotkey_flag.txt");
+                    System.IO.File.WriteAllText(flagPath, "1");
                 }
             }
         }

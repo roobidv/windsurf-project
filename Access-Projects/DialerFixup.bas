@@ -187,16 +187,26 @@ End Sub
 ' Hotkey stubs - replace GlobalHotkey module
 ' F2 hotkey is handled by external PowerShell script (AccessHotkey.ps1)
 ' ---------------------------------------------------------------------------
-Private Const HOTKEY_SCRIPT As String = "C:\Users\USER\Documents\unbound\dialer-google\AccessHotkey.ps1"
+' Script must be in same folder as the ACCDB/ACCDE
 
 Public Sub StartHotkey()
     On Error Resume Next
-    Shell "powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File """ & HOTKEY_SCRIPT & """", vbHide
+    Dim sScript As String
+    sScript = CurrentProject.Path & "\AccessHotkey.ps1"
+    If Dir(sScript) = "" Then Debug.Print "Hotkey: AccessHotkey.ps1 not found!": Exit Sub
+    Shell "powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File """ & sScript & """", vbHide
     Debug.Print "Hotkey: F2 script launched"
 End Sub
 
 Public Sub CheckHotkey()
-    ' No-op: F2 handled by external PowerShell script
+    On Error Resume Next
+    Dim sFlag As String
+    sFlag = Environ("TEMP") & "\hotkey_flag.txt"
+    If Dir(sFlag) <> "" Then
+        Kill sFlag
+        ShowWindow Application.hWndAccessApp, 9
+        DoCmd.OpenForm "frmContactsDialer"
+    End If
 End Sub
 
 Public Sub StopHotkey()
