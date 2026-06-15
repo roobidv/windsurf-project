@@ -68,8 +68,14 @@ public class AccessHotkey : Form {
                 if (h == IntPtr.Zero) h = FindWindow("OMain", null);
                 if (h != IntPtr.Zero) {
                     ShowWindow(h, SW_RESTORE);
-                    ShowWindow(h, 3); // SW_MAXIMIZE - handles off-screen windows
-                    SetForegroundWindow(h);
+                    // Try to find and activate the form window directly
+                    IntPtr hForm = FindWindow(null, "Contacts Dialer");
+                    if (hForm != IntPtr.Zero) {
+                        ShowWindow(hForm, SW_RESTORE);
+                        SetForegroundWindow(hForm);
+                    } else {
+                        SetForegroundWindow(h);
+                    }
                     Thread.Sleep(150);
                     // Switch to Hebrew keyboard
                     IntPtr hkl = LoadKeyboardLayout("0000040D", 1);
