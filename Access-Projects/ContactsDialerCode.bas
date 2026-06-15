@@ -83,7 +83,7 @@ Private m_rsCallHistory As DAO.Recordset
 Private m_hWndDialer As LongPtr
 Private m_skipGridNoteUpdate As Boolean
 Private m_logID As Long
-Private Const APP_VERSION As String = "1.0.0"  ' ???? ????????
+Private Const APP_VERSION As String = "1.2.0"  ' ???? ????????
 
 ' ---------------------------------------------------------------------------
 ' Form_Load: clears display when form opens
