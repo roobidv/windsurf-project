@@ -26,7 +26,7 @@ Public Sub RestoreTablesFromBackup()
     newestDate = #1/1/2000#
     Dim f As Object
     For Each f In folder.Files
-        If LCase$(fso.GetExtensionName(f.Name)) = "accdb" Then
+        If LCase$(f.Name) = "backup_odd.accdb" Or LCase$(f.Name) = "backup_even.accdb" Then
             If f.DateLastModified > newestDate Then
                 newestDate = f.DateLastModified
                 newestFile = f.Path
@@ -52,7 +52,7 @@ Public Sub RestoreTablesFromBackup()
 
     ' --- Restore each table ---
     Dim tables As Variant
-    tables = Array("Contacts", "CallHistory", "SpeedDial", "Interactions", "tblSettings", "tblGLOBAL_PHONE_BOOK")
+    tables = Array("CallHistory", "SpeedDial", "Interactions", "tblSettings")
     Dim restored As Long: restored = 0
     Dim skipped As String
     Dim i As Long
@@ -69,6 +69,11 @@ Public Sub RestoreTablesFromBackup()
     dbBackup.Close
     Set dbBackup = Nothing
 
+
+    ' --- Cloud tables: Contacts + tblGLOBAL_PHONE_BOOK from Google Sheet ---
+    On Error Resume Next
+    Application.Run "PullAll"
+    On Error GoTo ErrHandler
     ' --- Report ---
     Dim report As String
     report = "שוחזרו " & restored & " טבלאות."
@@ -83,6 +88,7 @@ End Sub
 ' ---------------------------------------------------------------------------
 ' RestoreSingleTable - delete local rows, copy all from backup
 ' ---------------------------------------------------------------------------
+' שחזור טבלה בודדת - מוחק רשומות מקומיות ומעתיק מגיבוי
 Private Sub RestoreSingleTable(ByRef dbSrc As DAO.Database, ByVal tblName As String)
     On Error GoTo RestErr
     CurrentDb.Execute "DELETE FROM " & tblName, dbFailOnError
@@ -126,6 +132,7 @@ RestErr:
 End Sub
 
 ' ---------------------------------------------------------------------------
+' בדיקת שדה מספור אוטומטי - מחזיר True אם השדה הוא AutoNumber
 Private Function IsAutoNumber(ByRef rs As DAO.Recordset, ByVal fldName As String) As Boolean
     On Error Resume Next
     IsAutoNumber = False
@@ -136,6 +143,7 @@ Private Function IsAutoNumber(ByRef rs As DAO.Recordset, ByVal fldName As String
 End Function
 
 ' ---------------------------------------------------------------------------
+' בדיקת קיום טבלה - מחזיר True אם הטבלה קיימת במסד נתונים
 Private Function TableExistsInDb(ByRef db As DAO.Database, ByVal tblName As String) As Boolean
     On Error Resume Next
     Dim td As DAO.TableDef
