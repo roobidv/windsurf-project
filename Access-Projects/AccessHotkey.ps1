@@ -67,13 +67,13 @@ public class AccessHotkey : Form {
                 }
                 if (h == IntPtr.Zero) h = FindWindow("OMain", null);
                 if (h != IntPtr.Zero) {
-                    ShowWindow(h, SW_RESTORE);
-                    // Try to find and activate the form window directly
+                    // Try to find the form window directly
                     IntPtr hForm = FindWindow(null, "Contacts Dialer");
                     if (hForm != IntPtr.Zero) {
                         ShowWindow(hForm, SW_RESTORE);
                         SetForegroundWindow(hForm);
                     } else {
+                        ShowWindow(h, SW_RESTORE);
                         SetForegroundWindow(h);
                     }
                     Thread.Sleep(150);
