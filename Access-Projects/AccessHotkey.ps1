@@ -35,7 +35,7 @@ public class AccessHotkey : Form {
 
     const int WM_HOTKEY = 0x0312;
     const int SW_RESTORE = 9;
-    const uint VK_F2 = 0x71;
+    const uint VK_F9 = 0x78;
 
     private System.Windows.Forms.Timer watchdog;
 
@@ -45,7 +45,7 @@ public class AccessHotkey : Form {
         this.Visible = false;
         this.FormBorderStyle = FormBorderStyle.None;
         this.Size = new System.Drawing.Size(1, 1);
-        RegisterHotKey(this.Handle, 1, 0, VK_F2);
+        RegisterHotKey(this.Handle, 1, 0, VK_F9);
 
         // Auto-exit when Access closes
         watchdog = new System.Windows.Forms.Timer();

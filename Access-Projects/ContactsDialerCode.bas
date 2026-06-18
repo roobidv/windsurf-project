@@ -56,7 +56,6 @@ Private Const GMEM_MOVEABLE As Long = &H2
 ' ????? ?? SendKeys ????? ????? ????? (Access) ????? ???????
 Private Declare PtrSafe Sub keybd_event Lib "user32" (ByVal bVk As Byte, ByVal bScan As Byte, ByVal dwFlags As Long, ByVal dwExtraInfo As LongPtr)
 Private Const KEYEVENTF_KEYUP As Long = &H2
-Private Const VK_F9 As Long = &H78
 Private Const VK_F8 As Long = &H77
 Private Declare PtrSafe Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
 Private Declare PtrSafe Function LoadKeyboardLayout Lib "user32" Alias "LoadKeyboardLayoutA" (ByVal pwszKLID As String, ByVal flags As Long) As LongPtr
@@ -283,8 +282,8 @@ Public Function ContactsDialer_CmdPhoneNumber_Click() As Variant
 End Function
 
 ' ---------------------------------------------------------------------------
-' cmdLandline Click: copies digits-only landline to clipboard, then sends F9
-' ????? ?? ????? ???? ? ????? ????? ???? ???? ??????, ??"? ???? F9
+' cmdLandline Click: copies digits-only landline to clipboard and dials
+' ????? ?? ????? ???? ? ????? ????? ???? ???? ??????, ??"? ????
 ' cmdLandline property: On Click = =ContactsDialer_CmdLandline_Click()
 ' ---------------------------------------------------------------------------
 Public Function ContactsDialer_CmdLandline_Click() As Variant
@@ -960,7 +959,6 @@ Public Function ContactsDialer_Form_KeyDown() As Variant
     If ctlName = "txtSearch" Then
         If Not (kDown Or kEnter Or kEsc _
             Or GetAsyncKeyState(vbKeyF8) < 0 _
-            Or GetAsyncKeyState(vbKeyF9) < 0 _
             Or (GetAsyncKeyState(VK_MENU) And &H8000) <> 0 _
             Or (GetAsyncKeyState(vbKeyControl) And &H8000) <> 0) Then
             Exit Function
@@ -1073,16 +1071,6 @@ Public Function ContactsDialer_Form_KeyDown() As Variant
     If GetAsyncKeyState(vbKeyF8) < 0 Then
         If frm.cmdPhoneNumber.Enabled Then
             ContactsDialer_CmdPhoneNumber_Click
-        End If
-        ContactsDialer_Form_KeyDown = True
-        Exit Function
-    End If
-
-    ' F9 ??? ???? ? ????? ????? ?? cmdLandline (???? ?????)
-    ' F9 from anywhere -> triggers cmdLandline click (dial landline)
-    If GetAsyncKeyState(vbKeyF9) < 0 Then
-        If frm.cmdLandline.Enabled Then
-            ContactsDialer_CmdLandline_Click
         End If
         ContactsDialer_Form_KeyDown = True
         Exit Function
@@ -1618,7 +1606,7 @@ Private Sub ContactsDialer_LoadSelectedContact(ByRef frm As Access.Form, ByVal c
     Dim landNum As String
     landNum = Trim$(Nz(rs!landline, ""))
     If Len(landNum) > 0 Then
-        frm.cmdLandline.caption = "F9  " & ChrW(1495) & ChrW(1497) & ChrW(1497) & ChrW(1490) & " " & ChrW(1500) & ChrW(1504) & ChrW(1497) & ChrW(1497) & ChrW(1495) & vbCrLf & landNum
+        frm.cmdLandline.caption = "" & ChrW(1495) & ChrW(1497) & ChrW(1497) & ChrW(1490) & " " & ChrW(1500) & ChrW(1504) & ChrW(1497) & ChrW(1497) & ChrW(1495) & vbCrLf & landNum
         frm.cmdLandline.Enabled = True
     Else
         frm.cmdLandline.caption = ChrW(1500) & ChrW(1488) & " " & ChrW(1511) & ChrW(1497) & ChrW(1497) & ChrW(1501) & " " & ChrW(1502) & ChrW(1505) & ChrW(1508) & ChrW(1512)
