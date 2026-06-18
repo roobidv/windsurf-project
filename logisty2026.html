@@ -2143,7 +2143,11 @@
                     } else {
                         filtered.forEach(ev => {
                             body += ev.date;
-                            if (ev.code) body += ' | סמל: ' + ev.code;
+                            if (ev.code) {
+                                body += ' | סמל: ' + ev.code;
+                                const matchedRow = allRows.find(r => r.code === ev.code);
+                                if (matchedRow && matchedRow.name) body += ' | מוסד: ' + matchedRow.name;
+                            }
                             body += ' | ' + (ev.field || ev.action);
                             if (ev.newVal) body += '\n   ' + ev.newVal;
                             body += '\n\n';
