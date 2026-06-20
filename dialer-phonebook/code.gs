@@ -79,7 +79,7 @@ function doAuth_(params) {
   // בדוק חסימה
   var lockout = cache.get('auth_lockout');
   if (lockout) {
-    return jsonOut_({authorized: false, locked: true, message: 'חשבון חסום. נסה שוב מאוחר יותר.'});
+    return jsonOut_({authorized: false, locked: true, message: 'locked'});
   }
 
   // כניסה לפי קוד אחיד
@@ -103,12 +103,12 @@ function doAuth_(params) {
     // חסום ל-4 שעות
     cache.put('auth_lockout', 'true', LOCKOUT_HOURS * 3600);
     cache.remove('auth_fails');
-    return jsonOut_({authorized: false, locked: true, message: 'יותר מדי ניסיונות. חסום ל-' + LOCKOUT_HOURS + ' שעות.'});
+    return jsonOut_({authorized: false, locked: true, message: 'locked'});
   }
 
   cache.put('auth_fails', JSON.stringify(fails), WINDOW_MINUTES * 60);
   var remaining = MAX_ATTEMPTS - fails.count;
-  return jsonOut_({authorized: false, message: 'קוד שגוי. נותרו ' + remaining + ' ניסיונות.'});
+  return jsonOut_({authorized: false, remaining: remaining, message: 'wrong_code'});
 }
 
 // === deviceAuth: אימות לפי מזהה מכשיר ===

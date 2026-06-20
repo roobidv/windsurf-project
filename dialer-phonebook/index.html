@@ -1188,7 +1188,13 @@
                     _registerDevice(data.name || value, value);
                     showApp(data.name);
                 } else {
-                    errEl.textContent = data.message || 'קוד שגוי.';
+                    if (data.locked) {
+                        errEl.textContent = 'יותר מדי ניסיונות. חסום ל-4 שעות.';
+                    } else if (data.remaining !== undefined) {
+                        errEl.textContent = 'קוד שגוי. נותרו ' + data.remaining + ' ניסיונות.';
+                    } else {
+                        errEl.textContent = 'קוד שגוי.';
+                    }
                     btn.disabled = false;
                     btn.textContent = 'כניסה';
                 }
