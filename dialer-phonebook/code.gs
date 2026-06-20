@@ -64,43 +64,51 @@ function getCSV_() {
   return ContentService.createTextOutput(JSON.stringify({csv: csv})).setMimeType(ContentService.MimeType.JSON);
 }
 
-// === auth: אימות לפי קוד כניסה אחיד ===
+// === auth: אימות לפי קוד כניסה אחיד + הגבלת ניסיונות ===
 function doAuth_(params) {
   var type = (params.type || '').trim();
   var value = (params.value || '').trim();
 
   var ACCESS_CODE = '583995';
+  var MAX_ATTEMPTS = 5;
+  var WINDOW_MINUTES = 5;
+  var LOCKOUT_HOURS = 4;
+
+  var cache = CacheService.getScriptCache();
+
+  // בדוק חסימה
+  var lockout = cache.get('auth_lockout');
+  if (lockout) {
+    return jsonOut_({authorized: false, locked: true, message: 'חשבון חסום. נסה שוב מאוחר יותר.'});
+  }
 
   // כניסה לפי קוד אחיד
   if (type === 'code' && value === ACCESS_CODE) {
+    cache.remove('auth_fails');
     return jsonOut_({authorized: true, name: 'משתמש מורשה', permType: 'מנהל'});
   }
 
-  // כניסה לפי טלפון/מייל מגליון הרשאות - A=מזהה, B=סוג, C=שם, D=פעיל
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('הרשאות');
-  if (!sheet) return jsonOut_({authorized: false});
+  // ניסיון כושל - עדכן מונה
+  var failsRaw = cache.get('auth_fails');
+  var fails = failsRaw ? JSON.parse(failsRaw) : {count: 0, first: Date.now()};
 
-  var data = sheet.getDataRange().getValues();
-  for (var i = 1; i < data.length; i++) {
-    var identifier = String(data[i][0] || '').replace(/[\s\-]/g, '');
-    var idType = String(data[i][1] || '').trim().toLowerCase();
-    var name = String(data[i][2] || '').trim();
-
-    var match = false;
-    if (type === 'phone' && (idType === 'phone' || idType === 'phone1')) {
-      var inputPhone = value.replace(/[\s\-]/g, '');
-      // Handle leading zero stripped by Sheets number format
-      if (identifier === inputPhone || '0' + identifier === inputPhone || identifier === '0' + inputPhone) match = true;
-    }
-    if (type === 'email' && idType === 'email' && identifier.toLowerCase() === value.toLowerCase()) match = true;
-
-    if (match) {
-      return jsonOut_({authorized: true, name: name, permType: 'מנהל'});
-    }
+  // אם עבר חלון הזמן - אפס
+  if (Date.now() - fails.first > WINDOW_MINUTES * 60 * 1000) {
+    fails = {count: 0, first: Date.now()};
   }
 
-  return jsonOut_({authorized: false});
+  fails.count++;
+
+  if (fails.count >= MAX_ATTEMPTS) {
+    // חסום ל-4 שעות
+    cache.put('auth_lockout', 'true', LOCKOUT_HOURS * 3600);
+    cache.remove('auth_fails');
+    return jsonOut_({authorized: false, locked: true, message: 'יותר מדי ניסיונות. חסום ל-' + LOCKOUT_HOURS + ' שעות.'});
+  }
+
+  cache.put('auth_fails', JSON.stringify(fails), WINDOW_MINUTES * 60);
+  var remaining = MAX_ATTEMPTS - fails.count;
+  return jsonOut_({authorized: false, message: 'קוד שגוי. נותרו ' + remaining + ' ניסיונות.'});
 }
 
 // === deviceAuth: אימות לפי מזהה מכשיר ===
@@ -309,15 +317,45 @@ function getDropboxTempLink_(serialNumber) {
   });
   var accessToken = JSON.parse(tokenResponse.getContentText()).access_token;
 
-  // Get temporary link for the file (valid 4 hours)
-  var filePath = '/Ness/offers/הצעת מחיר_' + serialNumber + '.pdf';
+  // List files in offers folder and find matching serial number
+  var listResponse = UrlFetchApp.fetch('https://api.dropboxapi.com/2/files/list_folder', {
+    method: 'post',
+    headers: {
+      'Authorization': 'Bearer ' + accessToken,
+      'Content-Type': 'application/json'
+    },
+    payload: JSON.stringify({path: '/Ness/offers', limit: 100}),
+    muteHttpExceptions: true
+  });
+
+  var listCode = listResponse.getResponseCode();
+  if (listCode !== 200) {
+    throw new Error('שגיאה בגישה לתיקיית ההצעות');
+  }
+
+  var listResult = JSON.parse(listResponse.getContentText());
+  var matchedPath = null;
+
+  for (var i = 0; i < listResult.entries.length; i++) {
+    var entry = listResult.entries[i];
+    if (entry.name.indexOf('_' + serialNumber + '.pdf') > -1) {
+      matchedPath = entry.path_lower;
+      break;
+    }
+  }
+
+  if (!matchedPath) {
+    throw new Error('הצעה מספר ' + serialNumber + ' לא נמצאה');
+  }
+
+  // Get temporary link using the exact path from listing
   var response = UrlFetchApp.fetch('https://api.dropboxapi.com/2/files/get_temporary_link', {
     method: 'post',
     headers: {
       'Authorization': 'Bearer ' + accessToken,
       'Content-Type': 'application/json'
     },
-    payload: JSON.stringify({path: filePath}),
+    payload: JSON.stringify({path: matchedPath}),
     muteHttpExceptions: true
   });
 
@@ -325,13 +363,16 @@ function getDropboxTempLink_(serialNumber) {
   var result = JSON.parse(response.getContentText());
 
   if (code !== 200) {
-    if (result.error && result.error['.tag'] === 'path' && result.error.path['.tag'] === 'not_found') {
-      throw new Error('הצעה מספר ' + serialNumber + ' לא נמצאה');
-    }
     throw new Error(result.error_summary || 'Dropbox API error');
   }
 
   return result.link;
+}
+
+// === Test: run this once to grant UrlFetchApp permissions ===
+function testDropboxAuth() {
+  var link = getDropboxTempLink_('1900384');
+  Logger.log('Link: ' + link);
 }
 
 // === Helper ===

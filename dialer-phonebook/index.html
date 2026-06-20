@@ -610,19 +610,8 @@
 <div class="login-overlay" id="loginOverlay">
     <div class="login-box">
         <h2>ספר טלפונים</h2>
-        <p>הזן פרטי זיהוי לכניסה</p>
-        <div class="login-tabs">
-            <button class="login-tab active" data-tab="phone" onclick="switchLoginTab('phone')">טלפון</button>
-            <button class="login-tab" data-tab="email" onclick="switchLoginTab('email')">מייל</button>
-            <button class="login-tab" data-tab="code" onclick="switchLoginTab('code')">קוד</button>
-        </div>
-        <div class="login-field active" id="field-phone">
-            <input type="tel" id="loginPhone" placeholder="052-xxx-xxxx" onkeydown="if(event.key==='Enter')doLogin()">
-        </div>
-        <div class="login-field" id="field-email">
-            <input type="email" id="loginEmail" placeholder="name@example.com" onkeydown="if(event.key==='Enter')doLogin()">
-        </div>
-        <div class="login-field" id="field-code">
+        <p>הזן קוד כניסה</p>
+        <div class="login-field active" id="field-code">
             <input type="text" id="loginCode" placeholder="קוד כניסה" onkeydown="if(event.key==='Enter')doLogin()">
         </div>
         <button class="login-btn" id="loginBtn" onclick="doLogin()">כניסה</button>
@@ -1180,29 +1169,26 @@
     function doLogin() {
         const btn = document.getElementById('loginBtn');
         const errEl = document.getElementById('loginError');
-        let value = '';
-        if (_loginTab === 'phone') value = document.getElementById('loginPhone').value.replace(/[\s\-()]/g, '');
-        else if (_loginTab === 'email') value = document.getElementById('loginEmail').value.trim().toLowerCase();
-        else value = document.getElementById('loginCode').value.trim();
+        const value = document.getElementById('loginCode').value.trim();
 
-        if (!value) { errEl.textContent = 'יש להזין ערך'; return; }
+        if (!value) { errEl.textContent = 'יש להזין קוד'; return; }
 
         btn.disabled = true;
         btn.textContent = 'בודק...';
         errEl.textContent = '';
 
-        fetch(SCRIPT_URL + '?action=auth&type=' + _loginTab + '&value=' + encodeURIComponent(value), {mode: 'cors'})
+        fetch(SCRIPT_URL + '?action=auth&type=code&value=' + encodeURIComponent(value), {mode: 'cors'})
             .then(r => r.json())
             .then(data => {
                 if (data.authorized) {
                     localStorage.setItem('pb_auth_token', value);
-                    localStorage.setItem('pb_auth_type', _loginTab);
+                    localStorage.setItem('pb_auth_type', 'code');
                     localStorage.setItem('pb_auth_name', data.name || '');
                     localStorage.setItem('pb_auth_perm', data.permType || '');
                     _registerDevice(data.name || value, value);
                     showApp(data.name);
                 } else {
-                    errEl.textContent = 'אין הרשאה. פנה למנהל.';
+                    errEl.textContent = data.message || 'קוד שגוי.';
                     btn.disabled = false;
                     btn.textContent = 'כניסה';
                 }
