@@ -1298,7 +1298,11 @@
                 btn.disabled = false;
                 btn.textContent = 'פתח PDF';
                 if (data.error) {
-                    errEl.textContent = data.error;
+                    var msg = 'שגיאה לא ידועה';
+                    if (data.error === 'not_found') msg = 'הצעה מספר ' + (data.serial || serial) + ' לא נמצאה';
+                    else if (data.error === 'folder_error') msg = 'שגיאה בגישה לתיקיית ההצעות';
+                    else if (data.error === 'missing_serial') msg = 'לא הוזן מספר הצעה';
+                    errEl.textContent = msg;
                 } else if (data.link) {
                     window.open(data.link, '_blank');
                     closeOfferDialog();

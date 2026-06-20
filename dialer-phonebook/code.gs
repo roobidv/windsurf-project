@@ -285,13 +285,13 @@ function markMessageRead_(data) {
 // === getOfferPdf: שליפת קישור זמני ל-PDF הצעת מחיר מ-Dropbox ===
 function getOfferPdf_(params) {
   var serial = (params.serial || '').trim();
-  if (!serial) return jsonOut_({error: 'missing serial number'});
+  if (!serial) return jsonOut_({error: 'missing_serial'});
 
   try {
     var link = getDropboxTempLink_(serial);
     return jsonOut_({link: link});
   } catch(e) {
-    return jsonOut_({error: e.message});
+    return jsonOut_({error: e.message, serial: serial});
   }
 }
 
@@ -330,7 +330,7 @@ function getDropboxTempLink_(serialNumber) {
 
   var listCode = listResponse.getResponseCode();
   if (listCode !== 200) {
-    throw new Error('שגיאה בגישה לתיקיית ההצעות');
+    throw new Error('folder_error');
   }
 
   var listResult = JSON.parse(listResponse.getContentText());
@@ -345,7 +345,7 @@ function getDropboxTempLink_(serialNumber) {
   }
 
   if (!matchedPath) {
-    throw new Error('הצעה מספר ' + serialNumber + ' לא נמצאה');
+    throw new Error('not_found');
   }
 
   // Get temporary link using the exact path from listing
