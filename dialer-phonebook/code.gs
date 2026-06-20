@@ -317,7 +317,7 @@ function getDropboxTempLink_(serialNumber) {
   });
   var accessToken = JSON.parse(tokenResponse.getContentText()).access_token;
 
-  // List files in offers folder and find matching serial number
+  // List files in offers folder with pagination support
   var listResponse = UrlFetchApp.fetch('https://api.dropboxapi.com/2/files/list_folder', {
     method: 'post',
     headers: {
@@ -335,12 +335,39 @@ function getDropboxTempLink_(serialNumber) {
 
   var listResult = JSON.parse(listResponse.getContentText());
   var matchedPath = null;
+  var needle = '_' + serialNumber + '.pdf';
 
+  // Search current batch
   for (var i = 0; i < listResult.entries.length; i++) {
-    var entry = listResult.entries[i];
-    if (entry.name.indexOf('_' + serialNumber + '.pdf') > -1) {
-      matchedPath = entry.path_lower;
+    if (listResult.entries[i].name.indexOf(needle) > -1) {
+      matchedPath = listResult.entries[i].path_lower;
       break;
+    }
+  }
+
+  // Continue fetching if more pages exist and file not yet found
+  while (!matchedPath && listResult.has_more) {
+    var contResponse = UrlFetchApp.fetch('https://api.dropboxapi.com/2/files/list_folder/continue', {
+      method: 'post',
+      headers: {
+        'Authorization': 'Bearer ' + accessToken,
+        'Content-Type': 'application/json'
+      },
+      payload: JSON.stringify({cursor: listResult.cursor}),
+      muteHttpExceptions: true
+    });
+
+    if (contResponse.getResponseCode() !== 200) {
+      throw new Error('folder_continue_error');
+    }
+
+    listResult = JSON.parse(contResponse.getContentText());
+
+    for (var j = 0; j < listResult.entries.length; j++) {
+      if (listResult.entries[j].name.indexOf(needle) > -1) {
+        matchedPath = listResult.entries[j].path_lower;
+        break;
+      }
     }
   }
 
