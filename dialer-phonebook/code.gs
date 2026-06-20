@@ -64,31 +64,39 @@ function getCSV_() {
   return ContentService.createTextOutput(JSON.stringify({csv: csv})).setMimeType(ContentService.MimeType.JSON);
 }
 
-// === auth: אימות טלפון/מייל/קוד ===
+// === auth: אימות לפי קוד כניסה אחיד ===
 function doAuth_(params) {
   var type = (params.type || '').trim();
   var value = (params.value || '').trim();
 
+  var ACCESS_CODE = '583995';
+
+  // כניסה לפי קוד אחיד
+  if (type === 'code' && value === ACCESS_CODE) {
+    return jsonOut_({authorized: true, name: 'משתמש מורשה', permType: 'מנהל'});
+  }
+
+  // כניסה לפי טלפון/מייל מגליון הרשאות - A=מזהה, B=סוג, C=שם, D=פעיל
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName('הרשאות');
   if (!sheet) return jsonOut_({authorized: false});
 
   var data = sheet.getDataRange().getValues();
-  // הרשאות: עמודה A=טלפון, B=מייל, C=קוד, D=שם, E=הרשאה
   for (var i = 1; i < data.length; i++) {
-    var phone = String(data[i][0] || '').replace(/[\s\-]/g, '');
-    var email = String(data[i][1] || '').trim().toLowerCase();
-    var code = String(data[i][2] || '').trim();
-    var name = String(data[i][3] || '').trim();
-    var perm = String(data[i][4] || '').trim();
+    var identifier = String(data[i][0] || '').replace(/[\s\-]/g, '');
+    var idType = String(data[i][1] || '').trim().toLowerCase();
+    var name = String(data[i][2] || '').trim();
 
     var match = false;
-    if (type === 'phone' && phone === value.replace(/[\s\-]/g, '')) match = true;
-    if (type === 'email' && email === value.toLowerCase()) match = true;
-    if (type === 'code' && code === value) match = true;
+    if (type === 'phone' && (idType === 'phone' || idType === 'phone1')) {
+      var inputPhone = value.replace(/[\s\-]/g, '');
+      // Handle leading zero stripped by Sheets number format
+      if (identifier === inputPhone || '0' + identifier === inputPhone || identifier === '0' + inputPhone) match = true;
+    }
+    if (type === 'email' && idType === 'email' && identifier.toLowerCase() === value.toLowerCase()) match = true;
 
     if (match) {
-      return jsonOut_({authorized: true, name: name, permType: perm});
+      return jsonOut_({authorized: true, name: name, permType: 'מנהל'});
     }
   }
 
