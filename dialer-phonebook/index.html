@@ -511,6 +511,97 @@
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
+
+        /* Offer FAB button */
+        .offer-fab {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff6f00, #e65100);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 12px rgba(230,81,0,0.4);
+            font-size: 22px;
+            cursor: pointer;
+            z-index: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.15s;
+        }
+        .offer-fab:active { transform: scale(0.9); }
+
+        /* Offer dialog */
+        .offer-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .offer-overlay.visible { display: flex; }
+        .offer-dialog {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            width: 90%;
+            max-width: 340px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+            text-align: center;
+        }
+        .offer-dialog h3 {
+            margin-bottom: 16px;
+            font-size: 18px;
+        }
+        .offer-dialog input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 20px;
+            text-align: center;
+            direction: ltr;
+            font-weight: 700;
+            letter-spacing: 1px;
+            outline: none;
+        }
+        .offer-dialog input:focus { border-color: var(--primary); }
+        .offer-dialog .offer-btns {
+            margin-top: 16px;
+            display: flex;
+            gap: 10px;
+        }
+        .offer-dialog .offer-btn-open {
+            flex: 1;
+            padding: 10px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .offer-dialog .offer-btn-open:disabled { opacity: 0.5; }
+        .offer-dialog .offer-btn-cancel {
+            padding: 10px 16px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+            cursor: pointer;
+        }
+        .offer-error {
+            color: var(--red);
+            font-size: 13px;
+            margin-top: 8px;
+            min-height: 18px;
+        }
     </style>
 </head>
 <body>
@@ -540,6 +631,22 @@
 </div>
 
 <div class="copy-toast" id="copyToast"></div>
+
+<!-- Offer FAB -->
+<button class="offer-fab" onclick="openOfferDialog()" title="שלוף הצעת מחיר">📄</button>
+
+<!-- Offer Dialog -->
+<div class="offer-overlay" id="offerOverlay" onclick="if(event.target===this)closeOfferDialog()">
+    <div class="offer-dialog">
+        <h3>🔍 שלוף הצעת מחיר</h3>
+        <input type="tel" id="offerInput" placeholder="מספר הצעה" onkeydown="if(event.key==='Enter')fetchOffer()">
+        <div class="offer-error" id="offerError"></div>
+        <div class="offer-btns">
+            <button class="offer-btn-open" id="offerOpenBtn" onclick="fetchOffer()">פתח PDF</button>
+            <button class="offer-btn-cancel" onclick="closeOfferDialog()">ביטול</button>
+        </div>
+    </div>
+</div>
 
 <!-- Report overlay -->
 <div class="report-overlay" id="reportOverlay" onclick="if(event.target===this)closeReport()">
@@ -1162,6 +1269,54 @@
         } else {
             document.getElementById('loginOverlay').classList.remove('hidden');
         }
+    }
+
+    // === Offer PDF Lookup ===
+    function openOfferDialog() {
+        const input = document.getElementById('offerInput');
+        input.value = '190';
+        document.getElementById('offerError').textContent = '';
+        document.getElementById('offerOpenBtn').disabled = false;
+        document.getElementById('offerOverlay').classList.add('visible');
+        setTimeout(() => { input.focus(); input.setSelectionRange(3, 3); }, 100);
+    }
+
+    function closeOfferDialog() {
+        document.getElementById('offerOverlay').classList.remove('visible');
+    }
+
+    function fetchOffer() {
+        const input = document.getElementById('offerInput');
+        const serial = input.value.trim();
+        const errEl = document.getElementById('offerError');
+        const btn = document.getElementById('offerOpenBtn');
+
+        if (!serial || serial.length < 4) {
+            errEl.textContent = 'הזן מספר הצעה תקין';
+            return;
+        }
+
+        errEl.textContent = '';
+        btn.disabled = true;
+        btn.textContent = 'טוען...';
+
+        fetch(SCRIPT_URL + '?action=getOfferPdf&serial=' + encodeURIComponent(serial), {mode: 'cors'})
+            .then(r => r.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.textContent = 'פתח PDF';
+                if (data.error) {
+                    errEl.textContent = data.error;
+                } else if (data.link) {
+                    window.open(data.link, '_blank');
+                    closeOfferDialog();
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.textContent = 'פתח PDF';
+                errEl.textContent = 'שגיאת תקשורת';
+            });
     }
 
     // === Events ===

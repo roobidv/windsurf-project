@@ -20,6 +20,7 @@ function doGet(e) {
   if (action === 'auth') return doAuth_(e.parameter);
   if (action === 'deviceAuth') return doDeviceAuth_(e.parameter);
   if (action === 'checkMessages') return checkMessages_(e.parameter);
+  if (action === 'getOfferPdf') return getOfferPdf_(e.parameter);
 
   // Default: return notes/fields (like loadCloudNotes in LOGISTY2026)
   return ContentService.createTextOutput('{}').setMimeType(ContentService.MimeType.JSON);
@@ -263,6 +264,66 @@ function markMessageRead_(data) {
   // עמודה E = ReadDate
   sheet.getRange(row, 5).setValue(new Date());
   return jsonOut_({ok: true});
+}
+
+// === getOfferPdf: שליפת קישור זמני ל-PDF הצעת מחיר מ-Dropbox ===
+function getOfferPdf_(params) {
+  var serial = (params.serial || '').trim();
+  if (!serial) return jsonOut_({error: 'missing serial number'});
+
+  try {
+    var link = getDropboxTempLink_(serial);
+    return jsonOut_({link: link});
+  } catch(e) {
+    return jsonOut_({error: e.message});
+  }
+}
+
+function getDropboxTempLink_(serialNumber) {
+  var props = PropertiesService.getScriptProperties();
+  var refreshToken = props.getProperty('DROPBOX_REFRESH_TOKEN');
+  var appKey = props.getProperty('DROPBOX_APP_KEY');
+  var appSecret = props.getProperty('DROPBOX_APP_SECRET');
+
+  if (!refreshToken || !appKey || !appSecret) {
+    throw new Error('Dropbox credentials not configured in Script Properties');
+  }
+
+  // Get fresh access token using refresh token
+  var tokenResponse = UrlFetchApp.fetch('https://api.dropbox.com/oauth2/token', {
+    method: 'post',
+    payload: {
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: appKey,
+      client_secret: appSecret
+    }
+  });
+  var accessToken = JSON.parse(tokenResponse.getContentText()).access_token;
+
+  // Get temporary link for the file (valid 4 hours)
+  var filePath = '/Ness/offers/הצעת מחיר_' + serialNumber + '.pdf';
+  var response = UrlFetchApp.fetch('https://api.dropboxapi.com/2/files/get_temporary_link', {
+    method: 'post',
+    headers: {
+      'Authorization': 'Bearer ' + accessToken,
+      'Content-Type': 'application/json'
+    },
+    payload: JSON.stringify({path: filePath}),
+    muteHttpExceptions: true
+  });
+
+  var code = response.getResponseCode();
+  var result = JSON.parse(response.getContentText());
+
+  if (code !== 200) {
+    if (result.error && result.error['.tag'] === 'path' && result.error.path['.tag'] === 'not_found') {
+      throw new Error('הצעה מספר ' + serialNumber + ' לא נמצאה');
+    }
+    throw new Error(result.error_summary || 'Dropbox API error');
+  }
+
+  return result.link;
 }
 
 // === Helper ===
