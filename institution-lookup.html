@@ -315,6 +315,68 @@
             color: #fff;
             border-color: #2c5364;
         }
+
+        .summary-card {
+            background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
+            border: 2px solid #4caf50;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .summary-card h3 {
+            font-size: 1rem;
+            color: #2e7d32;
+            margin-bottom: 12px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px dashed #c8e6c9;
+            font-size: 0.95rem;
+        }
+
+        .summary-row:last-of-type {
+            border-bottom: none;
+        }
+
+        .summary-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .summary-value {
+            font-weight: 700;
+            color: #1b5e20;
+            direction: ltr;
+            text-align: left;
+        }
+
+        .copy-btn {
+            display: block;
+            width: 100%;
+            margin-top: 14px;
+            padding: 10px;
+            background: #4caf50;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: #388e3c;
+        }
+
+        .copy-btn.copied {
+            background: #1b5e20;
+        }
     </style>
 </head>
 <body>
@@ -371,6 +433,8 @@
                     <div class="semel-badge" id="semelBadge"></div>
                 </div>
             </div>
+
+            <div id="summaryCard" style="display:none"></div>
 
             <div class="data-grid" id="dataGrid"></div>
 
@@ -458,6 +522,7 @@
             document.getElementById('institutionName').textContent = 'שגיאה';
             document.getElementById('semelBadge').textContent = '';
             document.getElementById('sourceBadges').innerHTML = '';
+            document.getElementById('summaryCard').style.display = 'none';
         } finally {
             searchBtn.disabled = false;
         }
@@ -505,14 +570,44 @@
         document.getElementById('institutionName').textContent = name;
         document.getElementById('semelBadge').textContent = `סמל מוסד: ${semel}`;
 
+        // Build summary card
+        const phone = (gas && gas.phone) || '';
+        const address = (gas && gas.address) || (gov && gov['שם ישוב']) || '';
+        const summaryCard = document.getElementById('summaryCard');
+        summaryCard.style.display = 'block';
+        summaryCard.innerHTML = `
+            <div class="summary-card">
+                <h3>&#x1F4CB; כרטיס מוסד</h3>
+                <div class="summary-row">
+                    <span class="summary-label">סמל מוסד</span>
+                    <span class="summary-value">${semel}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">שם מוסד</span>
+                    <span class="summary-value" style="direction:rtl; text-align:right;">${name}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">טלפון</span>
+                    <span class="summary-value">${phone || 'לא זמין'}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">כתובת</span>
+                    <span class="summary-value" style="direction:rtl; text-align:right;">${address || 'לא זמין'}</span>
+                </div>
+                <button class="copy-btn" onclick="copySummary('${semel}', '${name.replace(/'/g, "\\'") }', '${phone}', '${address.replace(/'/g, "\\'")}')">
+                    &#x1F4CB; העתק ללוח גזירים
+                </button>
+            </div>
+        `;
+
         // Build data grid
         const fields = [];
 
         // Address (full from GAS, or just city from gov)
         const hasFullAddress = gas && gas.address;
-        const address = hasFullAddress ? gas.address : '';
-        if (address) {
-            fields.push({ label: 'כתובת', value: address, icon: '&#x1F4CD;', fullWidth: true });
+        const displayAddress = hasFullAddress ? gas.address : '';
+        if (displayAddress) {
+            fields.push({ label: 'כתובת', value: displayAddress, icon: '&#x1F4CD;', fullWidth: true });
         }
 
         // Phone
@@ -626,6 +721,25 @@
         }
 
         badges.innerHTML = badgesHtml;
+    }
+    function copySummary(semel, name, phone, address) {
+        const lines = [
+            `סמל מוסד: ${semel}`,
+            `שם מוסד: ${name}`,
+            `טלפון: ${phone || 'לא זמין'}`,
+            `כתובת: ${address || 'לא זמין'}`
+        ];
+        const text = lines.join('\n');
+        navigator.clipboard.writeText(text).then(() => {
+            const btn = document.querySelector('.copy-btn');
+            const original = btn.innerHTML;
+            btn.innerHTML = '&#x2705; הועתק!';
+            btn.classList.add('copied');
+            setTimeout(() => {
+                btn.innerHTML = original;
+                btn.classList.remove('copied');
+            }, 2000);
+        });
     }
     </script>
 </body>
