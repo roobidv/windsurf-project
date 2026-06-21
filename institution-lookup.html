@@ -712,11 +712,15 @@
                     <span class="summary-label">דוא"ל</span>
                     <span class="summary-value">${email ? '<a href="mailto:' + email + '">' + email + '</a>' : 'לא זמין'}</span>
                 </div>
-                <button class="copy-btn" onclick="copySummary('${semel}', '${name.replace(/'/g, "\\'") }', '${phone}', '${address.replace(/'/g, "\\'")}', '${email}')">
+                <button class="copy-btn" id="copyBtn">
                     &#x1F4CB; העתק ללוח גזירים
                 </button>
             </div>
         `;
+
+        document.getElementById('copyBtn').addEventListener('click', function() {
+            copySummary(semel, name, phone, address, email);
+        });
 
         // Build data grid
         const fields = [];
