@@ -21,8 +21,8 @@
  *     "address": "שד ירושלים, אור עקיבא",
  *     "phone": "04-6361277",
  *     "principal": "רינת מראד",
- *     "email": "school@example.co.il",
- *     "source": "allschool.co.il"
+ *     "email": "meiravtur@hinuchm.k12.il",
+ *     "source": "allschool.co.il + serviced.co.il"
  *   }
  */
 
@@ -43,10 +43,32 @@ function doGet(e) {
 }
 
 /**
- * Main lookup function - scrapes allschool.co.il
+ * Main lookup function - scrapes allschool.co.il and serviced.co.il
  */
 function lookupInstitution(semel) {
-  // allschool.co.il redirects /מוסדות/{semel}/any-slug → correct URL
+  // Step 1: Get basic data from allschool.co.il
+  var result = fetchFromAllSchool(semel);
+
+  // Step 2: If no email found, try serviced.co.il
+  if (!result.email && result.name) {
+    try {
+      var email = fetchEmailFromServiced(result.name);
+      if (email) {
+        result.email = email;
+        result.source = 'allschool.co.il + serviced.co.il';
+      }
+    } catch (e) {
+      // serviced.co.il failed, continue with what we have
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Fetch institution data from allschool.co.il
+ */
+function fetchFromAllSchool(semel) {
   var url = 'https://www.allschool.co.il/%D7%9E%D7%95%D7%A1%D7%93%D7%95%D7%AA/' + semel + '/lookup';
 
   var options = {
@@ -67,6 +89,53 @@ function lookupInstitution(semel) {
 
   var html = response.getContentText('UTF-8');
   return parseAllSchoolPage(semel, html);
+}
+
+/**
+ * Search serviced.co.il for the school by name and extract email
+ */
+function fetchEmailFromServiced(schoolName) {
+  // Search for the school on serviced.co.il
+  var searchUrl = 'https://serviced.co.il/?s=' + encodeURIComponent(schoolName) + '&post_type=school';
+
+  var options = {
+    followRedirects: true,
+    muteHttpExceptions: true,
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    }
+  };
+
+  var response = UrlFetchApp.fetch(searchUrl, options);
+  if (response.getResponseCode() !== 200) return null;
+
+  var html = response.getContentText('UTF-8');
+
+  // Find the first school result link
+  var linkMatch = html.match(/href="(https:\/\/serviced\.co\.il\/schools\/[^"]+)"/);
+  if (!linkMatch) return null;
+
+  // Fetch the school page
+  var schoolPageUrl = linkMatch[1];
+  var pageResponse = UrlFetchApp.fetch(schoolPageUrl, options);
+  if (pageResponse.getResponseCode() !== 200) return null;
+
+  var pageHtml = pageResponse.getContentText('UTF-8');
+
+  // Extract email from the page
+  var text = pageHtml.replace(/<[^>]+>/g, '\n');
+  var emailMatch = text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
+  if (emailMatch) {
+    // Filter out generic/irrelevant emails
+    var email = emailMatch[0].toLowerCase();
+    if (email.indexOf('serviced.co.il') === -1 &&
+        email.indexOf('wordpress') === -1 &&
+        email.indexOf('example.com') === -1) {
+      return emailMatch[0];
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -127,7 +196,7 @@ function parseAllSchoolPage(semel, html) {
     if (phoneMatch) result.phone = phoneMatch[0];
   }
 
-  // Fallback: try to find email address in page
+  // Fallback: try to find email address in allschool page
   if (!result.email) {
     var emailMatch = text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
     if (emailMatch) result.email = emailMatch[0];
@@ -159,7 +228,7 @@ function testLookup() {
   //   "address": "שד ירושלים, אור עקיבא",
   //   "phone": "04-6361277",
   //   "principal": "רינת מראד",
-  //   "email": "school@example.co.il",
-  //   "source": "allschool.co.il"
+  //   "email": "meiravtur@hinuchm.k12.il",
+  //   "source": "allschool.co.il + serviced.co.il"
   // }
 }
