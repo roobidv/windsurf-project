@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>חיפוש מוסד חינוך לפי סמל</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            min-height: 100vh;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header {
+            text-align: center;
+            padding: 40px 20px 20px;
+            color: #fff;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1rem;
+            opacity: 0.85;
+        }
+
+        .search-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 32px;
+            margin: 20px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 14px 18px;
+            font-size: 1.2rem;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            text-align: center;
+            letter-spacing: 4px;
+            font-weight: 600;
+            transition: border-color 0.3s;
+            direction: ltr;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #2c5364;
+        }
+
+        .input-group input::placeholder {
+            letter-spacing: 1px;
+            font-weight: 400;
+            color: #aaa;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2c5364, #203a43);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(44, 83, 100, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .error-msg {
+            color: #e74c3c;
+            font-size: 0.9rem;
+            margin-top: 4px;
+            min-height: 20px;
+        }
+
+        .result-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 32px;
+            margin: 0 20px 30px;
+            width: 90%;
+            max-width: 700px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-card.visible { display: block; }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .result-header .icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #2c5364, #203a43);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .result-header h2 {
+            font-size: 1.4rem;
+            color: #2c5364;
+        }
+
+        .result-header .semel-badge {
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: 2px;
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 600px) {
+            .data-grid { grid-template-columns: 1fr; }
+        }
+
+        .data-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 14px 16px;
+            border-right: 4px solid #2c5364;
+        }
+
+        .data-item.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .data-item .label {
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .data-item .value {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .data-item .value a {
+            color: #2c5364;
+            text-decoration: none;
+        }
+
+        .data-item .value a:hover {
+            text-decoration: underline;
+        }
+
+        .source-section {
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 2px solid #eee;
+        }
+
+        .source-section h3 {
+            font-size: 1rem;
+            color: #888;
+            margin-bottom: 10px;
+        }
+
+        .source-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-left: 6px;
+            margin-bottom: 6px;
+        }
+
+        .source-badge.api { background: #d4edda; color: #155724; }
+        .source-badge.scrape { background: #fff3cd; color: #856404; }
+        .source-badge.pending { background: #e2e3e5; color: #6c757d; }
+        .source-badge.error { background: #f8d7da; color: #721c24; }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .dot.green { background: #28a745; }
+        .dot.yellow { background: #ffc107; }
+        .dot.gray { background: #adb5bd; }
+        .dot.red { background: #dc3545; }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #ddd;
+            border-top: 4px solid #2c5364;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 12px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .setup-notice {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 10px;
+            padding: 16px;
+            margin-top: 16px;
+            font-size: 0.85rem;
+            color: #856404;
+            line-height: 1.6;
+        }
+
+        .setup-notice code {
+            background: #f8f0d8;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            direction: ltr;
+            display: inline-block;
+        }
+
+        .footer {
+            color: rgba(255,255,255,0.5);
+            font-size: 0.8rem;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .examples {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .example-btn {
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            padding: 4px 14px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            direction: ltr;
+        }
+
+        .example-btn:hover {
+            background: #2c5364;
+            color: #fff;
+            border-color: #2c5364;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>&#x1F3EB; חיפוש מוסד חינוך</h1>
+        <p>הזן סמל מוסד (6 ספרות) לקבלת מידע מלא</p>
+    </div>
+
+    <div class="search-card">
+        <div class="input-group">
+            <input type="text" id="semelInput" maxlength="6" placeholder="310011"
+                   pattern="[0-9]{6}" inputmode="numeric"
+                   onkeypress="if(event.key==='Enter') searchInstitution()">
+            <button class="btn btn-primary" id="searchBtn" onclick="searchInstitution()">
+                &#x1F50D; חפש
+            </button>
+        </div>
+        <div class="error-msg" id="errorMsg"></div>
+        <div class="examples">
+            <span style="font-size:0.85rem; color:#888;">דוגמאות:</span>
+            <button class="example-btn" onclick="fillExample('310011')">310011</button>
+            <button class="example-btn" onclick="fillExample('110007')">110007</button>
+            <button class="example-btn" onclick="fillExample('460279')">460279</button>
+        </div>
+
+        <div class="setup-notice" id="setupNotice">
+            <strong>&#x2699;&#xFE0F; הגדרה ראשונית נדרשת:</strong><br>
+            כדי לקבל נתונים מלאים (טלפון, כתובת, מנהל/ת), יש להתקין את הסקריפט ב-Google Apps Script.<br>
+            1. העתק את הקובץ <code>institution_lookup_gas.js</code> ל-Google Apps Script חדש<br>
+            2. פרסם כ-Web App (Deploy &rarr; New deployment &rarr; Web app &rarr; Anyone)<br>
+            3. הדבק את כתובת ה-Web App כאן:
+            <div style="margin-top: 8px;">
+                <input type="text" id="gasUrl" placeholder="https://script.google.com/macros/s/.../exec"
+                       style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 0.85rem; direction: ltr;"
+                       onchange="saveGasUrl()">
+            </div>
+            <div style="margin-top: 6px; font-size: 0.8rem; color: #666;">
+                &#x1F4A1; ללא הגדרה, יוצגו רק נתונים בסיסיים מ-data.gov.il
+            </div>
+        </div>
+    </div>
+
+    <div class="result-card" id="resultCard">
+        <div class="loading" id="loadingDiv">
+            <div class="spinner"></div>
+            <div>מחפש מוסד...</div>
+        </div>
+
+        <div id="resultContent" style="display:none">
+            <div class="result-header">
+                <div class="icon">&#x1F3EB;</div>
+                <div>
+                    <h2 id="institutionName"></h2>
+                    <div class="semel-badge" id="semelBadge"></div>
+                </div>
+            </div>
+
+            <div class="data-grid" id="dataGrid"></div>
+
+            <div class="source-section">
+                <h3>&#x1F4E1; מקורות מידע</h3>
+                <div id="sourceBadges"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        נתונים ממשרד החינוך | data.gov.il &amp; allschool.co.il
+    </div>
+
+    <script>
+    const DATA_GOV_API = 'https://data.gov.il/api/3/action/datastore_search';
+    const RESOURCE_ID = '5548fd63-5868-4053-ad81-98caddc5e232';
+
+    // Load saved GAS URL from localStorage
+    (function initGasUrl() {
+        const saved = localStorage.getItem('gasUrl');
+        if (saved) {
+            document.getElementById('gasUrl').value = saved;
+        }
+    })();
+
+    function saveGasUrl() {
+        const url = document.getElementById('gasUrl').value.trim();
+        if (url) {
+            localStorage.setItem('gasUrl', url);
+        } else {
+            localStorage.removeItem('gasUrl');
+        }
+    }
+
+    function fillExample(semel) {
+        document.getElementById('semelInput').value = semel;
+        searchInstitution();
+    }
+
+    async function searchInstitution() {
+        const input = document.getElementById('semelInput');
+        const semel = input.value.trim();
+        const errorMsg = document.getElementById('errorMsg');
+        const resultCard = document.getElementById('resultCard');
+        const loadingDiv = document.getElementById('loadingDiv');
+        const resultContent = document.getElementById('resultContent');
+        const searchBtn = document.getElementById('searchBtn');
+
+        // Validate
+        if (!/^\d{6}$/.test(semel)) {
+            errorMsg.textContent = 'יש להזין מספר בן 6 ספרות בדיוק';
+            return;
+        }
+        errorMsg.textContent = '';
+
+        // Show loading
+        resultCard.classList.add('visible');
+        loadingDiv.style.display = 'block';
+        resultContent.style.display = 'none';
+        searchBtn.disabled = true;
+
+        try {
+            // Fetch from both sources in parallel
+            const [govData, gasData] = await Promise.allSettled([
+                fetchGovData(semel),
+                fetchGasData(semel)
+            ]);
+
+            const gov = govData.status === 'fulfilled' ? govData.value : null;
+            const gas = gasData.status === 'fulfilled' ? gasData.value : null;
+
+            if (!gov && !gas) {
+                throw new Error('לא נמצא מוסד עם הסמל שהוזן');
+            }
+
+            displayResults(semel, gov, gas);
+        } catch (err) {
+            loadingDiv.style.display = 'none';
+            resultContent.style.display = 'block';
+            document.getElementById('dataGrid').innerHTML =
+                `<div class="data-item full-width" style="border-right-color:#e74c3c; text-align:center; padding:30px;">
+                    <div class="value" style="color:#e74c3c;">${err.message}</div>
+                </div>`;
+            document.getElementById('institutionName').textContent = 'שגיאה';
+            document.getElementById('semelBadge').textContent = '';
+            document.getElementById('sourceBadges').innerHTML = '';
+        } finally {
+            searchBtn.disabled = false;
+        }
+    }
+
+    async function fetchGovData(semel) {
+        const url = `${DATA_GOV_API}?resource_id=${RESOURCE_ID}&q=${semel}&limit=20`;
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('API error');
+        const data = await resp.json();
+
+        if (!data.success || !data.result.records.length) return null;
+
+        // Get the most recent year's record
+        const records = data.result.records
+            .filter(r => String(r['סמל מוסד']) === semel)
+            .sort((a, b) => (b['שנה'] || 0) - (a['שנה'] || 0));
+
+        if (records.length === 0) return null;
+        return records[0];
+    }
+
+    async function fetchGasData(semel) {
+        const gasUrl = document.getElementById('gasUrl').value.trim() ||
+                       localStorage.getItem('gasUrl');
+        if (!gasUrl) return null;
+
+        const url = `${gasUrl}?semel=${semel}`;
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('GAS error');
+        const data = await resp.json();
+        if (data.error) return null;
+        return data;
+    }
+
+    function displayResults(semel, gov, gas) {
+        const loadingDiv = document.getElementById('loadingDiv');
+        const resultContent = document.getElementById('resultContent');
+
+        loadingDiv.style.display = 'none';
+        resultContent.style.display = 'block';
+
+        // Institution name
+        const name = (gas && gas.name) || (gov && gov['שם מוסד']) || 'לא ידוע';
+        document.getElementById('institutionName').textContent = name;
+        document.getElementById('semelBadge').textContent = `סמל מוסד: ${semel}`;
+
+        // Build data grid
+        const fields = [];
+
+        // Address (full from GAS, or just city from gov)
+        const hasFullAddress = gas && gas.address;
+        const address = hasFullAddress ? gas.address : '';
+        if (address) {
+            fields.push({ label: 'כתובת', value: address, icon: '&#x1F4CD;', fullWidth: true });
+        }
+
+        // Phone
+        if (gas && gas.phone) {
+            fields.push({
+                label: 'טלפון מזכירות',
+                value: `<a href="tel:${gas.phone}">${gas.phone}</a>`,
+                icon: '&#x1F4DE;'
+            });
+        }
+
+        // Principal
+        if (gas && gas.principal) {
+            fields.push({ label: 'מנהל/ת', value: gas.principal, icon: '&#x1F464;' });
+        }
+
+        // Inspector
+        if (gas && gas.inspector) {
+            fields.push({ label: 'מפקח/ת', value: gas.inspector, icon: '&#x1F50E;' });
+        }
+
+        // City
+        if (gov && gov['שם ישוב']) {
+            fields.push({ label: 'ישוב', value: gov['שם ישוב'], icon: '&#x1F3D8;&#xFE0F;' });
+        }
+
+        // Authority
+        if (gov && gov['שם רשות'] && gov['שם רשות'] !== gov['שם ישוב']) {
+            fields.push({ label: 'רשות', value: gov['שם רשות'], icon: '&#x1F3DB;&#xFE0F;' });
+        }
+
+        // District
+        if (gov && gov['מחוז גאוגרפי']) {
+            fields.push({ label: 'מחוז', value: gov['מחוז גאוגרפי'], icon: '&#x1F5FA;&#xFE0F;' });
+        }
+
+        // Sector
+        if (gov && gov['מגזר']) {
+            fields.push({ label: 'מגזר', value: gov['מגזר'], icon: '&#x1F465;' });
+        }
+
+        // Supervision type
+        if (gov && gov['פיקוח']) {
+            const supervision = gov['פיקוח'].replace(/"/g, '');
+            fields.push({ label: 'פיקוח', value: supervision, icon: '&#x1F4CB;' });
+        }
+
+        // Grade levels
+        if (gov && gov['משכבה'] && gov['עד שכבה']) {
+            const from = String(gov['משכבה']).replace('.0', '');
+            const to = String(gov['עד שכבה']).replace('.0', '');
+            const hebrewGrades = { '1': "א'", '2': "ב'", '3': "ג'", '4': "ד'", '5': "ה'", '6': "ו'",
+                                   '7': "ז'", '8': "ח'", '9': "ט'", '10': "י'", '11': "י\"א", '12': "י\"ב" };
+            const fromHeb = hebrewGrades[from] || from;
+            const toHeb = hebrewGrades[to] || to;
+            fields.push({ label: 'שכבות', value: `${fromHeb} - ${toHeb}`, icon: '&#x1F393;' });
+        }
+
+        // Institution type
+        if (gov && gov['סוג מסגרת אירגונית']) {
+            fields.push({ label: 'סוג מסגרת', value: gov['סוג מסגרת אירגונית'], icon: '&#x1F3E2;' });
+        }
+
+        // Students count
+        if (gov && gov['סהכ תלמידים במוסד']) {
+            fields.push({ label: 'תלמידים', value: gov['סהכ תלמידים במוסד'].toLocaleString(), icon: '&#x1F9D1;&#x200D;&#x1F393;' });
+        }
+
+        // Legal status
+        if (gov && gov['מעמד משפטי']) {
+            fields.push({ label: 'מעמד משפטי', value: gov['מעמד משפטי'], icon: '&#x2696;&#xFE0F;' });
+        }
+
+        // Year of establishment
+        if (gov && gov['שנת יסוד']) {
+            fields.push({ label: 'שנת יסוד', value: gov['שנת יסוד'], icon: '&#x1F4C5;' });
+        }
+
+        // Data year
+        if (gov && gov['שנה']) {
+            fields.push({ label: 'שנת נתונים', value: gov['שנה'], icon: '&#x1F4CA;' });
+        }
+
+        // Render
+        const grid = document.getElementById('dataGrid');
+        grid.innerHTML = fields.map(f =>
+            `<div class="data-item${f.fullWidth ? ' full-width' : ''}">
+                <div class="label">${f.icon} ${f.label}</div>
+                <div class="value">${f.value}</div>
+            </div>`
+        ).join('');
+
+        // Source badges
+        const badges = document.getElementById('sourceBadges');
+        let badgesHtml = '';
+
+        if (gov) {
+            badgesHtml += `<span class="source-badge api"><span class="dot green"></span> data.gov.il API</span>`;
+        } else {
+            badgesHtml += `<span class="source-badge error"><span class="dot red"></span> data.gov.il - לא זמין</span>`;
+        }
+
+        const gasUrl = document.getElementById('gasUrl').value.trim() || localStorage.getItem('gasUrl');
+        if (!gasUrl) {
+            badgesHtml += `<span class="source-badge pending"><span class="dot gray"></span> allschool.co.il - לא מוגדר</span>`;
+        } else if (gas) {
+            badgesHtml += `<span class="source-badge scrape"><span class="dot yellow"></span> allschool.co.il (via GAS)</span>`;
+        } else {
+            badgesHtml += `<span class="source-badge error"><span class="dot red"></span> allschool.co.il - שגיאה</span>`;
+        }
+
+        badges.innerHTML = badgesHtml;
+    }
+    </script>
+</body>
+</html>
