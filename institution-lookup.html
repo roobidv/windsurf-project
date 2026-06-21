@@ -383,6 +383,7 @@
     <div class="header">
         <h1>&#x1F3EB; חיפוש מוסד חינוך</h1>
         <p>הזן סמל מוסד (6 ספרות) לקבלת מידע מלא</p>
+        <p style="font-weight:bold; margin-top:6px; font-size:0.9rem; color:#ffd700;">נכתב על ידי : רובי דביר roobid@gmail.com</p>
     </div>
 
     <div class="search-card">
@@ -402,7 +403,7 @@
             <button class="example-btn" onclick="fillExample('411124')">411124</button>
         </div>
 
-        <div class="setup-notice" id="setupNotice">
+        <div class="setup-notice" id="setupNotice" style="display:none">
             <strong>&#x2699;&#xFE0F; הגדרה ראשונית נדרשת:</strong><br>
             כדי לקבל נתונים מלאים (טלפון, כתובת, מנהל/ת), יש להתקין את הסקריפט ב-Google Apps Script.<br>
             1. העתק את הקובץ <code>institution_lookup_gas.js</code> ל-Google Apps Script חדש<br>
@@ -438,7 +439,7 @@
 
             <div class="data-grid" id="dataGrid"></div>
 
-            <div class="source-section">
+            <div class="source-section" style="display:none">
                 <h3>&#x1F4E1; מקורות מידע</h3>
                 <div id="sourceBadges"></div>
             </div>
@@ -447,6 +448,9 @@
 
     <div class="footer">
         נתונים ממשרד החינוך | data.gov.il &amp; allschool.co.il
+        <div style="margin-top:10px; font-size:0.75rem; opacity:0.8; max-width:500px; margin-left:auto; margin-right:auto;">
+            הנתונים נלקחים ממקורות חופשיים וגלויים באינטרנט. אולם יש איסור מוחלט לעשות שימוש מסחרי בנתונים.
+        </div>
     </div>
 
     <script>
@@ -545,9 +549,12 @@
         return records[0];
     }
 
+    const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzYWeiu0IGLqSXtn4UCdf09uprRFgXb7bwImaOe7VI7amranNQZesp4OG0sk2PH4P8n/exec';
+
     async function fetchGasData(semel) {
         const gasUrl = document.getElementById('gasUrl').value.trim() ||
-                       localStorage.getItem('gasUrl');
+                       localStorage.getItem('gasUrl') ||
+                       DEFAULT_GAS_URL;
         if (!gasUrl) return null;
 
         const url = `${gasUrl}?semel=${semel}`;
@@ -573,6 +580,7 @@
         // Build summary card
         const phone = (gas && gas.phone) || '';
         const address = (gas && gas.address) || (gov && gov['שם ישוב']) || '';
+        const email = (gas && gas.email) || '';
         const summaryCard = document.getElementById('summaryCard');
         summaryCard.style.display = 'block';
         summaryCard.innerHTML = `
@@ -594,7 +602,11 @@
                     <span class="summary-label">כתובת</span>
                     <span class="summary-value" style="direction:rtl; text-align:right;">${address || 'לא זמין'}</span>
                 </div>
-                <button class="copy-btn" onclick="copySummary('${semel}', '${name.replace(/'/g, "\\'") }', '${phone}', '${address.replace(/'/g, "\\'")}')">
+                <div class="summary-row">
+                    <span class="summary-label">דוא"ל</span>
+                    <span class="summary-value">${email ? '<a href="mailto:' + email + '">' + email + '</a>' : 'לא זמין'}</span>
+                </div>
+                <button class="copy-btn" onclick="copySummary('${semel}', '${name.replace(/'/g, "\\'") }', '${phone}', '${address.replace(/'/g, "\\'")}', '${email}')">
                     &#x1F4CB; העתק ללוח גזירים
                 </button>
             </div>
@@ -624,9 +636,9 @@
             fields.push({ label: 'מנהל/ת', value: gas.principal, icon: '&#x1F464;' });
         }
 
-        // Inspector
-        if (gas && gas.inspector) {
-            fields.push({ label: 'מפקח/ת', value: gas.inspector, icon: '&#x1F50E;' });
+        // Email
+        if (gas && gas.email) {
+            fields.push({ label: 'דוא"ל בית ספר', value: `<a href="mailto:${gas.email}">${gas.email}</a>`, icon: '&#x2709;&#xFE0F;' });
         }
 
         // City
@@ -722,12 +734,13 @@
 
         badges.innerHTML = badgesHtml;
     }
-    function copySummary(semel, name, phone, address) {
+    function copySummary(semel, name, phone, address, email) {
         const lines = [
             `סמל מוסד: ${semel}`,
             `שם מוסד: ${name}`,
             `טלפון: ${phone || 'לא זמין'}`,
-            `כתובת: ${address || 'לא זמין'}`
+            `כתובת: ${address || 'לא זמין'}`,
+            `דוא"ל: ${email || 'לא זמין'}`
         ];
         const text = lines.join('\n');
         navigator.clipboard.writeText(text).then(() => {

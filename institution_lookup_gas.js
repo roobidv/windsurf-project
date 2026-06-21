@@ -21,7 +21,7 @@
  *     "address": "שד ירושלים, אור עקיבא",
  *     "phone": "04-6361277",
  *     "principal": "רינת מראד",
- *     "inspector": "זיוה רון",
+ *     "email": "school@example.co.il",
  *     "source": "allschool.co.il"
  *   }
  */
@@ -88,7 +88,7 @@ function parseAllSchoolPage(semel, html) {
     address: '',
     phone: '',
     principal: '',
-    inspector: '',
+    email: '',
     source: 'allschool.co.il'
   };
 
@@ -116,8 +116,8 @@ function parseAllSchoolPage(semel, html) {
     else if (current === 'מנהל/ת' && next && !/^[\d\s]+$/.test(next)) {
       result.principal = next;
     }
-    else if (current === 'מפקח/ת' && next && !/^[\d\s]+$/.test(next)) {
-      result.inspector = next;
+    else if ((current === 'דוא"ל' || current === 'אימייל' || current === 'email' || current === 'דוא\"ל') && next && next.indexOf('@') !== -1) {
+      result.email = next;
     }
   }
 
@@ -125,6 +125,12 @@ function parseAllSchoolPage(semel, html) {
   if (!result.phone) {
     var phoneMatch = text.match(/0[2-9]-?\d{7}/);
     if (phoneMatch) result.phone = phoneMatch[0];
+  }
+
+  // Fallback: try to find email address in page
+  if (!result.email) {
+    var emailMatch = text.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/);
+    if (emailMatch) result.email = emailMatch[0];
   }
 
   return result;
@@ -153,7 +159,7 @@ function testLookup() {
   //   "address": "שד ירושלים, אור עקיבא",
   //   "phone": "04-6361277",
   //   "principal": "רינת מראד",
-  //   "inspector": "זיוה רון",
+  //   "email": "school@example.co.il",
   //   "source": "allschool.co.il"
   // }
 }
