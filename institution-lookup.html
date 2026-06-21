@@ -57,10 +57,10 @@
             border: 2px solid #ddd;
             border-radius: 10px;
             text-align: center;
-            letter-spacing: 4px;
+            letter-spacing: 2px;
             font-weight: 600;
             transition: border-color 0.3s;
-            direction: ltr;
+            direction: rtl;
         }
 
         .input-group input:focus {
@@ -382,14 +382,13 @@
 <body>
     <div class="header">
         <h1>&#x1F3EB; חיפוש מוסד חינוך</h1>
-        <p>הזן סמל מוסד (6 ספרות) לקבלת מידע מלא</p>
+        <p>הזן סמל מוסד 6 ספרות או שם מוסד + עיר</p>
         <p style="font-weight:bold; margin-top:6px; font-size:0.9rem; color:#ffd700;">נכתב על ידי : רובי דביר roobid@gmail.com</p>
     </div>
 
     <div class="search-card">
         <div class="input-group">
-            <input type="text" id="semelInput" maxlength="6" placeholder="310011"
-                   pattern="[0-9]{6}" inputmode="numeric"
+            <input type="text" id="semelInput" placeholder="310011 או שרת בת ים"
                    onkeypress="if(event.key==='Enter') searchInstitution()">
             <button class="btn btn-primary" id="searchBtn" onclick="searchInstitution()">
                 &#x1F50D; חפש
@@ -400,8 +399,9 @@
             <span style="font-size:0.85rem; color:#888;">דוגמאות:</span>
             <button class="example-btn" onclick="fillExample('310011')">310011</button>
             <button class="example-btn" onclick="fillExample('420018')">420018</button>
-            <button class="example-btn" onclick="fillExample('411124')">411124</button>
+            <button class="example-btn" onclick="fillExample('שרת בת ים')">שרת בת ים</button>
         </div>
+        <div id="searchResults" style="display:none; margin-top:12px;"></div>
 
         <div class="setup-notice" id="setupNotice" style="display:none">
             <strong>&#x2699;&#xFE0F; הגדרה ראשונית נדרשת:</strong><br>
@@ -474,35 +474,50 @@
         }
     }
 
-    function fillExample(semel) {
-        document.getElementById('semelInput').value = semel;
+    function fillExample(val) {
+        document.getElementById('semelInput').value = val;
         searchInstitution();
     }
 
     async function searchInstitution() {
         const input = document.getElementById('semelInput');
-        const semel = input.value.trim();
+        const query = input.value.trim();
         const errorMsg = document.getElementById('errorMsg');
         const resultCard = document.getElementById('resultCard');
         const loadingDiv = document.getElementById('loadingDiv');
         const resultContent = document.getElementById('resultContent');
         const searchBtn = document.getElementById('searchBtn');
+        const searchResults = document.getElementById('searchResults');
 
-        // Validate
-        if (!/^\d{6}$/.test(semel)) {
-            errorMsg.textContent = 'יש להזין מספר בן 6 ספרות בדיוק';
+        if (!query) {
+            errorMsg.textContent = 'יש להזין סמל מוסד או שם מוסד + עיר';
             return;
         }
         errorMsg.textContent = '';
+        searchResults.style.display = 'none';
+        searchResults.innerHTML = '';
 
-        // Show loading
+        // If 6 digits — direct semel search
+        if (/^\d{6}$/.test(query)) {
+            await searchBySemel(query);
+        } else {
+            // Text search — search by name/city
+            await searchByName(query);
+        }
+    }
+
+    async function searchBySemel(semel) {
+        const resultCard = document.getElementById('resultCard');
+        const loadingDiv = document.getElementById('loadingDiv');
+        const resultContent = document.getElementById('resultContent');
+        const searchBtn = document.getElementById('searchBtn');
+
         resultCard.classList.add('visible');
         loadingDiv.style.display = 'block';
         resultContent.style.display = 'none';
         searchBtn.disabled = true;
 
         try {
-            // Fetch from both sources in parallel
             const [govData, gasData] = await Promise.allSettled([
                 fetchGovData(semel),
                 fetchGasData(semel)
@@ -530,6 +545,78 @@
         } finally {
             searchBtn.disabled = false;
         }
+    }
+
+    async function searchByName(query) {
+        const searchBtn = document.getElementById('searchBtn');
+        const searchResults = document.getElementById('searchResults');
+        const resultCard = document.getElementById('resultCard');
+        const errorMsg = document.getElementById('errorMsg');
+
+        searchBtn.disabled = true;
+        resultCard.classList.remove('visible');
+        searchResults.style.display = 'block';
+        searchResults.innerHTML = '<div style="text-align:center; padding:12px; color:#666;">מחפש...</div>';
+
+        try {
+            const url = `${DATA_GOV_API}?resource_id=${RESOURCE_ID}&q=${encodeURIComponent(query)}&limit=50`;
+            const resp = await fetch(url);
+            if (!resp.ok) throw new Error('שגיאה בחיפוש');
+            const data = await resp.json();
+
+            if (!data.success || !data.result.records.length) {
+                searchResults.innerHTML = '<div style="text-align:center; padding:12px; color:#e74c3c;">לא נמצאו תוצאות</div>';
+                return;
+            }
+
+            // Deduplicate by semel (keep most recent year)
+            const semelMap = {};
+            data.result.records.forEach(r => {
+                const s = String(r['סמל מוסד']);
+                if (!semelMap[s] || (r['שנה'] || 0) > (semelMap[s]['שנה'] || 0)) {
+                    semelMap[s] = r;
+                }
+            });
+
+            const results = Object.values(semelMap);
+            if (results.length === 0) {
+                searchResults.innerHTML = '<div style="text-align:center; padding:12px; color:#e74c3c;">לא נמצאו תוצאות</div>';
+                return;
+            }
+
+            // If only one result, go directly to it
+            if (results.length === 1) {
+                searchResults.style.display = 'none';
+                const semel = String(results[0]['סמל מוסד']);
+                document.getElementById('semelInput').value = semel;
+                await searchBySemel(semel);
+                return;
+            }
+
+            // Show list of results
+            let html = `<div style="font-size:0.85rem; color:#888; margin-bottom:8px;">נמצאו ${results.length} תוצאות — בחר מוסד:</div>`;
+            html += '<div style="max-height:250px; overflow-y:auto; border:1px solid #eee; border-radius:8px;">';
+            results.forEach(r => {
+                const semel = String(r['סמל מוסד']);
+                const name = r['שם מוסד'] || '';
+                const city = r['שם ישוב'] || '';
+                html += `<div onclick="selectResult('${semel}')" style="padding:10px 14px; border-bottom:1px solid #f0f0f0; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='#f0f7ff'" onmouseout="this.style.background=''">
+                    <strong>${name}</strong> <span style="color:#666;">— ${city}</span> <span style="color:#aaa; font-size:0.8rem;">(${semel})</span>
+                </div>`;
+            });
+            html += '</div>';
+            searchResults.innerHTML = html;
+        } catch (err) {
+            searchResults.innerHTML = `<div style="text-align:center; padding:12px; color:#e74c3c;">${err.message}</div>`;
+        } finally {
+            searchBtn.disabled = false;
+        }
+    }
+
+    function selectResult(semel) {
+        document.getElementById('searchResults').style.display = 'none';
+        document.getElementById('semelInput').value = semel;
+        searchBySemel(semel);
     }
 
     async function fetchGovData(semel) {
