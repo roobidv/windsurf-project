@@ -383,6 +383,7 @@
     <div class="header">
         <h1>&#x1F3EB; חיפוש מוסד חינוך</h1>
         <p>הזן סמל מוסד (6 ספרות) לקבלת מידע מלא</p>
+        <p style="font-weight:bold; margin-top:6px; font-size:0.9rem;">נכתב על ידי : רובי דביר roobid@gmail.com</p>
     </div>
 
     <div class="search-card">
@@ -573,6 +574,7 @@
         // Build summary card
         const phone = (gas && gas.phone) || '';
         const address = (gas && gas.address) || (gov && gov['שם ישוב']) || '';
+        const email = (gas && gas.email) || '';
         const summaryCard = document.getElementById('summaryCard');
         summaryCard.style.display = 'block';
         summaryCard.innerHTML = `
@@ -594,7 +596,11 @@
                     <span class="summary-label">כתובת</span>
                     <span class="summary-value" style="direction:rtl; text-align:right;">${address || 'לא זמין'}</span>
                 </div>
-                <button class="copy-btn" onclick="copySummary('${semel}', '${name.replace(/'/g, "\\'") }', '${phone}', '${address.replace(/'/g, "\\'")}')">
+                <div class="summary-row">
+                    <span class="summary-label">דוא"ל</span>
+                    <span class="summary-value">${email ? '<a href="mailto:' + email + '">' + email + '</a>' : 'לא זמין'}</span>
+                </div>
+                <button class="copy-btn" onclick="copySummary('${semel}', '${name.replace(/'/g, "\\'") }', '${phone}', '${address.replace(/'/g, "\\'")}', '${email}')">
                     &#x1F4CB; העתק ללוח גזירים
                 </button>
             </div>
@@ -624,9 +630,9 @@
             fields.push({ label: 'מנהל/ת', value: gas.principal, icon: '&#x1F464;' });
         }
 
-        // Inspector
-        if (gas && gas.inspector) {
-            fields.push({ label: 'מפקח/ת', value: gas.inspector, icon: '&#x1F50E;' });
+        // Email
+        if (gas && gas.email) {
+            fields.push({ label: 'דוא"ל בית ספר', value: `<a href="mailto:${gas.email}">${gas.email}</a>`, icon: '&#x2709;&#xFE0F;' });
         }
 
         // City
@@ -722,12 +728,13 @@
 
         badges.innerHTML = badgesHtml;
     }
-    function copySummary(semel, name, phone, address) {
+    function copySummary(semel, name, phone, address, email) {
         const lines = [
             `סמל מוסד: ${semel}`,
             `שם מוסד: ${name}`,
             `טלפון: ${phone || 'לא זמין'}`,
-            `כתובת: ${address || 'לא זמין'}`
+            `כתובת: ${address || 'לא זמין'}`,
+            `דוא"ל: ${email || 'לא זמין'}`
         ];
         const text = lines.join('\n');
         navigator.clipboard.writeText(text).then(() => {
