@@ -561,10 +561,11 @@
         }
 
         // Grade levels
-        if (gov && gov['משכבה'] && gov['עד שכבה']) {
+        if (gov && (gov['משכבה'] !== null && gov['משכבה'] !== undefined && gov['משכבה'] !== '') &&
+            (gov['עד שכבה'] !== null && gov['עד שכבה'] !== undefined && gov['עד שכבה'] !== '')) {
             const from = String(gov['משכבה']).replace('.0', '');
             const to = String(gov['עד שכבה']).replace('.0', '');
-            const hebrewGrades = { '1': "א'", '2': "ב'", '3': "ג'", '4': "ד'", '5': "ה'", '6': "ו'",
+            const hebrewGrades = { '0': "גן", '1': "א'", '2': "ב'", '3': "ג'", '4': "ד'", '5': "ה'", '6': "ו'",
                                    '7': "ז'", '8': "ח'", '9': "ט'", '10': "י'", '11': "י\"א", '12': "י\"ב" };
             const fromHeb = hebrewGrades[from] || from;
             const toHeb = hebrewGrades[to] || to;
