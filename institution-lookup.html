@@ -75,8 +75,8 @@
         }
 
         .btn {
-            padding: 14px 28px;
-            font-size: 1.1rem;
+            padding: 12px 16px;
+            font-size: 1rem;
             font-weight: 600;
             border: none;
             border-radius: 10px;
@@ -447,8 +447,7 @@
     </div>
 
     <div class="footer">
-        נתונים ממשרד החינוך | data.gov.il &amp; allschool.co.il
-        <div style="margin-top:10px; font-size:0.75rem; opacity:0.8; max-width:500px; margin-left:auto; margin-right:auto;">
+        <div style="font-size:0.75rem; opacity:0.8; max-width:500px; margin-left:auto; margin-right:auto;">
             הנתונים נלקחים ממקורות חופשיים וגלויים באינטרנט. אולם יש איסור מוחלט לעשות שימוש מסחרי בנתונים.
         </div>
     </div>
@@ -659,8 +658,14 @@
         loadingDiv.style.display = 'none';
         resultContent.style.display = 'block';
 
+        // Clean API quote encoding: "מ""מ" → מ"מ, "חט""ב" → חט"ב
+        function cleanQuotes(val) {
+            if (typeof val !== 'string') return val;
+            return val.replace(/^"|"$/g, '').replace(/""/g, '"');
+        }
+
         // Institution name
-        const name = (gas && gas.name) || (gov && gov['שם מוסד']) || 'לא ידוע';
+        const name = (gas && gas.name) || (gov && cleanQuotes(gov['שם מוסד'])) || 'לא ידוע';
         document.getElementById('institutionName').textContent = name;
         document.getElementById('semelBadge').textContent = `סמל מוסד: ${semel}`;
 
@@ -745,13 +750,12 @@
 
         // Sector
         if (gov && gov['מגזר']) {
-            fields.push({ label: 'מגזר', value: gov['מגזר'], icon: '&#x1F465;' });
+            fields.push({ label: 'מגזר', value: cleanQuotes(gov['מגזר']), icon: '&#x1F465;' });
         }
 
         // Supervision type
         if (gov && gov['פיקוח']) {
-            const supervision = gov['פיקוח'].replace(/"/g, '');
-            fields.push({ label: 'פיקוח', value: supervision, icon: '&#x1F4CB;' });
+            fields.push({ label: 'פיקוח', value: cleanQuotes(gov['פיקוח']), icon: '&#x1F4CB;' });
         }
 
         // Grade levels
@@ -759,8 +763,8 @@
             (gov['עד שכבה'] !== null && gov['עד שכבה'] !== undefined && gov['עד שכבה'] !== '')) {
             const from = String(gov['משכבה']).replace('.0', '');
             const to = String(gov['עד שכבה']).replace('.0', '');
-            const hebrewGrades = { '0': "גן", '1': "א'", '2': "ב'", '3': "ג'", '4': "ד'", '5': "ה'", '6': "ו'",
-                                   '7': "ז'", '8': "ח'", '9': "ט'", '10': "י'", '11': "י\"א", '12': "י\"ב" };
+            const hebrewGrades = { '0': "גן", '1': "א׳", '2': "ב׳", '3': "ג׳", '4': "ד׳", '5': "ה׳", '6': "ו׳",
+                                   '7': "ז׳", '8': "ח׳", '9': "ט׳", '10': "י׳", '11': "י״א", '12': "י״ב" };
             const fromHeb = hebrewGrades[from] || from;
             const toHeb = hebrewGrades[to] || to;
             fields.push({ label: 'שכבות', value: `${fromHeb} - ${toHeb}`, icon: '&#x1F393;' });
@@ -768,7 +772,7 @@
 
         // Institution type
         if (gov && gov['סוג מסגרת אירגונית']) {
-            fields.push({ label: 'סוג מסגרת', value: gov['סוג מסגרת אירגונית'], icon: '&#x1F3E2;' });
+            fields.push({ label: 'סוג מסגרת', value: cleanQuotes(gov['סוג מסגרת אירגונית']), icon: '&#x1F3E2;' });
         }
 
         // Students count
@@ -778,7 +782,7 @@
 
         // Legal status
         if (gov && gov['מעמד משפטי']) {
-            fields.push({ label: 'מעמד משפטי', value: gov['מעמד משפטי'], icon: '&#x2696;&#xFE0F;' });
+            fields.push({ label: 'מעמד משפטי', value: cleanQuotes(gov['מעמד משפטי']), icon: '&#x2696;&#xFE0F;' });
         }
 
         // Year of establishment
