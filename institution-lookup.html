@@ -669,15 +669,24 @@
             return val.replace(/^"|"$/g, '').replace(/""/g, '"');
         }
 
+        // Decode HTML entities like &quot; → "
+        function decodeHtml(val) {
+            if (typeof val !== 'string') return val;
+            const el = document.createElement('textarea');
+            el.innerHTML = val;
+            return el.value;
+        }
+
         // Institution name
-        const name = (gas && gas.name) || (gov && cleanQuotes(gov['שם מוסד'])) || 'לא ידוע';
+        const rawName = (gas && gas.name) || (gov && cleanQuotes(gov['שם מוסד'])) || 'לא ידוע';
+        const name = decodeHtml(rawName);
         document.getElementById('institutionName').textContent = name;
         document.getElementById('semelBadge').textContent = `סמל מוסד: ${semel}`;
 
         // Build summary card
-        const phone = (gas && gas.phone) || '';
-        const address = (gas && gas.address) || (gov && gov['שם ישוב']) || '';
-        const email = (gas && gas.email) || '';
+        const phone = decodeHtml((gas && gas.phone) || '');
+        const address = decodeHtml((gas && gas.address) || (gov && gov['שם ישוב']) || '');
+        const email = decodeHtml((gas && gas.email) || '');
         const summaryCard = document.getElementById('summaryCard');
         summaryCard.style.display = 'block';
         summaryCard.innerHTML = `
@@ -714,7 +723,7 @@
 
         // Address (full from GAS, or just city from gov)
         const hasFullAddress = gas && gas.address;
-        const displayAddress = hasFullAddress ? gas.address : '';
+        const displayAddress = hasFullAddress ? decodeHtml(gas.address) : '';
         if (displayAddress) {
             fields.push({ label: 'כתובת', value: displayAddress, icon: '&#x1F4CD;', fullWidth: true });
         }
@@ -723,19 +732,19 @@
         if (gas && gas.phone) {
             fields.push({
                 label: 'טלפון מזכירות',
-                value: `<a href="tel:${gas.phone}">${gas.phone}</a>`,
+                value: `<a href="tel:${decodeHtml(gas.phone)}">${decodeHtml(gas.phone)}</a>`,
                 icon: '&#x1F4DE;'
             });
         }
 
         // Principal
         if (gas && gas.principal) {
-            fields.push({ label: 'מנהל/ת', value: gas.principal, icon: '&#x1F464;' });
+            fields.push({ label: 'מנהל/ת', value: decodeHtml(gas.principal), icon: '&#x1F464;' });
         }
 
         // Email
         if (gas && gas.email) {
-            fields.push({ label: 'דוא"ל בית ספר', value: `<a href="mailto:${gas.email}">${gas.email}</a>`, icon: '&#x2709;&#xFE0F;' });
+            fields.push({ label: 'דוא"ל בית ספר', value: `<a href="mailto:${decodeHtml(gas.email)}">${decodeHtml(gas.email)}</a>`, icon: '&#x2709;&#xFE0F;' });
         }
 
         // City
