@@ -403,7 +403,7 @@
             <button class="example-btn" onclick="fillExample('411124')">411124</button>
         </div>
 
-        <div class="setup-notice" id="setupNotice">
+        <div class="setup-notice" id="setupNotice" style="display:none">
             <strong>&#x2699;&#xFE0F; הגדרה ראשונית נדרשת:</strong><br>
             כדי לקבל נתונים מלאים (טלפון, כתובת, מנהל/ת), יש להתקין את הסקריפט ב-Google Apps Script.<br>
             1. העתק את הקובץ <code>institution_lookup_gas.js</code> ל-Google Apps Script חדש<br>
@@ -549,9 +549,12 @@
         return records[0];
     }
 
+    const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzYWeiu0IGLqSXtn4UCdf09uprRFgXb7bwImaOe7VI7amranNQZesp4OG0sk2PH4P8n/exec';
+
     async function fetchGasData(semel) {
         const gasUrl = document.getElementById('gasUrl').value.trim() ||
-                       localStorage.getItem('gasUrl');
+                       localStorage.getItem('gasUrl') ||
+                       DEFAULT_GAS_URL;
         if (!gasUrl) return null;
 
         const url = `${gasUrl}?semel=${semel}`;
