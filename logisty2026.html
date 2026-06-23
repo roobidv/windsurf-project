@@ -1062,7 +1062,7 @@
         <div class="filter-chip active" data-level="" data-ptype="">הכל</div>
         <div class="filter-chip chip-green" data-level="" data-ptype="משרדי">משרדי</div>
         <div class="filter-chip chip-red" data-level="" data-ptype="לא-משרדי">לא משרדי</div>
-        <div class="filter-chip" id="refreshBtn" onclick="refreshData()" style="background:#4CAF50;color:white;padding:6px 20px;font-size:115%;margin-right:auto;margin-left:0">🔄 רענן</div>
+        <div class="filter-chip" id="refreshBtn" onclick="refreshData()" style="background:#4CAF50;color:white;padding:5px 16px;font-size:100%;margin-right:auto;margin-left:0">רענן</div>
     </div>
 
     <div class="stats-bar">
@@ -1213,7 +1213,7 @@
 
         function refreshData() {
             const btn = document.getElementById('refreshBtn');
-            btn.innerHTML = '⏳ רענן';
+            btn.textContent = 'מרענן...';
             btn.style.pointerEvents = 'none';
             fetch(SCRIPT_URL + '?action=getCSV', {mode: 'cors'})
                 .then(r => r.text())
@@ -1224,14 +1224,14 @@
                         localStorage.setItem('csv_cache_time', new Date().toISOString());
                         _parseAndLoad(text);
                     }
-                    btn.innerHTML = '✓ רענן';
+                    btn.textContent = 'רענן ✓';
                     btn.style.pointerEvents = '';
-                    setTimeout(() => { btn.innerHTML = '🔄 רענן'; }, 2000);
+                    setTimeout(() => { btn.textContent = 'רענן'; }, 2000);
                 })
                 .catch(() => {
-                    btn.innerHTML = '❌ רענן';
+                    btn.textContent = 'שגיאה';
                     btn.style.pointerEvents = '';
-                    setTimeout(() => { btn.innerHTML = '🔄 רענן'; }, 2000);
+                    setTimeout(() => { btn.textContent = 'רענן'; }, 2000);
                 });
         }
 
@@ -1265,11 +1265,20 @@
                 email:r[17]||'',address:r[18]||'',
                 status:r[20]||'',close_amount:r[21]||'',status_date:r[22]||''
             })).filter(r => r.name);
-            // Sync status & close_amount from cloud to localStorage (override local with sheet)
+            // Sync status & close_amount from cloud to localStorage
             allRows.forEach(r => {
                 const bk = r.code + '_' + r.level.replace(/"/g,'');
-                localStorage.setItem('status_' + bk, r.status);
-                localStorage.setItem('close_amount_' + bk, r.close_amount);
+                // Only overwrite local if server has a value (prevents wiping recent local changes)
+                if (r.status || !localStorage.getItem('status_' + bk)) {
+                    localStorage.setItem('status_' + bk, r.status);
+                }
+                if (r.close_amount || !localStorage.getItem('close_amount_' + bk)) {
+                    localStorage.setItem('close_amount_' + bk, r.close_amount);
+                }
+                // Sync status_date from CSV if available
+                if (r.status_date && !localStorage.getItem('status_date_' + bk)) {
+                    localStorage.setItem('status_date_' + bk, r.status_date);
+                }
             });
             // Show data source in subtitle
             const cacheTime = localStorage.getItem('csv_cache_time');
