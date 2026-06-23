@@ -1056,6 +1056,7 @@
             <option value="">כל הרשויות</option>
         </select>
         <button class="mgr-report-btn" id="mgrReportBtn" style="display:none" onclick="openMgrReport()">📊 דו"ח מנהל</button>
+        <button class="mgr-report-btn" id="refreshBtn" onclick="refreshData()" style="background:#4CAF50;color:white;padding:5px 10px;font-size:15px;min-width:auto">🔄</button>
     </div>
 
     <div class="filters" id="levelFilters">
@@ -1208,6 +1209,30 @@
                     }
                 })
                 .catch(() => { if (!cached) _useCacheOrEmbedded(); });
+        }
+
+        function refreshData() {
+            const btn = document.getElementById('refreshBtn');
+            btn.textContent = '⏳';
+            btn.disabled = true;
+            fetch(SCRIPT_URL + '?action=getCSV', {mode: 'cors'})
+                .then(r => r.text())
+                .then(text => {
+                    try { const j = JSON.parse(text); if (j.csv) text = j.csv; } catch(e) {}
+                    if (text && text.length > 100) {
+                        localStorage.setItem('csv_cache', text);
+                        localStorage.setItem('csv_cache_time', new Date().toISOString());
+                        _parseAndLoad(text);
+                    }
+                    btn.textContent = '✓';
+                    btn.disabled = false;
+                    setTimeout(() => { btn.textContent = '🔄'; }, 2000);
+                })
+                .catch(() => {
+                    btn.textContent = '❌';
+                    btn.disabled = false;
+                    setTimeout(() => { btn.textContent = '🔄'; }, 2000);
+                });
         }
 
         function _useCacheOrEmbedded() {
