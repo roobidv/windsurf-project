@@ -22,6 +22,7 @@ function doGet(e) {
   if (action === 'checkMessages') return checkMessages_(e.parameter);
   if (action === 'getOfferPdf') return getOfferPdf_(e.parameter);
   if (action === 'lookupPhone') return lookupPhone_(e.parameter);
+  if (action === 'debugHeaders') return debugHeaders_();
 
   // Default: return notes/fields (like loadCloudNotes in LOGISTY2026)
   return ContentService.createTextOutput('{}').setMimeType(ContentService.MimeType.JSON);
@@ -373,20 +374,31 @@ function addGlobalContact_(data) {
   var sheet = ss.getSheetByName('tblGLOBAL_PHONE_BOOK');
   if (!sheet) return jsonOut_({ok: false, error: 'sheet_not_found'});
 
+  // Get next ContactID: find max in column A + 1
+  var lastRow = sheet.getLastRow();
+  var ids = sheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  var maxId = 0;
+  for (var j = 0; j < ids.length; j++) {
+    var val = parseInt(ids[j][0]) || 0;
+    if (val > maxId) maxId = val;
+  }
+  var nextId = maxId + 1;
+
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   var newRow = [];
   for (var i = 0; i < headers.length; i++) {
     var h = String(headers[i]).trim();
-    if (h === 'ContactName' || h === 'Name' || h === 'name') newRow.push(name);
-    else if (h === 'FamlyName' || h === 'FamilyName' || h === 'family') newRow.push(family);
-    else if (h === 'Tital' || h === 'Title' || h === 'title') newRow.push(title);
-    else if (h === 'PhoneNumber' || h === 'Phone' || h === 'phone') newRow.push(phone);
+    if (h === 'ContactID') newRow.push(nextId);
+    else if (h === 'ContactName') newRow.push(name);
+    else if (h === 'FamlyName') newRow.push(family);
+    else if (h === 'Tital') newRow.push(title);
+    else if (h === 'PhoneNumber') newRow.push(phone);
     else if (h === 'DateAdded') newRow.push(new Date());
     else newRow.push('');
   }
 
   sheet.appendRow(newRow);
-  return jsonOut_({ok: true});
+  return jsonOut_({ok: true, id: nextId});
 }
 
 // === getOfferPdf: שליפת קישור זמני ל-PDF הצעת מחיר מ-Dropbox ===
@@ -507,6 +519,17 @@ function getDropboxTempLink_(serialNumber) {
 function testDropboxAuth() {
   var link = getDropboxTempLink_('1900384');
   Logger.log('Link: ' + link);
+}
+
+// === Debug: temporary - get sheet headers ===
+function debugHeaders_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('tblGLOBAL_PHONE_BOOK');
+  if (!sheet) return jsonOut_({error: 'sheet not found'});
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var lastRow = sheet.getLastRow();
+  var lastId = sheet.getRange(lastRow, 1).getValue();
+  return jsonOut_({headers: headers, lastRow: lastRow, lastId: lastId});
 }
 
 // === Helper ===
