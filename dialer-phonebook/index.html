@@ -1312,6 +1312,13 @@
     function checkAuth() {
         const deviceId = localStorage.getItem('pb_device_id');
         const savedName = localStorage.getItem('pb_auth_name');
+        const savedToken = localStorage.getItem('pb_auth_token');
+
+        // Instant login: if device was previously authenticated, open immediately
+        if (deviceId && savedName && savedToken) {
+            showApp(savedName);
+            return;
+        }
 
         if (deviceId) {
             fetch(SCRIPT_URL + '?action=deviceAuth&deviceId=' + encodeURIComponent(deviceId), {mode: 'cors'})
