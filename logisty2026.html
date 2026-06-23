@@ -1213,8 +1213,8 @@
 
         function refreshData() {
             const btn = document.getElementById('refreshBtn');
-            btn.textContent = '⏳';
-            btn.disabled = true;
+            btn.innerHTML = '⏳ רענן';
+            btn.style.pointerEvents = 'none';
             fetch(SCRIPT_URL + '?action=getCSV', {mode: 'cors'})
                 .then(r => r.text())
                 .then(text => {
@@ -1224,14 +1224,14 @@
                         localStorage.setItem('csv_cache_time', new Date().toISOString());
                         _parseAndLoad(text);
                     }
-                    btn.textContent = '✓';
-                    btn.disabled = false;
-                    setTimeout(() => { btn.textContent = '🔄'; }, 2000);
+                    btn.innerHTML = '✓ רענן';
+                    btn.style.pointerEvents = '';
+                    setTimeout(() => { btn.innerHTML = '🔄 רענן'; }, 2000);
                 })
                 .catch(() => {
-                    btn.textContent = '❌';
-                    btn.disabled = false;
-                    setTimeout(() => { btn.textContent = '🔄'; }, 2000);
+                    btn.innerHTML = '❌ רענן';
+                    btn.style.pointerEvents = '';
+                    setTimeout(() => { btn.innerHTML = '🔄 רענן'; }, 2000);
                 });
         }
 
