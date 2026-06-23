@@ -696,7 +696,7 @@
         <h2>ספר טלפונים</h2>
         <p>הזן קוד כניסה</p>
         <div class="login-field active" id="field-code">
-            <input type="text" id="loginCode" placeholder="קוד כניסה" onkeydown="if(event.key==='Enter')doLogin()">
+            <input type="tel" inputmode="numeric" pattern="[0-9]*" id="loginCode" placeholder="קוד כניסה" onkeydown="if(event.key==='Enter')doLogin()">
         </div>
         <button class="login-btn" id="loginBtn" onclick="doLogin()">כניסה</button>
         <div class="login-error" id="loginError"></div>
