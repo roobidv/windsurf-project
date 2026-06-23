@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1a73e8">
     <title>ספר טלפונים</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1513,6 +1515,11 @@
 
     // === Init ===
     checkAuth();
+
+    // === Service Worker ===
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
 </script>
 </body>
 </html>
