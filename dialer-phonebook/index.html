@@ -1559,6 +1559,22 @@
     if (_n && !/^[\u0590-\u05FFa-zA-Z0-9 ]+$/.test(_n)) {
         localStorage.setItem('pb_auth_name', 'משתמש מורשה');
     }
+    // Clean garbled user names in existing notes
+    for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k.startsWith('notes_c_')) continue;
+        try {
+            let arr = JSON.parse(localStorage.getItem(k));
+            let changed = false;
+            arr.forEach(n => {
+                if (n.user && !/^[\u0590-\u05FFa-zA-Z0-9 ]+$/.test(n.user)) {
+                    n.user = 'משתמש מורשה';
+                    changed = true;
+                }
+            });
+            if (changed) localStorage.setItem(k, JSON.stringify(arr));
+        } catch(e) {}
+    }
     checkAuth();
 
     // === Service Worker ===
