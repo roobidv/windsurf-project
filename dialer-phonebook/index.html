@@ -1202,10 +1202,10 @@
         }
 
         let allNotes = [];
-        // Scan ALL localStorage keys starting with 'notes_'
+        // Scan localStorage keys for this app only (notes_c_ prefix)
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (!key.startsWith('notes_')) continue;
+            if (!key.startsWith('notes_c_')) continue;
             const baseKey = key.replace('notes_', '');
             const raw = localStorage.getItem(key);
             if (!raw) continue;
