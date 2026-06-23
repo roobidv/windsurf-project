@@ -2581,8 +2581,8 @@
             const savedToken = localStorage.getItem('auth_token');
             const savedPerm = localStorage.getItem('auth_perm');
 
-            // Instant login: if device was previously authenticated, open immediately
-            if (deviceId && savedName && savedToken) {
+            // Instant login: only for phone1 (ROOBI)
+            if (deviceId && savedName && savedToken && savedPerm === 'phone1') {
                 showApp(savedName, savedPerm);
                 return;
             }

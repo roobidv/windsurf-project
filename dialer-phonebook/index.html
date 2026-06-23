@@ -1322,7 +1322,7 @@
                     localStorage.setItem('pb_auth_token', value);
                     localStorage.setItem('pb_auth_type', 'code');
                     localStorage.setItem('pb_auth_name', displayName);
-                    localStorage.setItem('pb_auth_perm', 'מנהל');
+                    localStorage.setItem('pb_auth_perm', data.permType || 'מנהל');
                     _registerDevice(displayName, value);
                     showApp(displayName);
                 } else {
@@ -1359,8 +1359,9 @@
         const savedName = localStorage.getItem('pb_auth_name');
         const savedToken = localStorage.getItem('pb_auth_token');
 
-        // Instant login: if device was previously authenticated, open immediately
-        if (deviceId && savedName && savedToken) {
+        // Instant login: only for phone1 (ROOBI)
+        const savedPerm = localStorage.getItem('pb_auth_perm');
+        if (deviceId && savedName && savedToken && savedPerm === 'phone1') {
             showApp(savedName);
             return;
         }
@@ -1393,6 +1394,7 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.authorized) {
+                        if (data.permType) localStorage.setItem('pb_auth_perm', data.permType);
                         _registerDevice(data.name || savedToken, savedToken);
                         showApp(data.name || localStorage.getItem('pb_auth_name'));
                     } else {
