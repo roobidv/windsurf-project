@@ -757,7 +757,7 @@
 
 <div class="global-report-bar">
     <button class="global-report-btn" onclick="openGlobalReport()">📊 דו"ח הערות</button>
-    <button class="global-report-btn" onclick="refreshData()" id="refreshBtn" style="background:#4CAF50;color:white">🔄 רענן</button>
+    <button class="global-report-btn" onclick="refreshData()" id="refreshBtn" style="background:#4CAF50;color:white;padding:4px 8px;font-size:12px;min-width:auto">🔄</button>
     <span style="font-size:12px;color:var(--text-muted)">ימים:</span>
     <input type="number" class="report-days-input" id="reportDays" value="7" min="1" max="90">
 </div>
@@ -1118,7 +1118,9 @@
     function _getNow() {
         const d = new Date();
         const yr = String(d.getFullYear()).slice(-2);
-        return d.getDate() + '.' + (d.getMonth()+1) + '.' + yr + ' ' + d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+        const hh = String(d.getHours()).padStart(2,'0');
+        const mm = String(d.getMinutes()).padStart(2,'0');
+        return d.getDate() + '.' + (d.getMonth()+1) + '.' + yr + ' ' + hh + ':' + mm;
     }
 
     function getNotesForKey(baseKey) {
@@ -1193,20 +1195,27 @@
         const cutoff = new Date();
         cutoff.setDate(cutoff.getDate() - days);
 
-        let allNotes = [];
-        // Gather notes from all contacts
+        // Build contact name lookup from allRows
+        const nameMap = {};
         for (const r of allRows) {
-            const baseKey = 'c_' + r.id;
-            const raw = localStorage.getItem('notes_' + baseKey);
+            nameMap['c_' + r.id] = (r.name + ' ' + (r.family||'')).trim();
+        }
+
+        let allNotes = [];
+        // Scan ALL localStorage keys starting with 'notes_'
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (!key.startsWith('notes_')) continue;
+            const baseKey = key.replace('notes_', '');
+            const raw = localStorage.getItem(key);
             if (!raw) continue;
             try {
                 const arr = JSON.parse(raw);
-                const fullName = (r.name + ' ' + (r.family||'')).trim();
+                const contactName = nameMap[baseKey] || baseKey.replace('c_','');
                 arr.forEach(n => {
-                    // Parse date like "6.6.25 14:30"
                     const noteDate = _parseNoteDate(n.date);
                     if (noteDate && noteDate >= cutoff) {
-                        allNotes.push({name: fullName, text: n.text, user: n.user||'', date: n.date||'', dateObj: noteDate});
+                        allNotes.push({name: contactName, text: n.text, user: n.user||'', date: n.date||'', dateObj: noteDate});
                     }
                 });
             } catch(e) {}
@@ -1231,15 +1240,17 @@
     function _parseNoteDate(dateStr) {
         if (!dateStr) return null;
         try {
-            // Format: "6.6.25 14:30"
-            const parts = dateStr.split(' ');
+            // Strip any non-visible chars (RTL marks etc)
+            const clean = dateStr.replace(/[^\d.:/ ]/g, '').trim();
+            // Format: "6.6.25 14:30" or "23.6.26 09:15"
+            const parts = clean.split(/\s+/);
             const dParts = parts[0].split('.');
             const day = parseInt(dParts[0]);
             const month = parseInt(dParts[1]) - 1;
             let year = parseInt(dParts[2]);
             if (year < 100) year += 2000;
             const tParts = (parts[1]||'0:0').split(':');
-            return new Date(year, month, day, parseInt(tParts[0]), parseInt(tParts[1]));
+            return new Date(year, month, day, parseInt(tParts[0])||0, parseInt(tParts[1])||0);
         } catch(e) { return null; }
     }
 
