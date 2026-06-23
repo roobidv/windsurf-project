@@ -776,6 +776,11 @@
 
     // === Data Loading ===
     function loadData() {
+        // Show cached data immediately
+        const cached = localStorage.getItem('pb_csv_cache');
+        if (cached) _parseAndLoad(cached);
+
+        // Then fetch fresh data in background
         fetch(SCRIPT_URL + '?action=getCSV', {mode: 'cors'})
             .then(r => r.text())
             .then(text => {
@@ -787,11 +792,9 @@
                     localStorage.setItem('pb_csv_cache', text);
                     localStorage.setItem('pb_csv_time', new Date().toISOString());
                     _parseAndLoad(text);
-                } else {
-                    _useCache();
                 }
             })
-            .catch(() => _useCache());
+            .catch(() => { if (!cached) _useCache(); });
     }
 
     function _useCache() {
