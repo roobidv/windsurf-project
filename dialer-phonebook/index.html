@@ -1318,12 +1318,13 @@
             .then(r => r.json())
             .then(data => {
                 if (data.authorized) {
+                    const displayName = 'משתמש מורשה';
                     localStorage.setItem('pb_auth_token', value);
                     localStorage.setItem('pb_auth_type', 'code');
-                    localStorage.setItem('pb_auth_name', data.name || '');
-                    localStorage.setItem('pb_auth_perm', data.permType || '');
-                    _registerDevice(data.name || value, value);
-                    showApp(data.name);
+                    localStorage.setItem('pb_auth_name', displayName);
+                    localStorage.setItem('pb_auth_perm', 'מנהל');
+                    _registerDevice(displayName, value);
+                    showApp(displayName);
                 } else {
                     if (data.locked) {
                         errEl.textContent = 'יותר מדי ניסיונות. חסום ל-4 שעות.';
