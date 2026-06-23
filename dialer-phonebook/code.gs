@@ -21,6 +21,7 @@ function doGet(e) {
   if (action === 'deviceAuth') return doDeviceAuth_(e.parameter);
   if (action === 'checkMessages') return checkMessages_(e.parameter);
   if (action === 'getOfferPdf') return getOfferPdf_(e.parameter);
+  if (action === 'lookupPhone') return lookupPhone_(e.parameter);
 
   // Default: return notes/fields (like loadCloudNotes in LOGISTY2026)
   return ContentService.createTextOutput('{}').setMimeType(ContentService.MimeType.JSON);
@@ -37,6 +38,7 @@ function doPost(e) {
     if (action === 'updateContact') return updateContact_(data);
     if (action === 'addNote') return addNote_(data);
     if (action === 'markMessageRead') return markMessageRead_(data);
+    if (action === 'addGlobalContact') return addGlobalContact_(data);
 
     return ContentService.createTextOutput('{"ok":true}').setMimeType(ContentService.MimeType.JSON);
   } catch(ex) {
@@ -279,6 +281,104 @@ function markMessageRead_(data) {
 
   // עמודה E = ReadDate
   sheet.getRange(row, 5).setValue(new Date());
+  return jsonOut_({ok: true});
+}
+
+// === lookupPhone: חיפוש מספר טלפון בשתי טבלאות ===
+function lookupPhone_(params) {
+  var phone = (params.phone || '').replace(/[\s\-()]/g, '');
+  if (!phone) return jsonOut_({found: false, error: 'missing_phone'});
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // Search Contacts sheet
+  var contacts = ss.getSheetByName('Contacts');
+  if (contacts) {
+    var cData = contacts.getDataRange().getValues();
+    var cHeaders = cData[0];
+    var phoneCol = cHeaders.indexOf('PhoneNumber');
+    var landlineCol = cHeaders.indexOf('Landline');
+    var nameCol = cHeaders.indexOf('ContactName');
+    var familyCol = cHeaders.indexOf('FamlyName');
+    var titleCol = cHeaders.indexOf('Tital');
+
+    for (var i = 1; i < cData.length; i++) {
+      var cp = String(cData[i][phoneCol] || '').replace(/[\s\-()]/g, '');
+      var cl = String(cData[i][landlineCol] || '').replace(/[\s\-()]/g, '');
+      if (cp === phone || '0' + cp === phone || cp === '0' + phone ||
+          cl === phone || '0' + cl === phone || cl === '0' + phone) {
+        return jsonOut_({
+          found: true,
+          source: 'Contacts',
+          name: String(cData[i][nameCol] || ''),
+          family: String(cData[i][familyCol] || ''),
+          title: String(cData[i][titleCol] || ''),
+          phone: phone
+        });
+      }
+    }
+  }
+
+  // Search tblGLOBAL_PHONE_BOOK
+  var global = ss.getSheetByName('tblGLOBAL_PHONE_BOOK');
+  if (global) {
+    var gData = global.getDataRange().getValues();
+    var gHeaders = gData[0];
+    var gPhoneCol = -1, gNameCol = -1, gFamilyCol = -1, gTitleCol = -1;
+    for (var h = 0; h < gHeaders.length; h++) {
+      var hdr = String(gHeaders[h]).trim();
+      if (hdr === 'PhoneNumber' || hdr === 'Phone' || hdr === 'phone') gPhoneCol = h;
+      if (hdr === 'ContactName' || hdr === 'Name' || hdr === 'name') gNameCol = h;
+      if (hdr === 'FamlyName' || hdr === 'FamilyName' || hdr === 'family') gFamilyCol = h;
+      if (hdr === 'Tital' || hdr === 'Title' || hdr === 'title') gTitleCol = h;
+    }
+
+    if (gPhoneCol > -1) {
+      for (var j = 1; j < gData.length; j++) {
+        var gp = String(gData[j][gPhoneCol] || '').replace(/[\s\-()]/g, '');
+        if (gp === phone || '0' + gp === phone || gp === '0' + phone) {
+          return jsonOut_({
+            found: true,
+            source: 'Global',
+            name: gNameCol > -1 ? String(gData[j][gNameCol] || '') : '',
+            family: gFamilyCol > -1 ? String(gData[j][gFamilyCol] || '') : '',
+            title: gTitleCol > -1 ? String(gData[j][gTitleCol] || '') : '',
+            phone: phone
+          });
+        }
+      }
+    }
+  }
+
+  return jsonOut_({found: false, phone: phone});
+}
+
+// === addGlobalContact: הוספת איש קשר לטבלה הגלובלית ===
+function addGlobalContact_(data) {
+  var phone = (data.phone || '').replace(/[\s\-()]/g, '');
+  var name = (data.name || '').trim();
+  var family = (data.family || '').trim();
+  var title = (data.title || '').trim();
+
+  if (!phone || !name) return jsonOut_({ok: false, error: 'missing_fields'});
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('tblGLOBAL_PHONE_BOOK');
+  if (!sheet) return jsonOut_({ok: false, error: 'sheet_not_found'});
+
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var newRow = [];
+  for (var i = 0; i < headers.length; i++) {
+    var h = String(headers[i]).trim();
+    if (h === 'ContactName' || h === 'Name' || h === 'name') newRow.push(name);
+    else if (h === 'FamlyName' || h === 'FamilyName' || h === 'family') newRow.push(family);
+    else if (h === 'Tital' || h === 'Title' || h === 'title') newRow.push(title);
+    else if (h === 'PhoneNumber' || h === 'Phone' || h === 'phone') newRow.push(phone);
+    else if (h === 'DateAdded') newRow.push(new Date());
+    else newRow.push('');
+  }
+
+  sheet.appendRow(newRow);
   return jsonOut_({ok: true});
 }
 

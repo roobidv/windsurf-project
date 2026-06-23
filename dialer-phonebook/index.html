@@ -602,6 +602,90 @@
             margin-top: 8px;
             min-height: 18px;
         }
+
+        /* Phone Lookup Dialog */
+        .phone-lookup-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .phone-lookup-overlay.visible { display: flex; }
+        .phone-lookup-dialog {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            width: 90%;
+            max-width: 360px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+            text-align: center;
+            direction: rtl;
+        }
+        .phone-lookup-dialog h3 { margin: 0 0 16px; font-size: 18px; }
+        .phone-lookup-result {
+            background: var(--bg);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .phone-lookup-result .plr-name { font-size: 20px; font-weight: 700; }
+        .phone-lookup-result .plr-title { font-size: 14px; color: #666; margin-top: 4px; }
+        .phone-lookup-result .plr-source { font-size: 11px; color: #999; margin-top: 6px; }
+        .phone-lookup-dial {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .phone-lookup-add-form input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+            margin-bottom: 8px;
+            direction: rtl;
+        }
+        .phone-lookup-add-form input:focus { border-color: var(--primary); outline: none; }
+        .phone-lookup-save {
+            width: 100%;
+            padding: 10px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 4px;
+        }
+        .phone-lookup-save:disabled { opacity: 0.5; }
+        .phone-lookup-close {
+            margin-top: 12px;
+            padding: 8px 16px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .phone-lookup-error {
+            color: var(--red);
+            font-size: 13px;
+            margin-top: 8px;
+            min-height: 18px;
+        }
     </style>
 </head>
 <body>
@@ -634,6 +718,15 @@
             <button class="offer-btn-open" id="offerOpenBtn" onclick="fetchOffer()">פתח PDF</button>
             <button class="offer-btn-cancel" onclick="closeOfferDialog()">ביטול</button>
         </div>
+    </div>
+</div>
+
+<!-- Phone Lookup Dialog -->
+<div class="phone-lookup-overlay" id="phoneLookupOverlay" onclick="if(event.target===this)closePhoneLookup()">
+    <div class="phone-lookup-dialog">
+        <h3>🔎 חיפוש מספר טלפון</h3>
+        <div id="phoneLookupContent"></div>
+        <button class="phone-lookup-close" onclick="closePhoneLookup()">סגור</button>
     </div>
 </div>
 
@@ -1315,8 +1408,91 @@
             });
     }
 
+    // === Phone Lookup ===
+    function isPhoneNumber(val) {
+        const clean = val.replace(/[\s\-()]/g, '');
+        return /^0\d{8,9}$/.test(clean);
+    }
+
+    function checkPhoneLookup() {
+        const q = document.getElementById('searchInput').value.trim();
+        if (isPhoneNumber(q)) {
+            doPhoneLookup(q.replace(/[\s\-()]/g, ''));
+        }
+    }
+
+    function doPhoneLookup(phone) {
+        const content = document.getElementById('phoneLookupContent');
+        content.innerHTML = '<div style="padding:20px;color:#666">מחפש...</div>';
+        document.getElementById('phoneLookupOverlay').classList.add('visible');
+
+        fetch(SCRIPT_URL + '?action=lookupPhone&phone=' + encodeURIComponent(phone), {mode: 'cors'})
+            .then(r => r.json())
+            .then(data => {
+                if (data.found) {
+                    const fullName = data.name + (data.family ? ' ' + data.family : '');
+                    content.innerHTML = `
+                        <div class="phone-lookup-result">
+                            <div class="plr-name">${esc(fullName)}</div>
+                            ${data.title ? '<div class="plr-title">' + esc(data.title) + '</div>' : ''}
+                            <div class="plr-source">${data.source === 'Contacts' ? 'אנשי קשר' : 'ספר טלפונים גלובלי'}</div>
+                        </div>
+                        <button class="phone-lookup-dial" onclick="window.open('tel:${esc(phone)}')">📞 חייג ${esc(phone)}</button>`;
+                } else {
+                    content.innerHTML = `
+                        <div style="margin-bottom:12px;font-size:15px;color:#666">המספר <b>${esc(phone)}</b> לא נמצא במערכת</div>
+                        <div class="phone-lookup-add-form">
+                            <input type="text" id="plAddName" placeholder="שם *" autofocus>
+                            <input type="text" id="plAddFamily" placeholder="שם משפחה">
+                            <input type="text" id="plAddTitle" placeholder="תפקיד">
+                            <button class="phone-lookup-save" id="plSaveBtn" onclick="saveNewGlobalContact('${esc(phone)}')">💾 שמור איש קשר</button>
+                            <div class="phone-lookup-error" id="plError"></div>
+                        </div>`;
+                }
+            })
+            .catch(() => {
+                content.innerHTML = '<div class="phone-lookup-error">שגיאת תקשורת</div>';
+            });
+    }
+
+    function saveNewGlobalContact(phone) {
+        const name = document.getElementById('plAddName').value.trim();
+        const family = document.getElementById('plAddFamily').value.trim();
+        const title = document.getElementById('plAddTitle').value.trim();
+        const errEl = document.getElementById('plError');
+        const btn = document.getElementById('plSaveBtn');
+
+        if (!name) { errEl.textContent = 'שם הוא שדה חובה'; return; }
+
+        btn.disabled = true;
+        btn.textContent = 'שומר...';
+        errEl.textContent = '';
+
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {'Content-Type': 'text/plain'},
+            body: JSON.stringify({action: 'addGlobalContact', phone: phone, name: name, family: family, title: title})
+        }).then(() => {
+            document.getElementById('phoneLookupContent').innerHTML = `
+                <div style="padding:20px;font-size:18px;color:#4CAF50">✓ נשמר בהצלחה!</div>
+                <div style="font-size:14px;color:#666">${esc(name)} ${esc(family)}<br>${esc(phone)}</div>`;
+        }).catch(() => {
+            errEl.textContent = 'שגיאה בשמירה';
+            btn.disabled = false;
+            btn.textContent = '💾 שמור איש קשר';
+        });
+    }
+
+    function closePhoneLookup() {
+        document.getElementById('phoneLookupOverlay').classList.remove('visible');
+    }
+
     // === Events ===
-    document.getElementById('searchInput').addEventListener('input', debounce(applyFilter, 200));
+    document.getElementById('searchInput').addEventListener('input', debounce(function() {
+        applyFilter();
+        checkPhoneLookup();
+    }, 200));
     function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 
     // === Init ===
