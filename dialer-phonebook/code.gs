@@ -398,6 +398,12 @@ function addGlobalContact_(data) {
   }
 
   sheet.appendRow(newRow);
+
+  // Force phone column to text format to keep leading zero
+  var phoneColIdx = headers.indexOf('PhoneNumber') + 1;
+  var newRowNum = sheet.getLastRow();
+  sheet.getRange(newRowNum, phoneColIdx).setNumberFormat('@').setValue(phone);
+
   return jsonOut_({ok: true, id: nextId});
 }
 
