@@ -1554,6 +1554,11 @@
     function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 
     // === Init ===
+    // Fix garbled user name from old sessions
+    const _n = localStorage.getItem('pb_auth_name');
+    if (_n && !/^[\u0590-\u05FFa-zA-Z0-9 ]+$/.test(_n)) {
+        localStorage.setItem('pb_auth_name', 'משתמש מורשה');
+    }
     checkAuth();
 
     // === Service Worker ===
