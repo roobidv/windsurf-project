@@ -1819,12 +1819,13 @@
             cutoff.setDate(cutoff.getDate() - days);
             cutoff.setHours(0,0,0,0);
             const allNonMisradi = allRows.filter(r => !r.purchaseType.includes('משרדי'));
-            // Filter only rows with status_date within period
+            // Filter rows with status_date within period (check localStorage first, then CSV)
             const rows = allNonMisradi.filter(r => {
                 const bk = r.code + '_' + r.level.replace(/"/g,'');
                 const st = localStorage.getItem('status_' + bk) || r.status || '';
                 if (!st) return false;
-                const d = r.status_date ? new Date(r.status_date) : null;
+                const ds = localStorage.getItem('status_date_' + bk) || r.status_date || '';
+                const d = ds ? new Date(ds) : null;
                 return d && d >= cutoff;
             });
             function countSt(arr) {
