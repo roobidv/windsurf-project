@@ -1431,10 +1431,16 @@
             .then(data => {
                 if (data.found) {
                     const fullName = data.name + (data.family ? ' ' + data.family : '');
+                    let details = '';
+                    if (data.title) details += `<div style="margin-top:6px">📋 <b>תפקיד:</b> ${esc(data.title)}</div>`;
+                    if (data.email) details += `<div style="margin-top:4px">📧 <b>מייל:</b> ${esc(data.email)}</div>`;
+                    if (data.address) details += `<div style="margin-top:4px">📍 <b>כתובת:</b> ${esc(data.address)}</div>`;
+                    if (data.landline) details += `<div style="margin-top:4px">🏢 <b>קווי:</b> ${esc(data.landline)}</div>`;
+                    if (data.notes) details += `<div style="margin-top:4px">📝 <b>הערות:</b> ${esc(data.notes)}</div>`;
                     content.innerHTML = `
-                        <div class="phone-lookup-result">
+                        <div class="phone-lookup-result" style="text-align:right">
                             <div class="plr-name">${esc(fullName)}</div>
-                            ${data.title ? '<div class="plr-title">' + esc(data.title) + '</div>' : ''}
+                            ${details}
                             <div class="plr-source">${data.source === 'Contacts' ? 'אנשי קשר' : 'ספר טלפונים גלובלי'}</div>
                         </div>
                         <button class="phone-lookup-dial" onclick="window.open('tel:${esc(phone)}')">📞 חייג ${esc(phone)}</button>`;
@@ -1489,10 +1495,10 @@
     }
 
     // === Events ===
-    document.getElementById('searchInput').addEventListener('input', debounce(function() {
-        applyFilter();
-        checkPhoneLookup();
-    }, 200));
+    document.getElementById('searchInput').addEventListener('input', debounce(applyFilter, 200));
+    document.getElementById('searchInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') checkPhoneLookup();
+    });
     function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 
     // === Init ===

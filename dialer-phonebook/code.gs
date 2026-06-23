@@ -301,6 +301,9 @@ function lookupPhone_(params) {
     var nameCol = cHeaders.indexOf('ContactName');
     var familyCol = cHeaders.indexOf('FamlyName');
     var titleCol = cHeaders.indexOf('Tital');
+    var emailCol = cHeaders.indexOf('Email');
+    var addressCol = cHeaders.indexOf('Address');
+    var notesCol = cHeaders.indexOf('Notes');
 
     for (var i = 1; i < cData.length; i++) {
       var cp = String(cData[i][phoneCol] || '').replace(/[\s\-()]/g, '');
@@ -313,6 +316,10 @@ function lookupPhone_(params) {
           name: String(cData[i][nameCol] || ''),
           family: String(cData[i][familyCol] || ''),
           title: String(cData[i][titleCol] || ''),
+          email: emailCol > -1 ? String(cData[i][emailCol] || '') : '',
+          address: addressCol > -1 ? String(cData[i][addressCol] || '') : '',
+          landline: landlineCol > -1 ? String(cData[i][landlineCol] || '') : '',
+          notes: notesCol > -1 ? String(cData[i][notesCol] || '') : '',
           phone: phone
         });
       }
