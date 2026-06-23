@@ -1059,8 +1059,6 @@
     </div>
 
     <div class="filters" id="levelFilters">
-        <button class="sales-filter-btn" id="filterRubi" onclick="toggleSalesFilter('רובי')">רובי</button>
-        <button class="sales-filter-btn" id="filterIrit" onclick="toggleSalesFilter('אירית')">אירית</button>
         <div class="filter-chip active" data-level="" data-ptype="">הכל</div>
         <div class="filter-chip chip-green" data-level="" data-ptype="משרדי">משרדי</div>
         <div class="filter-chip chip-red" data-level="" data-ptype="לא-משרדי">לא משרדי</div>
@@ -1110,20 +1108,15 @@
                 <div class="mgr-section">
                     <h4>טבלת ביצועים ל-<input type="number" id="mgrDays" value="7" min="1" max="90" style="width:40px;text-align:center;font-weight:700;border:1px solid #ccc;border-radius:4px;"> ימים אחרונים</h4>
                     <table class="mgr-table" id="mgrTable">
-                        <thead><tr><th>משימה</th><th>רובי</th><th>אירית</th><th>סה"כ צוות</th></tr></thead>
-                        <tbody><tr><td colspan="4">טוען...</td></tr></tbody>
+                        <thead><tr><th>משימה</th><th>כמות</th></tr></thead>
+                        <tbody><tr><td colspan="2">טוען...</td></tr></tbody>
                     </table>
                 </div>
                 <div class="mgr-charts-row">
                     <div class="mgr-section">
-                        <h4>רובי</h4>
+                        <h4>סטטוס כללי</h4>
                         <canvas id="mgrPieRubi" width="180" height="180"></canvas>
                         <div class="chart-legend" id="mgrLegendRubi"></div>
-                    </div>
-                    <div class="mgr-section">
-                        <h4>אירית</h4>
-                        <canvas id="mgrPieIrit" width="180" height="180"></canvas>
-                        <div class="chart-legend" id="mgrLegendIrit"></div>
                     </div>
                 </div>
                 <div class="mgr-section">
@@ -1146,7 +1139,7 @@
                     </table>
                 </div>
             </div>
-            <div class="mgr-signature">נכתב על ידי רובי דביר roobid@gmail.com</div>
+            <div class="mgr-signature">roobid@gmail.com</div>
             <div class="mgr-report-footer">
                 <button class="mgr-print-btn" onclick="printMgrReport()">🖨️ הדפס / PDF</button>
             </div>
@@ -1196,11 +1189,14 @@
         }
 
         function loadData() {
-            // Try live data via Apps Script (CORS-safe), fallback to cache, then embedded
+            // Show cached data immediately
+            const cached = localStorage.getItem('csv_cache');
+            if (cached) _parseAndLoad(cached);
+
+            // Then fetch fresh data in background
             fetch(SCRIPT_URL + '?action=getCSV', {mode: 'cors'})
                 .then(r => r.text())
                 .then(text => {
-                    // Apps Script returns JSON with csv field
                     try {
                         const j = JSON.parse(text);
                         if (j.csv) text = j.csv;
@@ -1209,13 +1205,9 @@
                         localStorage.setItem('csv_cache', text);
                         localStorage.setItem('csv_cache_time', new Date().toISOString());
                         _parseAndLoad(text);
-                    } else {
-                        _useCacheOrEmbedded();
                     }
                 })
-                .catch(() => {
-                    _useCacheOrEmbedded();
-                });
+                .catch(() => { if (!cached) _useCacheOrEmbedded(); });
         }
 
         function _useCacheOrEmbedded() {
@@ -1318,17 +1310,6 @@
         // Build set of valid authority names for smart search
         let _authoritySet = new Set();
         let activeSalesperson = '';
-
-        function toggleSalesFilter(name) {
-            if (activeSalesperson === name) {
-                activeSalesperson = '';
-            } else {
-                activeSalesperson = name;
-            }
-            document.getElementById('filterRubi').classList.toggle('active', activeSalesperson === 'רובי');
-            document.getElementById('filterIrit').classList.toggle('active', activeSalesperson === 'אירית');
-            applyFilters();
-        }
 
         function applyFilters() {
             const rawSearch = document.getElementById('searchInput').value.trim();
@@ -1769,10 +1750,9 @@
         function renderMgrReport() {
             const rows = allRows;
             const total = rows.length;
-            const rubiRows = rows.filter(r => r.salesperson.includes('רובי') && !r.purchaseType.includes('משרדי'));
-            const iritRows = rows.filter(r => r.salesperson.includes('אירית') && !r.purchaseType.includes('משרדי'));
+            const nonMisradiAll = rows.filter(r => !r.purchaseType.includes('משרדי'));
 
-            // Pie charts: based on current cumulative state
+            // Pie chart: based on current cumulative state (all non-misradi)
             function countStatuses(arr) {
                 const s = {שיחה:0, הצעה:0, אבוד:0, סגירה:0, none:0};
                 arr.forEach(r => {
@@ -1783,10 +1763,8 @@
                 });
                 return s;
             }
-            const rubiStats = countStatuses(rubiRows);
-            const iritStats = countStatuses(iritRows);
-            drawPersonPie('mgrPieRubi', 'mgrLegendRubi', rubiStats, rubiRows.length);
-            drawPersonPie('mgrPieIrit', 'mgrLegendIrit', iritStats, iritRows.length);
+            const allStats = countStatuses(nonMisradiAll);
+            drawPersonPie('mgrPieRubi', 'mgrLegendRubi', allStats, nonMisradiAll.length);
 
             // General pie
             const misradi = rows.filter(r => r.purchaseType.includes('משרדי'));
@@ -1824,8 +1802,6 @@
                 const d = r.status_date ? new Date(r.status_date) : null;
                 return d && d >= cutoff;
             });
-            const rubiRows = rows.filter(r => r.salesperson.includes('רובי'));
-            const iritRows = rows.filter(r => r.salesperson.includes('אירית'));
             function countSt(arr) {
                 const s = {שיחה:0, הצעה:0, אבוד:0, סגירה:0};
                 arr.forEach(r => {
@@ -1835,19 +1811,15 @@
                 });
                 return s;
             }
-            const rubi = countSt(rubiRows);
-            const irit = countSt(iritRows);
+            const counts = countSt(rows);
             const statuses = ['שיחה','הצעה','אבוד','סגירה'];
             const tbody = document.querySelector('#mgrTable tbody');
             let html = '';
             statuses.forEach(s => {
-                html += `<tr><td>${s}</td><td>${rubi[s]}</td><td>${irit[s]}</td><td>${rubi[s]+irit[s]}</td></tr>`;
+                html += `<tr><td>${s}</td><td>${counts[s]}</td></tr>`;
             });
-            const rubiT = rubi['שיחה']+rubi['הצעה']+rubi['אבוד']+rubi['סגירה'];
-            const iritT = irit['שיחה']+irit['הצעה']+irit['אבוד']+irit['סגירה'];
-            const rubiAll = allNonMisradi.filter(r=>r.salesperson.includes('רובי')).length;
-            const iritAll = allNonMisradi.filter(r=>r.salesperson.includes('אירית')).length;
-            html += `<tr><td>סה"כ</td><td>${rubiT} / ${rubiAll}</td><td>${iritT} / ${iritAll}</td><td>${rubiT+iritT} / ${rubiAll+iritAll}</td></tr>`;
+            const totalPeriod = counts['שיחה']+counts['הצעה']+counts['אבוד']+counts['סגירה'];
+            html += `<tr><td><b>סה"כ</b></td><td><b>${totalPeriod} / ${allNonMisradi.length}</b></td></tr>`;
             tbody.innerHTML = html;
             // Refresh detailed call log if it is currently shown
             if (document.getElementById('mgrCallLogToggle').checked) renderMgrCallLog();
@@ -2571,43 +2543,30 @@
         function checkAuth() {
             const deviceId = localStorage.getItem('device_id');
             const savedName = localStorage.getItem('auth_name');
+            const savedToken = localStorage.getItem('auth_token');
+            const savedPerm = localStorage.getItem('auth_perm');
 
-            // Try device-based instant auth first
+            // Instant login: if device was previously authenticated, open immediately
+            if (deviceId && savedName && savedToken) {
+                showApp(savedName, savedPerm);
+                return;
+            }
+
+            // Try device-based auth
             if (deviceId) {
                 fetch(SCRIPT_URL + '?action=deviceAuth&deviceId=' + encodeURIComponent(deviceId), {mode: 'cors'})
                     .then(r => r.json())
                     .then(data => {
                         if (data.authorized) {
-                            // Update local name if server has newer
                             if (data.name) localStorage.setItem('auth_name', data.name);
-                            // If deviceAuth returned phone1 — use it directly
-                            if (data.permType === 'phone1') {
-                                localStorage.setItem('auth_perm', 'phone1');
-                                showApp(data.name || savedName, 'phone1');
-                            } else {
-                                // deviceAuth didn't confirm phone1 — verify via doAuth
-                                var savedToken = localStorage.getItem('auth_token');
-                                var savedType = localStorage.getItem('auth_type');
-                                if (savedToken && savedType) {
-                                    fetch(SCRIPT_URL + '?action=auth&type=' + savedType + '&value=' + encodeURIComponent(savedToken), {mode:'cors'})
-                                        .then(function(r){return r.json();})
-                                        .then(function(authData){
-                                            var perm = (authData.authorized && authData.permType) ? authData.permType : (localStorage.getItem('auth_perm')||'');
-                                            if (perm) localStorage.setItem('auth_perm', perm);
-                                            showApp(data.name || savedName, perm);
-                                        }).catch(function(){ showApp(data.name || savedName); });
-                                } else {
-                                    showApp(data.name || savedName);
-                                }
-                            }
+                            if (data.permType) localStorage.setItem('auth_perm', data.permType);
+                            showApp(data.name || savedName, data.permType || savedPerm);
                         } else {
-                            // Device revoked or unknown — fall back to token auth
                             _checkTokenAuth();
                         }
                     })
                     .catch(() => {
-                        // Offline — trust local if we have a name
-                        if (savedName) showApp(savedName);
+                        if (savedName) showApp(savedName, savedPerm);
                         else _checkTokenAuth();
                     });
             } else {
