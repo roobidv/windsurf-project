@@ -1,6 +1,7 @@
 # Backups
 backups/
 BU*/
+!bus-times/
 
 # OS files
 Thumbs.db
