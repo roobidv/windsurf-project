@@ -274,9 +274,18 @@
             text-align: center;
             flex-shrink: 0;
         }
-        .eta-now { color: var(--success); animation: pulse 1s infinite; }
-        .eta-soon { color: var(--warning); }
+        .eta-now { color: #fff; background: #22c55e; border-radius: 8px; padding: 2px 8px; animation: pulse 1s infinite; }
+        .eta-soon { color: var(--warning); font-size: 16px; }
         .eta-normal { color: var(--text); }
+        .eta-legend {
+            display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+            padding: 8px 14px; font-size: 11px; color: #666;
+        }
+        .eta-legend span { display: inline-flex; align-items: center; gap: 3px; }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .legend-green { background: #22c55e; }
+        .legend-orange { background: #f59e0b; }
+        .legend-black { background: #1a1a2e; }
 
         .no-data {
             text-align: center;
@@ -606,7 +615,7 @@ function renderArrivals(body, visits, now, relevantLines) {
             if (dest.length > 30) dest = dest.substring(0,30) + '...';
         }
 
-        const gpsIcon = a.hasGps ? '<span title="מאומת GPS" style="font-size:10px;">🛰️</span>' : '';
+        const gpsIcon = a.hasGps ? ' 🛰️' : '';
 
         const rowClass = a.isRelevant ? 'bus-row relevant' : 'bus-row';
         const lineClass = a.isRelevant ? 'bus-line highlight' : 'bus-line';
@@ -614,11 +623,19 @@ function renderArrivals(body, visits, now, relevantLines) {
 
         return `
             <div class="${rowClass}">
-                <div class="${lineClass}">${esc(a.line)} ${gpsIcon}</div>
+                <div class="${lineClass}">${esc(a.line)}</div>
                 <div class="${destClass}">${esc(dest)}</div>
-                <div class="bus-eta ${cls}">${txt}</div>
+                <div class="bus-eta ${cls}">${txt}${gpsIcon}</div>
             </div>`;
     }).join('');
+
+    // Add legend
+    body.innerHTML += `<div class="eta-legend">
+        <span><i class="legend-dot legend-green"></i> עכשיו (≤1 דק')</span>
+        <span><i class="legend-dot legend-orange"></i> קרוב (2-5 דק')</span>
+        <span><i class="legend-dot legend-black"></i> בדרך (5+ דק')</span>
+        <span>🛰️ = מאומת GPS</span>
+    </div>`;
 }
 
 // ===== Custom search =====
