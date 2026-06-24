@@ -424,6 +424,7 @@ const STOPS = [
 ];
 
 const CURLBUS = 'https://curlbus.app';
+const GTFS_API = 'https://open-bus-stride-api.hasadna.org.il';
 const PROXY = 'https://corsproxy.io/?';
 const REFRESH_SEC = 60;
 let refreshTimer = null;
@@ -434,6 +435,15 @@ let isCustom = false;
 
 // ===== Helpers =====
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function toISOLocal(d) {
+    const off = d.getTimezoneOffset();
+    const sign = off <= 0 ? '+' : '-';
+    const h = String(Math.floor(Math.abs(off)/60)).padStart(2,'0');
+    const m = String(Math.abs(off)%60).padStart(2,'0');
+    const iso = new Date(d.getTime() - off*60000).toISOString().replace('Z','');
+    return iso + sign + h + ':' + m;
+}
 
 
 // ===== Build buttons =====
@@ -509,7 +519,7 @@ function renderCard(stop) {
     </div>`;
 }
 
-// ===== Fetch (curlbus.app — real-time SIRI) =====
+// ===== Fetch: try curlbus (real-time), fallback to GTFS (planned) =====
 async function loadStop(stop) {
     const body = document.getElementById('stopBody');
     if (!body) return;
@@ -517,16 +527,19 @@ async function loadStop(stop) {
     document.getElementById('statusDot').className = 'dot dot-load';
     document.getElementById('statusText').textContent = 'מעדכן...';
 
+    const now = new Date();
+    let source = '';
+
     try {
-        const now = new Date();
+        // Try curlbus real-time first
         const targetUrl = `${CURLBUS}/${stop.code}`;
         const resp = await fetch(PROXY + encodeURIComponent(targetUrl), {
             headers: { 'Accept': 'application/json' }
         });
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        if (!resp.ok) throw new Error('curlbus:' + resp.status);
         const json = await resp.json();
 
-        // Update stop name from curlbus for custom stops
+        // Update stop name for custom stops
         if (isCustom && json.stop_info) {
             const nameEl = document.querySelector('.stop-name');
             if (nameEl && json.stop_info.name && json.stop_info.name.HE) {
@@ -551,28 +564,74 @@ async function loadStop(stop) {
         }
 
         const visits = json.visits && json.visits[stop.code] ? json.visits[stop.code] : [];
-        renderArrivals(body, visits, now, stop.lines || []);
+        const arrivals = parseRealtimeVisits(visits, now, stop.lines || []);
+        renderArrivals(body, arrivals, 'realtime');
+        source = 'realtime';
 
-        const ts = now.toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
-        document.getElementById('lastRefresh').textContent = ts;
-        document.getElementById('statusDot').className = 'dot dot-ok';
-        document.getElementById('statusText').textContent = '🛰️ זמן אמת (GPS)';
-    } catch(e) {
-        body.innerHTML = `<div class="stop-error">⚠️ שגיאה: ${esc(e.message)}</div>`;
-        document.getElementById('statusDot').className = 'dot dot-err';
-        document.getElementById('statusText').textContent = 'שגיאה';
+    } catch(e1) {
+        // Fallback to GTFS planned schedule
+        try {
+            const later = new Date(now.getTime() + 90 * 60000);
+            const from = toISOLocal(now);
+            const to = toISOLocal(later);
+            const today = now.toISOString().split('T')[0];
+
+            const url = `${GTFS_API}/gtfs_ride_stops/list?` +
+                `gtfs_stop__code=${stop.code}` +
+                `&gtfs_stop__date_from=${today}&gtfs_stop__date_to=${today}` +
+                `&arrival_time_from=${encodeURIComponent(from)}` +
+                `&arrival_time_to=${encodeURIComponent(to)}` +
+                `&limit=25` +
+                `&order_by=arrival_time asc`;
+
+            const resp2 = await fetch(url);
+            if (!resp2.ok) throw new Error('HTTP ' + resp2.status);
+            const data = await resp2.json();
+
+            // Update name for custom stops
+            if (isCustom && data.length > 0 && data[0].gtfs_stop__name) {
+                const nameEl = document.querySelector('.stop-name');
+                if (nameEl) nameEl.textContent = data[0].gtfs_stop__name;
+                if (data[0].gtfs_stop__city) {
+                    let descEl = document.querySelector('.stop-desc');
+                    if (!descEl) {
+                        const header = document.querySelector('.stop-header');
+                        if (header) {
+                            descEl = document.createElement('div');
+                            descEl.className = 'stop-desc';
+                            descEl.textContent = data[0].gtfs_stop__city;
+                            header.after(descEl);
+                        }
+                    }
+                }
+            }
+
+            const arrivals = parseGtfsData(data, now, stop.lines || []);
+            renderArrivals(body, arrivals, 'planned');
+            source = 'planned';
+
+        } catch(e2) {
+            body.innerHTML = `<div class="stop-error">⚠️ שגיאה: ${esc(e2.message)}</div>`;
+            document.getElementById('statusDot').className = 'dot dot-err';
+            document.getElementById('statusText').textContent = 'שגיאה';
+            countdown = REFRESH_SEC;
+            return;
+        }
     }
+
+    const ts = now.toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    document.getElementById('lastRefresh').textContent = ts;
+    document.getElementById('statusDot').className = 'dot dot-ok';
+    document.getElementById('statusText').textContent = source === 'realtime'
+        ? '🛰️ זמן אמת (GPS)'
+        : '📋 לוח זמנים מתוכנן';
     countdown = REFRESH_SEC;
 }
 
-function renderArrivals(body, visits, now, relevantLines) {
-    if (!visits || visits.length === 0) {
-        body.innerHTML = '<div class="no-data">אין אוטובוסים קרובים כרגע</div>';
-        return;
-    }
-
+// Parse curlbus real-time visits
+function parseRealtimeVisits(visits, now, relevantLines) {
     const seen = new Set();
-    const arrivals = visits.filter(v => {
+    return visits.filter(v => {
         const key = (v.line_name||'') + '_' + v.eta;
         if (seen.has(key)) return false;
         seen.add(key);
@@ -582,11 +641,16 @@ function renderArrivals(body, visits, now, relevantLines) {
         const min = eta ? Math.round((eta - now) / 60000) : null;
         const lineNum = v.line_name || '?';
         const dest = v.static_info?.route?.headsign || '';
+        // GPS confirmed = has location AND timestamp is recent (< 30 min old)
+        const ts = v.timestamp ? new Date(v.timestamp.replace(' ','T')) : null;
+        const tsAge = ts ? (now - ts) / 60000 : 999;
+        const hasGps = !!(v.location && v.location.lat && tsAge < 30);
         return {
             line: lineNum,
             dest,
             minutes: min,
-            hasGps: !!(v.location && v.location.lat),
+            hasGps,
+            isPlanned: false,
             isRelevant: relevantLines.length > 0 && relevantLines.includes(lineNum)
         };
     }).filter(a => a.minutes !== null && a.minutes >= -2)
@@ -596,15 +660,51 @@ function renderArrivals(body, visits, now, relevantLines) {
           return a.minutes - b.minutes;
       })
       .slice(0, 12);
+}
 
-    if (arrivals.length === 0) {
+// Parse GTFS planned data
+function parseGtfsData(data, now, relevantLines) {
+    const seen = new Set();
+    return data.filter(d => {
+        const key = (d.gtfs_route__route_short_name||'') + '_' + d.arrival_time;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    }).map(d => {
+        const eta = d.arrival_time ? new Date(d.arrival_time) : null;
+        const min = eta ? Math.round((eta - now) / 60000) : null;
+        const lineNum = d.gtfs_route__route_short_name || '?';
+        const dest = d.gtfs_route__route_long_name || '';
+        return {
+            line: lineNum,
+            dest,
+            minutes: min,
+            hasGps: false,
+            isPlanned: true,
+            isRelevant: relevantLines.length > 0 && relevantLines.includes(lineNum)
+        };
+    }).filter(a => a.minutes !== null && a.minutes >= -2)
+      .sort((a,b) => {
+          if (a.isRelevant && !b.isRelevant) return -1;
+          if (!a.isRelevant && b.isRelevant) return 1;
+          return a.minutes - b.minutes;
+      })
+      .slice(0, 12);
+}
+
+// Unified render for both sources
+function renderArrivals(body, arrivals, source) {
+    if (!arrivals || arrivals.length === 0) {
         body.innerHTML = '<div class="no-data">אין אוטובוסים קרובים כרגע</div>';
         return;
     }
 
     body.innerHTML = arrivals.map(a => {
         let cls, txt;
-        if (a.minutes <= 1) { cls = 'eta-now'; txt = 'עכשיו'; }
+        // Green only when GPS-confirmed
+        if (a.hasGps && a.minutes <= 1) { cls = 'eta-now'; txt = 'עכשיו!'; }
+        else if (a.hasGps && a.minutes <= 5) { cls = 'eta-soon'; txt = a.minutes + " דק'"; }
+        else if (!a.hasGps && a.minutes <= 1) { cls = 'eta-soon'; txt = '~עכשיו'; }
         else if (a.minutes <= 5) { cls = 'eta-soon'; txt = a.minutes + " דק'"; }
         else { cls = 'eta-normal'; txt = a.minutes + " דק'"; }
 
@@ -615,7 +715,7 @@ function renderArrivals(body, visits, now, relevantLines) {
             if (dest.length > 30) dest = dest.substring(0,30) + '...';
         }
 
-        const gpsIcon = a.hasGps ? ' 🛰️' : '';
+        const badge = a.hasGps ? ' 🛰️' : (a.isPlanned ? ' 📋' : '');
 
         const rowClass = a.isRelevant ? 'bus-row relevant' : 'bus-row';
         const lineClass = a.isRelevant ? 'bus-line highlight' : 'bus-line';
@@ -625,16 +725,19 @@ function renderArrivals(body, visits, now, relevantLines) {
             <div class="${rowClass}">
                 <div class="${lineClass}">${esc(a.line)}</div>
                 <div class="${destClass}">${esc(dest)}</div>
-                <div class="bus-eta ${cls}">${txt}${gpsIcon}</div>
+                <div class="bus-eta ${cls}">${txt}${badge}</div>
             </div>`;
     }).join('');
 
-    // Add legend
+    // Legend
+    const legendSrc = source === 'realtime'
+        ? '<span>🛰️ = מאומת GPS בזמן אמת</span>'
+        : '<span>📋 = לוח זמנים מתוכנן (לא GPS)</span>';
     body.innerHTML += `<div class="eta-legend">
-        <span><i class="legend-dot legend-green"></i> עכשיו (≤1 דק')</span>
-        <span><i class="legend-dot legend-orange"></i> קרוב (2-5 דק')</span>
-        <span><i class="legend-dot legend-black"></i> בדרך (5+ דק')</span>
-        <span>🛰️ = מאומת GPS</span>
+        <span><i class="legend-dot legend-green"></i> ודאי - מאומת GPS</span>
+        <span><i class="legend-dot legend-orange"></i> קרוב / לא מאומת</span>
+        <span><i class="legend-dot legend-black"></i> בדרך</span>
+        ${legendSrc}
     </div>`;
 }
 
