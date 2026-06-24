@@ -414,7 +414,8 @@ const STOPS = [
     }
 ];
 
-const API = 'https://curlbus.app';
+const CURLBUS = 'https://curlbus.app';
+const PROXY = 'https://corsproxy.io/?';
 const REFRESH_SEC = 60;
 let refreshTimer = null;
 let countdownTimer = null;
@@ -509,7 +510,8 @@ async function loadStop(stop) {
 
     try {
         const now = new Date();
-        const resp = await fetch(`${API}/${stop.code}`, {
+        const targetUrl = `${CURLBUS}/${stop.code}`;
+        const resp = await fetch(PROXY + encodeURIComponent(targetUrl), {
             headers: { 'Accept': 'application/json' }
         });
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
