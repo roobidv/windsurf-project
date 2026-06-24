@@ -188,7 +188,21 @@
             padding: 2px 8px;
             border-radius: 10px;
             font-family: monospace;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
         }
+        .copy-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            padding: 0 2px;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        .copy-btn:hover { opacity: 1; }
+        .copy-btn.copied { opacity: 1; }
         .stop-desc {
             font-size: 13px;
             color: var(--text-muted);
@@ -437,6 +451,15 @@ let isCustom = false;
 // ===== Helpers =====
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
+function copyCode(code, btn) {
+    navigator.clipboard.writeText(code).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = '✓';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
+    });
+}
+
 function toISOLocal(d) {
     const off = d.getTimezoneOffset();
     const sign = off <= 0 ? '+' : '-';
@@ -510,7 +533,7 @@ function renderCard(stop) {
     <div class="stop-card ${dirClass}">
         <div class="stop-header ${bgClass}">
             <span class="stop-name">${esc(stop.name)}</span>
-            <span class="stop-code">${esc(stop.code)}</span>
+            <span class="stop-code">${esc(stop.code)}<button class="copy-btn" onclick="copyCode('${esc(stop.code)}',this)" title="העתק מספר תחנה">📋</button></span>
         </div>
         ${descHtml}
         ${imgHtml}
