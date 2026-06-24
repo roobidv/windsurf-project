@@ -275,6 +275,7 @@
             flex-shrink: 0;
         }
         .eta-now { color: #fff; background: #22c55e; border-radius: 8px; padding: 2px 8px; animation: pulse 1s infinite; }
+        .eta-gps { color: #22c55e; font-weight: 800; }
         .eta-soon { color: var(--warning); font-size: 16px; }
         .eta-normal { color: var(--text); }
         .eta-legend {
@@ -701,10 +702,10 @@ function renderArrivals(body, arrivals, source) {
 
     body.innerHTML = arrivals.map(a => {
         let cls, txt;
-        // Green only when GPS-confirmed
+        // GPS confirmed = always green (time is certain)
         if (a.hasGps && a.minutes <= 1) { cls = 'eta-now'; txt = 'עכשיו!'; }
-        else if (a.hasGps && a.minutes <= 5) { cls = 'eta-soon'; txt = a.minutes + " דק'"; }
-        else if (!a.hasGps && a.minutes <= 1) { cls = 'eta-soon'; txt = '~עכשיו'; }
+        else if (a.hasGps) { cls = 'eta-gps'; txt = a.minutes + " דק'"; }
+        else if (a.minutes <= 1) { cls = 'eta-soon'; txt = '~עכשיו'; }
         else if (a.minutes <= 5) { cls = 'eta-soon'; txt = a.minutes + " דק'"; }
         else { cls = 'eta-normal'; txt = a.minutes + " דק'"; }
 
@@ -735,8 +736,8 @@ function renderArrivals(body, arrivals, source) {
         : '<span>📋 = לוח זמנים מתוכנן (לא GPS)</span>';
     body.innerHTML += `<div class="eta-legend">
         <span><i class="legend-dot legend-green"></i> ודאי - מאומת GPS</span>
-        <span><i class="legend-dot legend-orange"></i> קרוב / לא מאומת</span>
-        <span><i class="legend-dot legend-black"></i> בדרך</span>
+        <span><i class="legend-dot legend-orange"></i> לא מאומת GPS</span>
+        <span><i class="legend-dot legend-black"></i> מתוכנן בלבד</span>
         ${legendSrc}
     </div>`;
 }
