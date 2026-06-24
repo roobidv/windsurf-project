@@ -199,6 +199,7 @@
             object-fit: cover;
             display: block;
         }
+        .stop-img.img-bottom { object-position: center bottom; }
         .stop-img-placeholder {
             width: 100%;
             height: 70px;
@@ -341,6 +342,7 @@
 <div id="mainContent" style="padding:0 12px;"></div>
 
 <div class="footer">
+    <div style="color:#f9a825;font-weight:800;font-size:13px;margin-bottom:6px;">נכתב על ידי רובי דביר roobid@gmail.com</div>
     נתונים: Open Bus — הסדנא לידע ציבורי<br>
     עדכון אחרון: <span id="lastRefresh">-</span>
 </div>
@@ -478,8 +480,10 @@ function renderCard(stop) {
     else { bgClass = 'bg-blue'; dirClass = 'dir-custom'; }
 
     const imgSrc = stop.img ? ('images/' + stop.img) : '';
+    const bottomImgs = ['22942','32465'];
+    const imgExtra = bottomImgs.includes(stop.code) ? ' img-bottom' : '';
     const imgHtml = imgSrc
-        ? `<img class="stop-img" src="${imgSrc}" alt="${esc(stop.name)}" onerror="this.outerHTML='<div class=stop-img-placeholder>📷</div>'">`
+        ? `<img class="stop-img${imgExtra}" src="${imgSrc}" alt="${esc(stop.name)}" onerror="this.outerHTML='<div class=stop-img-placeholder>📷</div>'">`
         : '';
     const descHtml = stop.desc ? `<div class="stop-desc">${esc(stop.desc)}</div>` : '';
 
