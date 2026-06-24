@@ -349,7 +349,7 @@
 <div id="mainContent" style="padding:0 12px;"></div>
 
 <div class="footer">
-    נתונים: Open Bus — הסדנא לידע ציבורי<br>
+    נתונים: SIRI זמן אמת — משרד התחבורה (via curlbus.app)<br>
     עדכון אחרון: <span id="lastRefresh">-</span>
 </div>
 
@@ -414,7 +414,7 @@ const STOPS = [
     }
 ];
 
-const API = 'https://open-bus-stride-api.hasadna.org.il';
+const API = 'https://curlbus.app';
 const REFRESH_SEC = 60;
 let refreshTimer = null;
 let countdownTimer = null;
@@ -425,14 +425,6 @@ let isCustom = false;
 // ===== Helpers =====
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
-function toISOLocal(d) {
-    const off = d.getTimezoneOffset();
-    const sign = off <= 0 ? '+' : '-';
-    const h = String(Math.floor(Math.abs(off)/60)).padStart(2,'0');
-    const m = String(Math.abs(off)%60).padStart(2,'0');
-    const iso = new Date(d.getTime() - off*60000).toISOString().replace('Z','');
-    return iso + sign + h + ':' + m;
-}
 
 // ===== Build buttons =====
 function buildButtons() {
@@ -507,7 +499,7 @@ function renderCard(stop) {
     </div>`;
 }
 
-// ===== Fetch =====
+// ===== Fetch (curlbus.app — real-time SIRI) =====
 async function loadStop(stop) {
     const body = document.getElementById('stopBody');
     if (!body) return;
@@ -517,47 +509,43 @@ async function loadStop(stop) {
 
     try {
         const now = new Date();
-        const later = new Date(now.getTime() + 90 * 60000);
-        const from = toISOLocal(now);
-        const to = toISOLocal(later);
-        const today = now.toISOString().split('T')[0];
-
-        const url = `${API}/gtfs_ride_stops/list?` +
-            `gtfs_stop__code=${stop.code}` +
-            `&gtfs_stop__date_from=${today}&gtfs_stop__date_to=${today}` +
-            `&arrival_time_from=${encodeURIComponent(from)}` +
-            `&arrival_time_to=${encodeURIComponent(to)}` +
-            `&limit=25` +
-            `&order_by=arrival_time asc`;
-
-        const resp = await fetch(url);
+        const resp = await fetch(`${API}/${stop.code}`, {
+            headers: { 'Accept': 'application/json' }
+        });
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        const data = await resp.json();
+        const json = await resp.json();
 
-        // For custom stops, update name from API
-        if (isCustom && data.length > 0 && data[0].gtfs_stop__name) {
+        // Update stop name from curlbus for custom stops
+        if (isCustom && json.stop_info) {
             const nameEl = document.querySelector('.stop-name');
-            if (nameEl) nameEl.textContent = data[0].gtfs_stop__name;
-            if (data[0].gtfs_stop__city) {
-                const descEl = document.querySelector('.stop-desc');
-                if (!descEl) {
-                    const header = document.querySelector('.stop-header');
-                    if (header) {
-                        const d = document.createElement('div');
-                        d.className = 'stop-desc';
-                        d.textContent = data[0].gtfs_stop__city;
-                        header.after(d);
+            if (nameEl && json.stop_info.name && json.stop_info.name.HE) {
+                nameEl.textContent = json.stop_info.name.HE;
+                currentStop.name = json.stop_info.name.HE;
+            }
+            if (json.stop_info.address) {
+                const city = json.stop_info.address.city_multilingual?.HE || json.stop_info.address.city || '';
+                if (city) {
+                    let descEl = document.querySelector('.stop-desc');
+                    if (!descEl) {
+                        const header = document.querySelector('.stop-header');
+                        if (header) {
+                            descEl = document.createElement('div');
+                            descEl.className = 'stop-desc';
+                            header.after(descEl);
+                        }
                     }
+                    if (descEl) descEl.textContent = city;
                 }
             }
         }
 
-        renderArrivals(body, data, now, stop.lines || []);
+        const visits = json.visits && json.visits[stop.code] ? json.visits[stop.code] : [];
+        renderArrivals(body, visits, now, stop.lines || []);
 
         const ts = now.toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
         document.getElementById('lastRefresh').textContent = ts;
         document.getElementById('statusDot').className = 'dot dot-ok';
-        document.getElementById('statusText').textContent = 'לוח זמנים מתוכנן';
+        document.getElementById('statusText').textContent = '🛰️ זמן אמת (GPS)';
     } catch(e) {
         body.innerHTML = `<div class="stop-error">⚠️ שגיאה: ${esc(e.message)}</div>`;
         document.getElementById('statusDot').className = 'dot dot-err';
@@ -566,27 +554,28 @@ async function loadStop(stop) {
     countdown = REFRESH_SEC;
 }
 
-function renderArrivals(body, data, now, relevantLines) {
-    if (!data || data.length === 0) {
+function renderArrivals(body, visits, now, relevantLines) {
+    if (!visits || visits.length === 0) {
         body.innerHTML = '<div class="no-data">אין אוטובוסים קרובים כרגע</div>';
         return;
     }
 
     const seen = new Set();
-    const arrivals = data.filter(d => {
-        const key = (d.gtfs_route__route_short_name||'') + '_' + d.arrival_time;
+    const arrivals = visits.filter(v => {
+        const key = (v.line_name||'') + '_' + v.eta;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
-    }).map(d => {
-        const eta = d.arrival_time ? new Date(d.arrival_time) : null;
+    }).map(v => {
+        const eta = v.eta ? new Date(v.eta.replace(' ','T')) : null;
         const min = eta ? Math.round((eta - now) / 60000) : null;
-        const lineNum = d.gtfs_route__route_short_name || '?';
+        const lineNum = v.line_name || '?';
+        const dest = v.static_info?.route?.headsign || '';
         return {
             line: lineNum,
-            dest: d.gtfs_route__route_long_name || '',
-            agency: d.gtfs_route__agency_name || '',
+            dest,
             minutes: min,
+            hasGps: !!(v.location && v.location.lat),
             isRelevant: relevantLines.length > 0 && relevantLines.includes(lineNum)
         };
     }).filter(a => a.minutes !== null && a.minutes >= -2)
@@ -609,9 +598,13 @@ function renderArrivals(body, data, now, relevantLines) {
         else { cls = 'eta-normal'; txt = a.minutes + " דק'"; }
 
         let dest = a.dest;
-        const parts = dest.split('-');
-        if (parts.length >= 2) dest = parts[parts.length-1].trim();
-        if (dest.length > 30) dest = dest.substring(0,30) + '...';
+        if (dest) {
+            const parts = dest.split('-');
+            if (parts.length >= 2) dest = parts[parts.length-1].trim();
+            if (dest.length > 30) dest = dest.substring(0,30) + '...';
+        }
+
+        const gpsIcon = a.hasGps ? '<span title="מאומת GPS" style="font-size:10px;">🛰️</span>' : '';
 
         const rowClass = a.isRelevant ? 'bus-row relevant' : 'bus-row';
         const lineClass = a.isRelevant ? 'bus-line highlight' : 'bus-line';
@@ -619,7 +612,7 @@ function renderArrivals(body, data, now, relevantLines) {
 
         return `
             <div class="${rowClass}">
-                <div class="${lineClass}">${esc(a.line)}</div>
+                <div class="${lineClass}">${esc(a.line)} ${gpsIcon}</div>
                 <div class="${destClass}">${esc(dest)}</div>
                 <div class="bus-eta ${cls}">${txt}</div>
             </div>`;
