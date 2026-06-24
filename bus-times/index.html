@@ -86,17 +86,19 @@
         .stop-btn {
             border: none;
             border-radius: 8px;
-            padding: 7px 10px;
-            font-size: 12px;
+            padding: 6px 8px;
+            font-size: 11px;
             font-weight: 600;
             cursor: pointer;
             font-family: inherit;
             color: white;
             flex: 1;
             min-width: 0;
-            white-space: nowrap;
+            white-space: normal;
+            line-height: 1.3;
+            max-height: 42px;
             overflow: hidden;
-            text-overflow: ellipsis;
+            text-align: center;
             transition: transform 0.1s, box-shadow 0.1s;
         }
         .stop-btn:active { transform: scale(0.96); }
@@ -314,6 +316,9 @@
 </head>
 <body>
 
+<div style="background:#333;text-align:center;padding:4px 0;">
+    <span style="color:#f9a825;font-weight:800;font-size:11px;">נכתב על ידי רובי דביר roobid@gmail.com</span>
+</div>
 <div class="header">
     <h1>🚌 זמני אוטובוס</h1>
     <div class="header-sub">
@@ -329,9 +334,11 @@
     <div class="btn-grid" id="homeButtons"></div>
     <div class="btn-section-label" style="color:var(--primary)">🔍 תחנה אקראית</div>
     <div class="custom-search">
-        <input type="text" id="customInput" placeholder="מספר תחנה או שם..." dir="rtl">
+        <input type="text" id="customInput" placeholder="מספר תחנה..." dir="rtl" inputmode="numeric">
         <button onclick="searchCustom()">חפש</button>
+        <button onclick="saveFavorite()" style="background:#f9a825;" title="שמור במועדפים">⭐</button>
     </div>
+    <div class="btn-grid" id="favButtons" style="margin-top:6px;"></div>
 </div>
 
 <div class="toolbar">
@@ -342,7 +349,6 @@
 <div id="mainContent" style="padding:0 12px;"></div>
 
 <div class="footer">
-    <div style="color:#f9a825;font-weight:800;font-size:13px;margin-bottom:6px;">נכתב על ידי רובי דביר roobid@gmail.com</div>
     נתונים: Open Bus — הסדנא לידע ציבורי<br>
     עדכון אחרון: <span id="lastRefresh">-</span>
 </div>
@@ -624,13 +630,51 @@ function renderArrivals(body, data, now, relevantLines) {
 function searchCustom() {
     const val = document.getElementById('customInput').value.trim();
     if (!val) return;
-    // If numeric, treat as stop code
     if (/^\d+$/.test(val)) {
         selectCustomStop(val);
     } else {
-        // Treat as stop code anyway (API requires numeric code)
         selectCustomStop(val, val);
     }
+}
+
+// ===== Favorites (localStorage) =====
+function getFavorites() {
+    try { return JSON.parse(localStorage.getItem('bus_favorites') || '[]'); }
+    catch(e) { return []; }
+}
+
+function saveFavorite() {
+    if (!currentStop || !isCustom) {
+        alert('חפש תחנה אקראית קודם, ואז לחץ ⭐ לשמור');
+        return;
+    }
+    const favs = getFavorites();
+    if (favs.find(f => f.code === currentStop.code)) {
+        alert('התחנה כבר במועדפים');
+        return;
+    }
+    const name = document.querySelector('.stop-name')?.textContent || currentStop.name;
+    favs.push({ code: currentStop.code, name });
+    localStorage.setItem('bus_favorites', JSON.stringify(favs));
+    renderFavorites();
+}
+
+function removeFavorite(code) {
+    let favs = getFavorites().filter(f => f.code !== code);
+    localStorage.setItem('bus_favorites', JSON.stringify(favs));
+    renderFavorites();
+}
+
+function renderFavorites() {
+    const grid = document.getElementById('favButtons');
+    const favs = getFavorites();
+    if (favs.length === 0) { grid.innerHTML = ''; return; }
+    grid.innerHTML = favs.map(f => `
+        <button class="stop-btn" style="background:#7b1fa2;position:relative;" onclick="selectCustomStop('${esc(f.code)}','${esc(f.name)}')">
+            ${esc(f.name)}
+            <span onclick="event.stopPropagation();removeFavorite('${esc(f.code)}')" style="position:absolute;top:1px;left:3px;font-size:9px;cursor:pointer;">✕</span>
+        </button>
+    `).join('');
 }
 
 // ===== Refresh =====
@@ -664,6 +708,7 @@ document.getElementById('customInput').addEventListener('keydown', e => {
 
 // ===== Init =====
 buildButtons();
+renderFavorites();
 document.getElementById('mainContent').innerHTML = '<div style="text-align:center;padding:40px 20px;color:#999;font-size:15px;">👆 בחר תחנה מהכפתורים למעלה</div>';
 </script>
 </body>
