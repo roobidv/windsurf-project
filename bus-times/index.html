@@ -359,7 +359,7 @@
 <div id="mainContent" style="padding:0 12px;"></div>
 
 <div class="footer">
-    נתונים: SIRI זמן אמת — משרד התחבורה (via curlbus.app)<br>
+    נתונים: זמן אמת — משרד התחבורה (bus.gov.il)<br>
     עדכון אחרון: <span id="lastRefresh">-</span>
 </div>
 
@@ -424,7 +424,7 @@ const STOPS = [
     }
 ];
 
-const CURLBUS = 'https://curlbus.app';
+const MOT_API = 'https://bus.gov.il/WebApi/api/passengerinfo';
 const GTFS_API = 'https://open-bus-stride-api.hasadna.org.il';
 const PROXY = 'https://corsproxy.io/?';
 const REFRESH_SEC = 60;
@@ -520,7 +520,7 @@ function renderCard(stop) {
     </div>`;
 }
 
-// ===== Fetch: try curlbus (real-time), fallback to GTFS (planned) =====
+// ===== Fetch: bus.gov.il (real-time MOT), fallback to GTFS =====
 async function loadStop(stop) {
     const body = document.getElementById('stopBody');
     if (!body) return;
@@ -532,40 +532,24 @@ async function loadStop(stop) {
     let source = '';
 
     try {
-        // Try curlbus real-time first
-        const targetUrl = `${CURLBUS}/${stop.code}`;
-        const resp = await fetch(PROXY + encodeURIComponent(targetUrl), {
-            headers: { 'Accept': 'application/json' }
-        });
-        if (!resp.ok) throw new Error('curlbus:' + resp.status);
-        const json = await resp.json();
+        // Primary: bus.gov.il real-time SIRI (MOT official)
+        const motUrl = `${MOT_API}/GetRealtimeBusLineListByBustop/${stop.code}/he/false`;
+        const resp = await fetch(PROXY + encodeURIComponent(motUrl));
+        if (!resp.ok) throw new Error('MOT:' + resp.status);
+        const raw = await resp.json();
+        // API returns {value:[...], Count:N} or plain array
+        const lines = Array.isArray(raw) ? raw : (raw.value || []);
 
         // Update stop name for custom stops
-        if (isCustom && json.stop_info) {
+        if (isCustom && lines.length > 0 && lines[0].BusstopHebrewName) {
             const nameEl = document.querySelector('.stop-name');
-            if (nameEl && json.stop_info.name && json.stop_info.name.HE) {
-                nameEl.textContent = json.stop_info.name.HE;
-                currentStop.name = json.stop_info.name.HE;
-            }
-            if (json.stop_info.address) {
-                const city = json.stop_info.address.city_multilingual?.HE || json.stop_info.address.city || '';
-                if (city) {
-                    let descEl = document.querySelector('.stop-desc');
-                    if (!descEl) {
-                        const header = document.querySelector('.stop-header');
-                        if (header) {
-                            descEl = document.createElement('div');
-                            descEl.className = 'stop-desc';
-                            header.after(descEl);
-                        }
-                    }
-                    if (descEl) descEl.textContent = city;
-                }
+            if (nameEl) {
+                nameEl.textContent = lines[0].BusstopHebrewName;
+                currentStop.name = lines[0].BusstopHebrewName;
             }
         }
 
-        const visits = json.visits && json.visits[stop.code] ? json.visits[stop.code] : [];
-        const arrivals = parseRealtimeVisits(visits, now, stop.lines || []);
+        const arrivals = parseMotData(lines, stop.lines || []);
         renderArrivals(body, arrivals, 'realtime');
         source = 'realtime';
 
@@ -589,22 +573,9 @@ async function loadStop(stop) {
             if (!resp2.ok) throw new Error('HTTP ' + resp2.status);
             const data = await resp2.json();
 
-            // Update name for custom stops
             if (isCustom && data.length > 0 && data[0].gtfs_stop__name) {
                 const nameEl = document.querySelector('.stop-name');
                 if (nameEl) nameEl.textContent = data[0].gtfs_stop__name;
-                if (data[0].gtfs_stop__city) {
-                    let descEl = document.querySelector('.stop-desc');
-                    if (!descEl) {
-                        const header = document.querySelector('.stop-header');
-                        if (header) {
-                            descEl = document.createElement('div');
-                            descEl.className = 'stop-desc';
-                            descEl.textContent = data[0].gtfs_stop__city;
-                            header.after(descEl);
-                        }
-                    }
-                }
             }
 
             const arrivals = parseGtfsData(data, now, stop.lines || []);
@@ -624,46 +595,44 @@ async function loadStop(stop) {
     document.getElementById('lastRefresh').textContent = ts;
     document.getElementById('statusDot').className = 'dot dot-ok';
     document.getElementById('statusText').textContent = source === 'realtime'
-        ? '🛰️ זמן אמת (GPS)'
+        ? '🛰️ זמן אמת — משרד התחבורה'
         : '📋 לוח זמנים מתוכנן';
     countdown = REFRESH_SEC;
 }
 
-// Parse curlbus real-time visits
-function parseRealtimeVisits(visits, now, relevantLines) {
-    const seen = new Set();
-    return visits.filter(v => {
-        const key = (v.line_name||'') + '_' + v.eta;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-    }).map(v => {
-        const eta = v.eta ? new Date(v.eta.replace(' ','T')) : null;
-        const min = eta ? Math.round((eta - now) / 60000) : null;
-        const lineNum = v.line_name || '?';
-        const dest = v.static_info?.route?.headsign || '';
-        // GPS confirmed = has location AND timestamp is recent (< 30 min old)
-        const ts = v.timestamp ? new Date(v.timestamp.replace(' ','T')) : null;
-        const tsAge = ts ? (now - ts) / 60000 : 999;
-        const hasGps = !!(v.location && v.location.lat && tsAge < 30);
-        return {
-            line: lineNum,
-            dest,
-            minutes: min,
-            hasGps,
-            isPlanned: false,
-            isRelevant: relevantLines.length > 0 && relevantLines.includes(lineNum)
-        };
-    }).filter(a => a.minutes !== null && a.minutes >= -2)
-      .sort((a,b) => {
-          if (a.isRelevant && !b.isRelevant) return -1;
-          if (!a.isRelevant && b.isRelevant) return 1;
-          return a.minutes - b.minutes;
-      })
-      .slice(0, 12);
+// Parse bus.gov.il real-time MOT data
+function parseMotData(lines, relevantLines) {
+    // Expand MinutesToArrivalList: each line can have multiple upcoming arrivals
+    const expanded = [];
+    (lines || []).forEach(ln => {
+        const lineNum = String(ln.Shilut || '?');
+        const dest = ln.DestinationQuarterName || ln.Description || '';
+        const company = ln.CompanyHebrewName || '';
+        const isRealtime = ln.ResponseSuccesed === true;
+        const arrList = ln.MinutesToArrivalList || (ln.MinutesToArrival != null ? [ln.MinutesToArrival] : []);
+        arrList.forEach(min => {
+            expanded.push({
+                line: lineNum,
+                dest,
+                company,
+                minutes: min,
+                hasGps: isRealtime,
+                isPlanned: false,
+                isRelevant: relevantLines.length > 0 && relevantLines.includes(lineNum)
+            });
+        });
+    });
+    return expanded
+        .filter(a => a.minutes >= -2)
+        .sort((a,b) => {
+            if (a.isRelevant && !b.isRelevant) return -1;
+            if (!a.isRelevant && b.isRelevant) return 1;
+            return a.minutes - b.minutes;
+        })
+        .slice(0, 15);
 }
 
-// Parse GTFS planned data
+// Parse GTFS planned data (fallback)
 function parseGtfsData(data, now, relevantLines) {
     const seen = new Set();
     return data.filter(d => {
@@ -679,6 +648,7 @@ function parseGtfsData(data, now, relevantLines) {
         return {
             line: lineNum,
             dest,
+            company: d.gtfs_route__agency_name || '',
             minutes: min,
             hasGps: false,
             isPlanned: true,
@@ -690,10 +660,10 @@ function parseGtfsData(data, now, relevantLines) {
           if (!a.isRelevant && b.isRelevant) return 1;
           return a.minutes - b.minutes;
       })
-      .slice(0, 12);
+      .slice(0, 15);
 }
 
-// Unified render for both sources
+// Unified render
 function renderArrivals(body, arrivals, source) {
     if (!arrivals || arrivals.length === 0) {
         body.innerHTML = '<div class="no-data">אין אוטובוסים קרובים כרגע</div>';
@@ -702,8 +672,8 @@ function renderArrivals(body, arrivals, source) {
 
     body.innerHTML = arrivals.map(a => {
         let cls, txt;
-        // GPS confirmed = always green (time is certain)
-        if (a.hasGps && a.minutes <= 1) { cls = 'eta-now'; txt = 'עכשיו!'; }
+        // Real-time (MOT confirmed) = green always
+        if (a.hasGps && a.minutes <= 0) { cls = 'eta-now'; txt = 'מגיע!'; }
         else if (a.hasGps) { cls = 'eta-gps'; txt = a.minutes + " דק'"; }
         else if (a.minutes <= 1) { cls = 'eta-soon'; txt = '~עכשיו'; }
         else if (a.minutes <= 5) { cls = 'eta-soon'; txt = a.minutes + " דק'"; }
@@ -713,7 +683,7 @@ function renderArrivals(body, arrivals, source) {
         if (dest) {
             const parts = dest.split('-');
             if (parts.length >= 2) dest = parts[parts.length-1].trim();
-            if (dest.length > 30) dest = dest.substring(0,30) + '...';
+            if (dest.length > 25) dest = dest.substring(0,25) + '...';
         }
 
         const badge = a.hasGps ? ' 🛰️' : (a.isPlanned ? ' 📋' : '');
@@ -732,12 +702,11 @@ function renderArrivals(body, arrivals, source) {
 
     // Legend
     const legendSrc = source === 'realtime'
-        ? '<span>🛰️ = מאומת GPS בזמן אמת</span>'
-        : '<span>📋 = לוח זמנים מתוכנן (לא GPS)</span>';
+        ? '<span>🛰️ = זמן אמת (משרד התחבורה)</span>'
+        : '<span>📋 = לוח מתוכנן בלבד</span>';
     body.innerHTML += `<div class="eta-legend">
-        <span><i class="legend-dot legend-green"></i> ודאי - מאומת GPS</span>
-        <span><i class="legend-dot legend-orange"></i> לא מאומת GPS</span>
-        <span><i class="legend-dot legend-black"></i> מתוכנן בלבד</span>
+        <span><i class="legend-dot legend-green"></i> זמן אמת מאומת</span>
+        <span><i class="legend-dot legend-orange"></i> לא מאומת</span>
         ${legendSrc}
     </div>`;
 }
