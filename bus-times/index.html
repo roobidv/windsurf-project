@@ -19,8 +19,10 @@
             --danger: #ef4444;
             --green-bg: #c8f7c5;
             --green-header: #2e7d32;
+            --green-btn: #43a047;
             --red-bg: #fdd;
             --red-header: #c62828;
+            --red-btn: #e53935;
             --shadow: 0 2px 8px rgba(0,0,0,0.08);
             --radius: 14px;
         }
@@ -35,16 +37,16 @@
         .header {
             background: linear-gradient(135deg, var(--primary), var(--primary-dark));
             color: white;
-            padding: 16px 16px 12px;
+            padding: 14px 16px 10px;
             text-align: center;
             position: sticky;
             top: 0;
             z-index: 100;
             box-shadow: 0 2px 12px rgba(26,115,232,0.3);
         }
-        .header h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+        .header h1 { font-size: 20px; font-weight: 700; margin-bottom: 3px; }
         .header-sub {
-            font-size: 12px;
+            font-size: 11px;
             opacity: 0.85;
             display: flex;
             align-items: center;
@@ -61,67 +63,110 @@
         .dot-load { background: var(--warning); animation: pulse 0.8s infinite; }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-        .toolbar {
+        /* Stop selector buttons */
+        .stop-buttons {
             background: white;
-            padding: 8px 12px;
+            padding: 10px 10px 8px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .btn-section-label {
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 5px;
+            padding-right: 4px;
+        }
+        .btn-section-label.lbl-base { color: var(--green-header); }
+        .btn-section-label.lbl-home { color: var(--red-header); }
+        .btn-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 8px;
+        }
+        .stop-btn {
+            border: none;
+            border-radius: 8px;
+            padding: 7px 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            color: white;
+            flex: 1;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        .stop-btn:active { transform: scale(0.96); }
+        .stop-btn.btn-base { background: var(--green-btn); }
+        .stop-btn.btn-home { background: var(--red-btn); }
+        .stop-btn.active { box-shadow: 0 0 0 3px rgba(0,0,0,0.3); transform: scale(1.03); }
+
+        /* Custom stop search */
+        .custom-search {
+            display: flex;
+            gap: 6px;
+            margin-top: 2px;
+            align-items: center;
+        }
+        .custom-search input {
+            flex: 1;
+            padding: 7px 10px;
+            border: 1.5px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: inherit;
+        }
+        .custom-search input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(26,115,232,0.2); }
+        .custom-search button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 7px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: inherit;
+            white-space: nowrap;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            background: #fafafa;
+            padding: 6px 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
             border-bottom: 1px solid #e5e7eb;
-            flex-wrap: wrap;
         }
         .toolbar button {
             background: var(--primary);
             color: white;
             border: none;
             border-radius: 8px;
-            padding: 6px 14px;
-            font-size: 13px;
+            padding: 5px 12px;
+            font-size: 12px;
             cursor: pointer;
             font-family: inherit;
         }
-        .toolbar button:active { opacity: 0.8; }
-        .toolbar .timer {
-            font-size: 11px;
-            color: var(--text-muted);
-        }
+        .toolbar .timer { font-size: 11px; color: var(--text-muted); }
 
-        .section-title {
-            max-width: 600px;
-            margin: 16px auto 8px;
-            padding: 10px 16px;
-            border-radius: 10px;
-            font-size: 18px;
-            font-weight: 800;
-            text-align: center;
-        }
-        .section-title.to-base {
-            background: var(--green-bg);
-            color: var(--green-header);
-        }
-        .section-title.to-home {
-            background: var(--red-bg);
-            color: var(--red-header);
-        }
-
-        .stops-container {
-            padding: 0 12px 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
+        /* Single stop card */
         .stop-card {
             background: var(--card-bg);
             border-radius: var(--radius);
             box-shadow: var(--shadow);
             overflow: hidden;
+            max-width: 600px;
+            margin: 12px auto;
         }
         .stop-card.dir-base { border-right: 5px solid var(--green-header); }
         .stop-card.dir-home { border-right: 5px solid var(--red-header); }
+        .stop-card.dir-custom { border-right: 5px solid var(--primary); }
 
         .stop-header {
             padding: 12px 14px 6px;
@@ -131,10 +176,11 @@
         }
         .stop-header.bg-green { background: var(--green-bg); }
         .stop-header.bg-red { background: var(--red-bg); }
+        .stop-header.bg-blue { background: #e3f2fd; }
 
-        .stop-name { font-size: 15px; font-weight: 700; }
+        .stop-name { font-size: 16px; font-weight: 700; }
         .stop-code {
-            font-size: 11px;
+            font-size: 12px;
             color: var(--text-muted);
             background: rgba(255,255,255,0.7);
             padding: 2px 8px;
@@ -149,13 +195,13 @@
         }
         .stop-img {
             width: 100%;
-            max-height: 120px;
+            max-height: 140px;
             object-fit: cover;
             display: block;
         }
         .stop-img-placeholder {
             width: 100%;
-            height: 80px;
+            height: 70px;
             background: #f3f4f6;
             display: flex;
             align-items: center;
@@ -163,24 +209,37 @@
             font-size: 12px;
             color: #aaa;
         }
-        .stop-body { padding: 8px 14px 12px; }
+        .stop-body { padding: 8px 14px 14px; }
 
+        /* Bus rows */
         .bus-row {
             display: flex;
             align-items: center;
-            padding: 7px 0;
-            border-bottom: 1px solid #f9fafb;
+            padding: 8px 6px;
+            margin-bottom: 3px;
+            border-radius: 8px;
+            background: #fafafa;
         }
-        .bus-row:last-child { border-bottom: none; }
-        .bus-row.relevant { background: #f0f9ff; border-radius: 6px; margin: 2px -4px; padding: 7px 4px; }
+        .bus-row.relevant {
+            background: repeating-linear-gradient(
+                -45deg,
+                #fff8e1,
+                #fff8e1 6px,
+                #fff3cd 6px,
+                #fff3cd 12px
+            );
+            border: 2px solid #ff8f00;
+            border-radius: 10px;
+            padding: 8px 6px;
+        }
 
         .bus-line {
             background: var(--primary);
             color: white;
             font-weight: 700;
             font-size: 14px;
-            min-width: 46px;
-            height: 30px;
+            min-width: 48px;
+            height: 32px;
             border-radius: 8px;
             display: flex;
             align-items: center;
@@ -189,11 +248,11 @@
             flex-shrink: 0;
         }
         .bus-line.highlight {
-            background: #ff6f00;
-            font-size: 16px;
-            min-width: 52px;
-            height: 34px;
-            box-shadow: 0 2px 6px rgba(255,111,0,0.3);
+            background: #e65100;
+            font-size: 17px;
+            min-width: 56px;
+            height: 36px;
+            box-shadow: 0 2px 8px rgba(230,81,0,0.4);
         }
 
         .bus-dest {
@@ -203,7 +262,7 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .bus-dest.bold { font-weight: 700; font-size: 14px; }
+        .bus-dest.bold { font-weight: 800; font-size: 14px; color: #e65100; }
 
         .bus-eta {
             font-size: 15px;
@@ -218,18 +277,18 @@
 
         .no-data {
             text-align: center;
-            padding: 18px 0;
+            padding: 20px 0;
             color: var(--text-muted);
-            font-size: 13px;
+            font-size: 14px;
         }
         .stop-loading {
             text-align: center;
-            padding: 18px 0;
+            padding: 20px 0;
             color: var(--text-muted);
             font-size: 13px;
         }
         .spinner {
-            width: 22px; height: 22px;
+            width: 24px; height: 24px;
             border: 2.5px solid #e5e7eb;
             border-top-color: var(--primary);
             border-radius: 50%;
@@ -241,12 +300,12 @@
             text-align: center;
             padding: 14px 0;
             color: var(--danger);
-            font-size: 12px;
+            font-size: 13px;
         }
 
         .footer {
             text-align: center;
-            padding: 20px;
+            padding: 16px;
             font-size: 11px;
             color: var(--text-muted);
         }
@@ -258,16 +317,28 @@
     <h1>🚌 זמני אוטובוס</h1>
     <div class="header-sub">
         <span class="dot dot-load" id="statusDot"></span>
-        <span id="statusText">מתחבר...</span>
+        <span id="statusText">בחר תחנה</span>
+    </div>
+</div>
+
+<div class="stop-buttons">
+    <div class="btn-section-label lbl-base">🚌 לכיוון הבסיס</div>
+    <div class="btn-grid" id="baseButtons"></div>
+    <div class="btn-section-label lbl-home">🏠 חזרה הביתה</div>
+    <div class="btn-grid" id="homeButtons"></div>
+    <div class="btn-section-label" style="color:var(--primary)">🔍 תחנה אקראית</div>
+    <div class="custom-search">
+        <input type="text" id="customInput" placeholder="מספר תחנה או שם..." dir="rtl">
+        <button onclick="searchCustom()">חפש</button>
     </div>
 </div>
 
 <div class="toolbar">
-    <button onclick="refreshAll()">רענן</button>
-    <span class="timer" id="timerText">רענון אוטומטי כל 60 שניות</span>
+    <button onclick="refreshCurrent()">רענן</button>
+    <span class="timer" id="timerText"></span>
 </div>
 
-<div id="mainContent"></div>
+<div id="mainContent" style="padding:0 12px;"></div>
 
 <div class="footer">
     נתונים: Open Bus — הסדנא לידע ציבורי<br>
@@ -277,7 +348,6 @@
 <script>
 // ===== Stops Data =====
 const STOPS = [
-    // === לכיוון הבסיס (GREEN) ===
     {
         code: '37018',
         name: 'מהשכונה טשרנחובסקי ויצמן',
@@ -310,7 +380,6 @@ const STOPS = [
         dir: 'base',
         img: '32465.jpg'
     },
-    // === חזרה הביתה (RED) ===
     {
         code: '33442',
         name: 'חזור מהבסיס תחנה שחורה',
@@ -342,6 +411,8 @@ const REFRESH_SEC = 60;
 let refreshTimer = null;
 let countdownTimer = null;
 let countdown = REFRESH_SEC;
+let currentStop = null; // currently selected stop object
+let isCustom = false;
 
 // ===== Helpers =====
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
@@ -355,49 +426,84 @@ function toISOLocal(d) {
     return iso + sign + h + ':' + m;
 }
 
-// ===== Render =====
-function renderCards() {
-    const main = document.getElementById('mainContent');
-    const baseStops = STOPS.filter(s => s.dir === 'base');
-    const homeStops = STOPS.filter(s => s.dir === 'home');
-
-    let html = '';
-    html += '<div class="section-title to-base">🚌 לכיוון הבסיס</div>';
-    html += '<div class="stops-container">';
-    html += baseStops.map((s, i) => buildCard(s, STOPS.indexOf(s))).join('');
-    html += '</div>';
-
-    html += '<div class="section-title to-home">🏠 חזרה הביתה</div>';
-    html += '<div class="stops-container">';
-    html += homeStops.map((s, i) => buildCard(s, STOPS.indexOf(s))).join('');
-    html += '</div>';
-
-    main.innerHTML = html;
+// ===== Build buttons =====
+function buildButtons() {
+    const baseGrid = document.getElementById('baseButtons');
+    const homeGrid = document.getElementById('homeButtons');
+    STOPS.forEach((s, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'stop-btn ' + (s.dir === 'base' ? 'btn-base' : 'btn-home');
+        btn.textContent = s.name;
+        btn.title = s.code + ' — ' + s.desc;
+        btn.dataset.idx = i;
+        btn.onclick = () => selectStop(i);
+        if (s.dir === 'base') baseGrid.appendChild(btn);
+        else homeGrid.appendChild(btn);
+    });
 }
 
-function buildCard(stop, idx) {
-    const bgClass = stop.dir === 'base' ? 'bg-green' : 'bg-red';
-    const dirClass = stop.dir === 'base' ? 'dir-base' : 'dir-home';
-    const imgSrc = 'images/' + stop.img;
+function highlightBtn(idx) {
+    document.querySelectorAll('.stop-btn').forEach(b => b.classList.remove('active'));
+    if (idx !== null) {
+        const btn = document.querySelector(`.stop-btn[data-idx="${idx}"]`);
+        if (btn) btn.classList.add('active');
+    }
+}
 
-    return `
+// ===== Select stop =====
+function selectStop(idx) {
+    isCustom = false;
+    currentStop = { ...STOPS[idx], _idx: idx };
+    highlightBtn(idx);
+    renderCard(currentStop);
+    loadStop(currentStop);
+    startAutoRefresh();
+}
+
+function selectCustomStop(code, name) {
+    isCustom = true;
+    currentStop = { code, name: name || 'תחנה ' + code, desc: '', lines: [], dir: 'custom', img: '' };
+    highlightBtn(null);
+    renderCard(currentStop);
+    loadStop(currentStop);
+    startAutoRefresh();
+}
+
+// ===== Render single card =====
+function renderCard(stop) {
+    const main = document.getElementById('mainContent');
+    let bgClass, dirClass;
+    if (stop.dir === 'base') { bgClass = 'bg-green'; dirClass = 'dir-base'; }
+    else if (stop.dir === 'home') { bgClass = 'bg-red'; dirClass = 'dir-home'; }
+    else { bgClass = 'bg-blue'; dirClass = 'dir-custom'; }
+
+    const imgSrc = stop.img ? ('images/' + stop.img) : '';
+    const imgHtml = imgSrc
+        ? `<img class="stop-img" src="${imgSrc}" alt="${esc(stop.name)}" onerror="this.outerHTML='<div class=stop-img-placeholder>📷</div>'">`
+        : '';
+    const descHtml = stop.desc ? `<div class="stop-desc">${esc(stop.desc)}</div>` : '';
+
+    main.innerHTML = `
     <div class="stop-card ${dirClass}">
         <div class="stop-header ${bgClass}">
             <span class="stop-name">${esc(stop.name)}</span>
             <span class="stop-code">${esc(stop.code)}</span>
         </div>
-        <div class="stop-desc">${esc(stop.desc)}</div>
-        <img class="stop-img" src="${imgSrc}" alt="${esc(stop.name)}" onerror="this.outerHTML='<div class=stop-img-placeholder>📷 ${esc(stop.img)}</div>'">
-        <div class="stop-body" id="body_${idx}">
+        ${descHtml}
+        ${imgHtml}
+        <div class="stop-body" id="stopBody">
             <div class="stop-loading"><div class="spinner"></div>טוען...</div>
         </div>
     </div>`;
 }
 
-// ===== Fetch arrivals =====
-async function fetchStop(stop, idx) {
-    const body = document.getElementById('body_' + idx);
+// ===== Fetch =====
+async function loadStop(stop) {
+    const body = document.getElementById('stopBody');
     if (!body) return;
+
+    document.getElementById('statusDot').className = 'dot dot-load';
+    document.getElementById('statusText').textContent = 'מעדכן...';
 
     try {
         const now = new Date();
@@ -417,10 +523,37 @@ async function fetchStop(stop, idx) {
         const resp = await fetch(url);
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
         const data = await resp.json();
-        renderArrivals(body, data, now, stop.lines);
+
+        // For custom stops, update name from API
+        if (isCustom && data.length > 0 && data[0].gtfs_stop__name) {
+            const nameEl = document.querySelector('.stop-name');
+            if (nameEl) nameEl.textContent = data[0].gtfs_stop__name;
+            if (data[0].gtfs_stop__city) {
+                const descEl = document.querySelector('.stop-desc');
+                if (!descEl) {
+                    const header = document.querySelector('.stop-header');
+                    if (header) {
+                        const d = document.createElement('div');
+                        d.className = 'stop-desc';
+                        d.textContent = data[0].gtfs_stop__city;
+                        header.after(d);
+                    }
+                }
+            }
+        }
+
+        renderArrivals(body, data, now, stop.lines || []);
+
+        const ts = now.toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+        document.getElementById('lastRefresh').textContent = ts;
+        document.getElementById('statusDot').className = 'dot dot-ok';
+        document.getElementById('statusText').textContent = 'לוח זמנים מתוכנן';
     } catch(e) {
         body.innerHTML = `<div class="stop-error">⚠️ שגיאה: ${esc(e.message)}</div>`;
+        document.getElementById('statusDot').className = 'dot dot-err';
+        document.getElementById('statusText').textContent = 'שגיאה';
     }
+    countdown = REFRESH_SEC;
 }
 
 function renderArrivals(body, data, now, relevantLines) {
@@ -444,16 +577,15 @@ function renderArrivals(body, data, now, relevantLines) {
             dest: d.gtfs_route__route_long_name || '',
             agency: d.gtfs_route__agency_name || '',
             minutes: min,
-            isRelevant: relevantLines.includes(lineNum)
+            isRelevant: relevantLines.length > 0 && relevantLines.includes(lineNum)
         };
     }).filter(a => a.minutes !== null && a.minutes >= -2)
       .sort((a,b) => {
-          // Relevant lines first, then by time
           if (a.isRelevant && !b.isRelevant) return -1;
           if (!a.isRelevant && b.isRelevant) return 1;
           return a.minutes - b.minutes;
       })
-      .slice(0, 10);
+      .slice(0, 12);
 
     if (arrivals.length === 0) {
         body.innerHTML = '<div class="no-data">אין אוטובוסים קרובים כרגע</div>';
@@ -469,7 +601,7 @@ function renderArrivals(body, data, now, relevantLines) {
         let dest = a.dest;
         const parts = dest.split('-');
         if (parts.length >= 2) dest = parts[parts.length-1].trim();
-        if (dest.length > 28) dest = dest.substring(0,28) + '...';
+        if (dest.length > 30) dest = dest.substring(0,30) + '...';
 
         const rowClass = a.isRelevant ? 'bus-row relevant' : 'bus-row';
         const lineClass = a.isRelevant ? 'bus-line highlight' : 'bus-line';
@@ -484,44 +616,51 @@ function renderArrivals(body, data, now, relevantLines) {
     }).join('');
 }
 
-// ===== Refresh =====
-async function refreshAll() {
-    document.getElementById('statusDot').className = 'dot dot-load';
-    document.getElementById('statusText').textContent = 'מעדכן...';
-
-    const promises = STOPS.map((s, i) => fetchStop(s, i));
-    const results = await Promise.allSettled(promises);
-
-    const errs = results.filter(r => r.status === 'rejected').length;
-    const now = new Date();
-    document.getElementById('lastRefresh').textContent =
-        now.toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
-
-    if (errs === 0) {
-        document.getElementById('statusDot').className = 'dot dot-ok';
-        document.getElementById('statusText').textContent = 'מחובר — לוח זמנים מתוכנן';
+// ===== Custom search =====
+function searchCustom() {
+    const val = document.getElementById('customInput').value.trim();
+    if (!val) return;
+    // If numeric, treat as stop code
+    if (/^\d+$/.test(val)) {
+        selectCustomStop(val);
     } else {
-        document.getElementById('statusDot').className = 'dot dot-err';
-        document.getElementById('statusText').textContent = errs + ' תחנות עם שגיאה';
+        // Treat as stop code anyway (API requires numeric code)
+        selectCustomStop(val, val);
     }
-    countdown = REFRESH_SEC;
+}
+
+// ===== Refresh =====
+function refreshCurrent() {
+    if (!currentStop) return;
+    renderCard(currentStop);
+    loadStop(currentStop);
 }
 
 function startAutoRefresh() {
     if (refreshTimer) clearInterval(refreshTimer);
     if (countdownTimer) clearInterval(countdownTimer);
-    refreshTimer = setInterval(refreshAll, REFRESH_SEC * 1000);
+    refreshTimer = setInterval(() => {
+        if (currentStop) {
+            const body = document.getElementById('stopBody');
+            if (body) loadStop(currentStop);
+        }
+    }, REFRESH_SEC * 1000);
     countdownTimer = setInterval(() => {
         countdown--;
         if (countdown < 0) countdown = REFRESH_SEC;
         document.getElementById('timerText').textContent = 'רענון בעוד ' + countdown + ' שניות';
     }, 1000);
+    countdown = REFRESH_SEC;
 }
 
+// Enter key on custom input
+document.getElementById('customInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') searchCustom();
+});
+
 // ===== Init =====
-renderCards();
-refreshAll();
-startAutoRefresh();
+buildButtons();
+document.getElementById('mainContent').innerHTML = '<div style="text-align:center;padding:40px 20px;color:#999;font-size:15px;">👆 בחר תחנה מהכפתורים למעלה</div>';
 </script>
 </body>
 </html>
