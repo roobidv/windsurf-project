@@ -399,13 +399,18 @@
         }
         .modal-time-chip:first-child { background: #22c55e; color: #fff; border-color: #22c55e; }
         .modal-section { font-size: 12px; color: #888; margin-bottom: 4px; font-weight: 600; }
+        .modal-btns { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
         .modal-nav-btn {
             display: flex; align-items: center; justify-content: center; gap: 8px;
             width: 100%; padding: 12px; border: none; border-radius: 12px;
-            background: #1a73e8; color: #fff; font-size: 15px; font-weight: 700;
-            cursor: pointer; margin-top: 8px; text-decoration: none;
+            background: #7b1fa2; color: #fff; font-size: 15px; font-weight: 700;
+            cursor: pointer; text-decoration: none;
         }
-        .modal-nav-btn:hover { background: #1557b0; }
+        .modal-nav-btn:hover { background: #6a1b9a; }
+        .modal-nav-btn.secondary {
+            background: #1a73e8; font-size: 13px; padding: 10px;
+        }
+        .modal-nav-btn.secondary:hover { background: #1557b0; }
         .modal-close {
             display: block; text-align: center; padding: 12px;
             color: #888; font-size: 13px; cursor: pointer;
@@ -911,9 +916,14 @@ async function showLineModal(lineNum) {
                 ${destMakat ? '<div class="modal-section" style="margin-top:4px;color:#1a73e8">🏁 תחנת יעד: ' + destMakat + '</div>' : ''}
                 <div class="modal-section" style="margin-top:12px">⏱️ הגעות קרובות:</div>
                 <div class="modal-times">${chips || '<span style="color:#aaa">אין נתונים</span>'}</div>
-                <a class="modal-nav-btn" href="${mapsUrl}" target="_blank" rel="noopener">
-                    🗺️ נווט בתחבורה ציבורית — Google Maps
-                </a>
+                <div class="modal-btns">
+                    <a class="modal-nav-btn" href="https://moovitapp.com/israel/he/?customerId=4908&ref=5&poiType=line&lineNumber=${encodeURIComponent(lineNum)}&lang=he" target="_blank" rel="noopener">
+                        🗺️ מסלול הקו ותחנות — Moovit
+                    </a>
+                    <a class="modal-nav-btn secondary" href="${mapsUrl}" target="_blank" rel="noopener">
+                        � ניווט תחבורה ציבורית — Google Maps
+                    </a>
+                </div>
             </div>
             <div class="modal-close" onclick="closeModal()">סגור ✕</div>
         </div>`;
