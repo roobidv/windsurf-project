@@ -673,9 +673,17 @@ async function loadStop(stop) {
     try {
         // Primary: bus.gov.il real-time SIRI (MOT official)
         const motUrl = `${MOT_API}/GetRealtimeBusLineListByBustop/${stop.code}/he/false`;
-        const resp = await fetch(PROXY + encodeURIComponent(motUrl));
-        if (!resp.ok) throw new Error('MOT:' + resp.status);
-        const raw = await resp.json();
+        const proxies = [PROXY, 'https://api.allorigins.win/raw?url='];
+        let raw = null;
+        for (const px of proxies) {
+            try {
+                const resp = await fetch(px + encodeURIComponent(motUrl));
+                if (!resp.ok) continue;
+                raw = await resp.json();
+                break;
+            } catch(_) { continue; }
+        }
+        if (!raw) throw new Error('MOT: all proxies failed');
         // API returns {value:[...], Count:N} or plain array
         const lines = Array.isArray(raw) ? raw : (raw.value || []);
 
