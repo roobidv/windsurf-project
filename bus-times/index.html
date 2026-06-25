@@ -364,6 +364,54 @@
             font-size: 11px;
             color: var(--text-muted);
         }
+
+        /* Line detail modal */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 1000;
+            display: flex; align-items: center; justify-content: center;
+            padding: 16px;
+        }
+        .modal-card {
+            background: #fff; border-radius: 16px; width: 100%; max-width: 380px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.3); overflow: hidden;
+            animation: slideUp 0.25s ease;
+        }
+        @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .modal-header {
+            display: flex; align-items: center; gap: 12px;
+            padding: 16px; background: var(--primary); color: #fff;
+        }
+        .modal-line-num {
+            font-size: 28px; font-weight: 800;
+            background: rgba(255,255,255,0.2); border-radius: 10px;
+            min-width: 60px; height: 44px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .modal-dest { font-size: 15px; font-weight: 600; flex: 1; }
+        .modal-operator { font-size: 11px; opacity: 0.8; margin-top: 2px; }
+        .modal-body { padding: 14px 16px; }
+        .modal-times { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 14px; }
+        .modal-time-chip {
+            background: #f0fdf4; color: #22c55e; font-weight: 700;
+            padding: 6px 14px; border-radius: 20px; font-size: 14px;
+            border: 1px solid #bbf7d0;
+        }
+        .modal-time-chip:first-child { background: #22c55e; color: #fff; border-color: #22c55e; }
+        .modal-section { font-size: 12px; color: #888; margin-bottom: 4px; font-weight: 600; }
+        .modal-nav-btn {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            width: 100%; padding: 12px; border: none; border-radius: 12px;
+            background: #1a73e8; color: #fff; font-size: 15px; font-weight: 700;
+            cursor: pointer; margin-top: 8px; text-decoration: none;
+        }
+        .modal-nav-btn:hover { background: #1557b0; }
+        .modal-close {
+            display: block; text-align: center; padding: 12px;
+            color: #888; font-size: 13px; cursor: pointer;
+            border-top: 1px solid #f3f4f6;
+        }
+        .modal-close:hover { background: #f9fafb; }
     </style>
 </head>
 <body>
@@ -491,6 +539,7 @@ let countdownTimer = null;
 let countdown = REFRESH_SEC;
 let currentStop = null; // currently selected stop object
 let isCustom = false;
+let lastMotLines = []; // store raw MOT data for modal
 
 // ===== Helpers =====
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
@@ -632,6 +681,7 @@ async function loadStop(stop) {
             }
         }
 
+        lastMotLines = lines;
         const arrivals = parseMotData(lines, stop.lines || []);
         renderArrivals(body, arrivals, 'realtime');
         source = 'realtime';
@@ -781,7 +831,7 @@ function renderArrivals(body, arrivals, source) {
 
         return `
             <div class="${rowClass}">
-                <div class="${lineClass}">${esc(a.line)}</div>
+                <div class="${lineClass}" style="cursor:pointer" onclick="showLineModal('${esc(a.line)}')">${esc(a.line)}</div>
                 <div class="${destClass}">${esc(dest)}</div>
                 <div class="bus-info">
                     <div class="bus-eta ${cls}">${txt}${badge}</div>
@@ -799,6 +849,69 @@ function renderArrivals(body, arrivals, source) {
         <span><i class="legend-dot legend-orange"></i> לא מאומת</span>
         ${legendSrc}
     </div>`;
+}
+
+// ===== Line detail modal =====
+function showLineModal(lineNum) {
+    // Find this line in raw MOT data
+    const ln = lastMotLines.find(l => String(l.Shilut) === lineNum);
+    if (!ln) return;
+
+    const dest = ln.DestinationQuarterName || ln.Description || '';
+    const company = ln.CompanyHebrewName || '';
+    const arrList = ln.MinutesToArrivalList || (ln.MinutesToArrival != null ? [ln.MinutesToArrival] : []);
+    const stopName = ln.BusstopHebrewName || currentStop?.name || '';
+    const desc = ln.Description || '';
+
+    // Build time chips with clock
+    const now = Date.now();
+    const chips = arrList.map((min, i) => {
+        const clock = new Date(now + min * 60000).toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' });
+        const label = min <= 0 ? 'מגיע!' : min + " דק'";
+        return `<span class="modal-time-chip">${label} (${clock})</span>`;
+    }).join('');
+
+    // Google Maps transit URL: from current stop coords to destination name
+    let mapsUrl = '';
+    if (currentStop?.lat && currentStop?.lon) {
+        const origin = `${currentStop.lat},${currentStop.lon}`;
+        const destination = encodeURIComponent(dest);
+        mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=transit`;
+    } else {
+        const origin = encodeURIComponent(stopName);
+        const destination = encodeURIComponent(dest);
+        mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=transit`;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.onclick = (e) => { if (e.target === overlay) closeModal(); };
+    overlay.innerHTML = `
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-line-num">${esc(lineNum)}</div>
+                <div>
+                    <div class="modal-dest">${esc(dest)}</div>
+                    <div class="modal-operator">${esc(company)}</div>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="modal-section">📍 תחנה: ${esc(stopName)}</div>
+                <div class="modal-section" style="margin-top:6px">🗺️ מסלול: ${esc(desc)}</div>
+                <div class="modal-section" style="margin-top:12px">⏱️ הגעות קרובות:</div>
+                <div class="modal-times">${chips || '<span style="color:#aaa">אין נתונים</span>'}</div>
+                <a class="modal-nav-btn" href="${mapsUrl}" target="_blank" rel="noopener">
+                    🗺️ נווט בתחבורה ציבורית — Google Maps
+                </a>
+            </div>
+            <div class="modal-close" onclick="closeModal()">סגור ✕</div>
+        </div>`;
+    document.body.appendChild(overlay);
+}
+
+function closeModal() {
+    const m = document.querySelector('.modal-overlay');
+    if (m) m.remove();
 }
 
 // ===== Custom search =====
