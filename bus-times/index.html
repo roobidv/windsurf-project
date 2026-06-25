@@ -203,6 +203,22 @@
         }
         .copy-btn:hover { opacity: 1; }
         .copy-btn.copied { opacity: 1; }
+        .loc-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(255,255,255,0.85);
+            border: 1px solid #ddd;
+            border-radius: 16px;
+            padding: 3px 10px;
+            font-size: 12px;
+            color: #1a73e8;
+            cursor: pointer;
+            margin: 4px 14px 0;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .loc-btn:hover { background: #e8f0fe; }
         .stop-desc {
             font-size: 13px;
             color: var(--text-muted);
@@ -398,7 +414,8 @@ const STOPS = [
         desc: 'ממש ליד השכרת רכב בשכונה',
         lines: ['640','468'],
         dir: 'base',
-        img: '37018.jpg'
+        img: '37018.jpg',
+        lat: 32.177906, lon: 34.894049
     },
     {
         code: '22942',
@@ -406,7 +423,8 @@ const STOPS = [
         desc: 'ממש ליד מפעל קוקה קולה',
         lines: ['354','318'],
         dir: 'base',
-        img: '22942.jpg'
+        img: '22942.jpg',
+        lat: 32.074823, lon: 34.843553
     },
     {
         code: '33737',
@@ -414,7 +432,8 @@ const STOPS = [
         desc: 'מפה ישירות לבסיס',
         lines: ['411','433'],
         dir: 'base',
-        img: '33737.jpg'
+        img: '33737.jpg',
+        lat: 32.000365, lon: 34.821606
     },
     {
         code: '32465',
@@ -422,7 +441,8 @@ const STOPS = [
         desc: 'ישיר עד הבסיס',
         lines: ['249'],
         dir: 'base',
-        img: '32465.jpg'
+        img: '32465.jpg',
+        lat: 32.101182, lon: 34.898303
     },
     {
         code: '33442',
@@ -430,7 +450,8 @@ const STOPS = [
         desc: '249 הלעבודה של אבא. האחרים לצומת בית דגן.',
         lines: ['249','411','458'],
         dir: 'home',
-        img: '33442.jpg'
+        img: '33442.jpg',
+        lat: 31.92101, lon: 34.876663
     },
     {
         code: '33440',
@@ -438,7 +459,8 @@ const STOPS = [
         desc: 'נוסעים לגבעת שמואל תחנה',
         lines: ['20055'],
         dir: 'home',
-        img: '33440.jpg'
+        img: '33440.jpg',
+        lat: 32.002455, lon: 34.820515
     },
     {
         code: '21257',
@@ -446,7 +468,8 @@ const STOPS = [
         desc: 'קווים ישירים לכפר סבא',
         lines: ['640','468'],
         dir: 'home',
-        img: '21257.jpg'
+        img: '21257.jpg',
+        lat: 32.076767, lon: 34.844303
     }
 ];
 
@@ -470,6 +493,21 @@ function copyCode(code, btn) {
         btn.classList.add('copied');
         setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
     });
+}
+
+async function fetchAndOpenMap(code) {
+    try {
+        const resp = await fetch(`${GTFS_API}/gtfs_stops/list?code=${code}&limit=1`);
+        const raw = await resp.json();
+        const stops = raw.value || raw;
+        if (stops.length > 0 && stops[0].lat && stops[0].lon) {
+            window.open(`https://www.google.com/maps?q=${stops[0].lat},${stops[0].lon}`, '_blank');
+        } else {
+            window.open(`https://www.google.com/maps/search/bus+stop+${code}+israel`, '_blank');
+        }
+    } catch(e) {
+        window.open(`https://www.google.com/maps/search/bus+stop+${code}+israel`, '_blank');
+    }
 }
 
 function toISOLocal(d) {
@@ -547,6 +585,7 @@ function renderCard(stop) {
             <span class="stop-name">${esc(stop.name)}</span>
             <span class="stop-code">${esc(stop.code)}<button class="copy-btn" onclick="copyCode('${esc(stop.code)}',this)" title="העתק מספר תחנה">📋</button></span>
         </div>
+        ${stop.lat ? `<a class="loc-btn" href="https://www.google.com/maps?q=${stop.lat},${stop.lon}" target="_blank" rel="noopener">📍 מיקום במפה</a>` : `<a class="loc-btn" id="locBtn" href="#" onclick="fetchAndOpenMap('${esc(stop.code)}');return false;">📍 מיקום במפה</a>`}
         ${descHtml}
         ${imgHtml}
         <div class="stop-body" id="stopBody">
