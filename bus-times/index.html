@@ -635,7 +635,7 @@ function renderCard(stop) {
     else { bgClass = 'bg-blue'; dirClass = 'dir-custom'; }
 
     const imgSrc = stop.img ? ('images/' + stop.img) : '';
-    const bottomImgs = ['22942','32465','33737','33440'];
+    const bottomImgs = ['22942','32465','33737','33440','21257'];
     const imgExtra = bottomImgs.includes(stop.code) ? ' img-bottom' : '';
     const imgHtml = imgSrc
         ? `<img class="stop-img${imgExtra}" src="${imgSrc}" alt="${esc(stop.name)}" onerror="this.outerHTML='<div class=stop-img-placeholder>📷</div>'">`
