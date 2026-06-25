@@ -927,6 +927,7 @@ async function showLineModal(lineNum) {
                 <div class="modal-section" style="margin-top:12px">⏱️ הגעות קרובות:</div>
                 <div class="modal-times">${chips || '<span style="color:#aaa">אין נתונים</span>'}</div>
                 <div class="modal-btns">
+                    <div style="color:#e65100;font-size:12px;text-align:center;margin-bottom:4px">⚠️ שים לב לכיוון הנסיעה הנכון מבחינתך</div>
                     <button class="modal-nav-btn" onclick="window.open('${coCode
                         ? 'https://www.bus.co.il/OtobusimMVC/Line_Places/1010/' + lineNum + '_' + coCode + '_0'
                         : 'https://www.google.com/search?q=' + encodeURIComponent('קו ' + lineNum + ' ' + company + ' מסלול תחנות')
