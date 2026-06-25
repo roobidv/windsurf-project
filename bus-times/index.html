@@ -856,6 +856,14 @@ function renderArrivals(body, arrivals, source) {
     </div>`;
 }
 
+// ===== bus.co.il company code mapping =====
+const BUS_CO_IL = {
+    'אגד':1,'דן':11,'מטרונית':12,'קווים':15,'אפיקים':16,'אלקטרה אפיקים':16,
+    'מטרופולין':21,'נתיב אקספרס':31,'גולן':46,'דן בדרום':63,'דן באר שבע':65,
+    'סופרבוס':71,'גלים':75,'אגד תעבורה':83,'תנופה':10034,'אקסטרה':10037,
+    'אקסטרה ירושלים':10038,'דרך אגד עוטף ירושלים':10135,'כפיר':15
+};
+
 // ===== Line detail modal =====
 async function showLineModal(lineNum) {
     // Find this line in raw MOT data
@@ -869,6 +877,8 @@ async function showLineModal(lineNum) {
     const desc = ln.Description || '';
     const destMakat = ln.DestinationMakat;
     const stopType = ln.BusstopType || '';
+    const motVar = (ln.MotVariation || '0').replace('#','%23');
+    const coCode = BUS_CO_IL[company];
 
     // Build time chips with clock
     const now = Date.now();
@@ -917,8 +927,11 @@ async function showLineModal(lineNum) {
                 <div class="modal-section" style="margin-top:12px">⏱️ הגעות קרובות:</div>
                 <div class="modal-times">${chips || '<span style="color:#aaa">אין נתונים</span>'}</div>
                 <div class="modal-btns">
-                    <a class="modal-nav-btn" href="https://www.google.com/search?q=${encodeURIComponent('קו ' + lineNum + ' ' + company + ' מסלול תחנות')}" target="_blank" rel="noopener">
-                        🗺️ מסלול הקו ${esc(lineNum)} ותחנות — חיפוש
+                    <a class="modal-nav-btn" href="${coCode
+                        ? 'https://www.bus.co.il/OtobusimMVC/Line_Places/1010/' + lineNum + '_' + coCode + '_' + motVar
+                        : 'https://www.google.com/search?q=' + encodeURIComponent('קו ' + lineNum + ' ' + company + ' מסלול תחנות')
+                    }" target="_blank" rel="noopener">
+                        🗺️ מסלול קו ${esc(lineNum)} — כל התחנות
                     </a>
                     <a class="modal-nav-btn secondary" href="${mapsUrl}" target="_blank" rel="noopener">
                         📍 ניווט תחבורה ציבורית — Google Maps
