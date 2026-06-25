@@ -673,14 +673,22 @@ async function loadStop(stop) {
     try {
         // Primary: bus.gov.il real-time SIRI (MOT official)
         const motUrl = `${MOT_API}/GetRealtimeBusLineListByBustop/${stop.code}/he/false`;
-        const proxies = [PROXY, 'https://api.allorigins.win/raw?url='];
+        const proxies = [
+            PROXY,
+            'https://api.allorigins.win/raw?url=',
+            'https://api.codetabs.com/v1/proxy?quest='
+        ];
         let raw = null;
         for (const px of proxies) {
             try {
-                const resp = await fetch(px + encodeURIComponent(motUrl));
+                const ctrl = new AbortController();
+                const tid = setTimeout(() => ctrl.abort(), 8000);
+                const resp = await fetch(px + encodeURIComponent(motUrl), { signal: ctrl.signal });
+                clearTimeout(tid);
                 if (!resp.ok) continue;
                 raw = await resp.json();
-                break;
+                if (raw && (Array.isArray(raw) || raw.value)) break;
+                raw = null;
             } catch(_) { continue; }
         }
         if (!raw) throw new Error('MOT: all proxies failed');
