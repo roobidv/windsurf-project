@@ -135,6 +135,17 @@ function doGet(e) {
       var reportUser = decodeURIComponent(e.parameter.user || '');
       var reportDays = parseInt(e.parameter.days) || 7;
       var evSheet = ss.getSheetByName('\u05d0\u05e8\u05d5\u05e2\u05d9\u05dd');
+      // Build code-to-name map from main data sheet
+      var codeToName = {};
+      var mainSheet = ss.getSheets()[0];
+      if (mainSheet) {
+        var mainRows = mainSheet.getDataRange().getValues();
+        for (var m = 1; m < mainRows.length; m++) {
+          var mCode = String(mainRows[m][1]).trim();
+          var mName = String(mainRows[m][2]).trim();
+          if (mCode && mName) codeToName[mCode] = mName;
+        }
+      }
       var events = [];
       if (evSheet) {
         var evRows = evSheet.getDataRange().getValues();
@@ -144,13 +155,15 @@ function doGet(e) {
           var evDate = new Date(evRows[i][0]);
           var evUser = String(evRows[i][1]).trim();
           if (evUser === reportUser && evDate >= cutoff) {
+            var evCode = String(evRows[i][6] || '').trim();
             events.push({
               date: Utilities.formatDate(evDate, 'Asia/Jerusalem', 'dd.MM.yy HH:mm'),
               action: String(evRows[i][2] || ''),
               field: String(evRows[i][3] || ''),
               oldVal: String(evRows[i][4] || ''),
               newVal: String(evRows[i][5] || ''),
-              code: String(evRows[i][6] || '')
+              code: evCode,
+              name: codeToName[evCode] || ''
             });
           }
         }

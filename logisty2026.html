@@ -2152,8 +2152,8 @@
                             body += ev.date;
                             if (ev.code) {
                                 body += ' | סמל: ' + ev.code;
-                                const matchedRow = allRows.find(r => r.code === ev.code);
-                                if (matchedRow && matchedRow.name) body += ' | מוסד: ' + matchedRow.name;
+                                const instName = ev.name || (allRows.find(r => String(r.code).trim() === String(ev.code).trim()) || {}).name || '';
+                                if (instName) body += ' | מוסד: ' + instName;
                             }
                             body += ' | ' + (ev.field || ev.action);
                             if (ev.newVal) body += '\n   ' + ev.newVal;
