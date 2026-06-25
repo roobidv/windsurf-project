@@ -877,8 +877,8 @@ async function showLineModal(lineNum) {
     const desc = ln.Description || '';
     const destMakat = ln.DestinationMakat;
     const stopType = ln.BusstopType || '';
-    const motVar = (ln.MotVariation || '0').replace('#','%23');
     const coCode = BUS_CO_IL[company];
+    const motDir = ln.MotDirection || 1;
 
     // Build time chips with clock
     const now = Date.now();
@@ -927,15 +927,15 @@ async function showLineModal(lineNum) {
                 <div class="modal-section" style="margin-top:12px">⏱️ הגעות קרובות:</div>
                 <div class="modal-times">${chips || '<span style="color:#aaa">אין נתונים</span>'}</div>
                 <div class="modal-btns">
-                    <a class="modal-nav-btn" href="${coCode
-                        ? 'https://www.bus.co.il/OtobusimMVC/Line_Places/1010/' + lineNum + '_' + coCode + '_' + motVar
+                    <button class="modal-nav-btn" onclick="window.open('${coCode
+                        ? 'https://www.bus.co.il/OtobusimMVC/Line_Places/1010/' + lineNum + '_' + coCode + '_0'
                         : 'https://www.google.com/search?q=' + encodeURIComponent('קו ' + lineNum + ' ' + company + ' מסלול תחנות')
-                    }" target="_blank" rel="noopener">
+                    }','_blank')">
                         🗺️ מסלול קו ${esc(lineNum)} — כל התחנות
-                    </a>
-                    <a class="modal-nav-btn secondary" href="${mapsUrl}" target="_blank" rel="noopener">
+                    </button>
+                    <button class="modal-nav-btn secondary" onclick="window.open('${mapsUrl}','_blank')">
                         📍 ניווט תחבורה ציבורית — Google Maps
-                    </a>
+                    </button>
                 </div>
             </div>
             <div class="modal-close" onclick="closeModal()">סגור ✕</div>
