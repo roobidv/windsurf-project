@@ -281,12 +281,24 @@
         }
         .bus-dest.bold { font-weight: 800; font-size: 14px; color: #e65100; }
 
+        .bus-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 1px;
+            flex-shrink: 0;
+            min-width: 80px;
+        }
         .bus-eta {
             font-size: 15px;
             font-weight: 700;
-            min-width: 60px;
             text-align: center;
-            flex-shrink: 0;
+        }
+        .bus-meta {
+            font-size: 10px;
+            color: #999;
+            text-align: center;
+            white-space: nowrap;
         }
         .eta-now { color: #fff; background: #22c55e; border-radius: 8px; padding: 2px 8px; animation: pulse 1s infinite; }
         .eta-gps { color: #22c55e; font-weight: 800; }
@@ -632,13 +644,15 @@ function parseMotData(lines, relevantLines) {
         const dest = ln.DestinationQuarterName || ln.Description || '';
         const company = ln.CompanyHebrewName || '';
         const isRealtime = ln.ResponseSuccesed === true;
+        const dist = ln.Distance || 0;
         const arrList = ln.MinutesToArrivalList || (ln.MinutesToArrival != null ? [ln.MinutesToArrival] : []);
-        arrList.forEach(min => {
+        arrList.forEach((min, idx) => {
             expanded.push({
                 line: lineNum,
                 dest,
                 company,
                 minutes: min,
+                distance: idx === 0 ? dist : 0,
                 hasGps: isRealtime,
                 isPlanned: false,
                 isRelevant: relevantLines.length > 0 && relevantLines.includes(lineNum)
@@ -673,6 +687,7 @@ function parseGtfsData(data, now, relevantLines) {
             dest,
             company: d.gtfs_route__agency_name || '',
             minutes: min,
+            distance: 0,
             hasGps: false,
             isPlanned: true,
             isRelevant: relevantLines.length > 0 && relevantLines.includes(lineNum)
@@ -711,6 +726,19 @@ function renderArrivals(body, arrivals, source) {
 
         const badge = a.hasGps ? ' 🛰️' : (a.isPlanned ? ' 📋' : '');
 
+        // Calculate ETA clock time
+        const etaTime = new Date(Date.now() + a.minutes * 60000);
+        const etaClock = etaTime.toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' });
+
+        // Distance text
+        let distTxt = '';
+        if (a.distance > 0) {
+            distTxt = a.distance >= 1000
+                ? (a.distance / 1000).toFixed(1) + ' ק"מ'
+                : a.distance + ' מ\'';
+        }
+        const metaParts = [etaClock, distTxt].filter(Boolean).join(' · ');
+
         const rowClass = a.isRelevant ? 'bus-row relevant' : 'bus-row';
         const lineClass = a.isRelevant ? 'bus-line highlight' : 'bus-line';
         const destClass = a.isRelevant ? 'bus-dest bold' : 'bus-dest';
@@ -719,7 +747,10 @@ function renderArrivals(body, arrivals, source) {
             <div class="${rowClass}">
                 <div class="${lineClass}">${esc(a.line)}</div>
                 <div class="${destClass}">${esc(dest)}</div>
-                <div class="bus-eta ${cls}">${txt}${badge}</div>
+                <div class="bus-info">
+                    <div class="bus-eta ${cls}">${txt}${badge}</div>
+                    <div class="bus-meta">${metaParts}</div>
+                </div>
             </div>`;
     }).join('');
 
