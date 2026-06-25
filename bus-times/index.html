@@ -852,7 +852,7 @@ function renderArrivals(body, arrivals, source) {
 }
 
 // ===== Line detail modal =====
-function showLineModal(lineNum) {
+async function showLineModal(lineNum) {
     // Find this line in raw MOT data
     const ln = lastMotLines.find(l => String(l.Shilut) === lineNum);
     if (!ln) return;
@@ -862,26 +862,36 @@ function showLineModal(lineNum) {
     const arrList = ln.MinutesToArrivalList || (ln.MinutesToArrival != null ? [ln.MinutesToArrival] : []);
     const stopName = ln.BusstopHebrewName || currentStop?.name || '';
     const desc = ln.Description || '';
+    const destMakat = ln.DestinationMakat;
+    const stopType = ln.BusstopType || '';
 
     // Build time chips with clock
     const now = Date.now();
-    const chips = arrList.map((min, i) => {
+    const chips = arrList.map(min => {
         const clock = new Date(now + min * 60000).toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' });
         const label = min <= 0 ? 'מגיע!' : min + " דק'";
         return `<span class="modal-time-chip">${label} (${clock})</span>`;
     }).join('');
 
-    // Google Maps transit URL: from current stop coords to destination name
-    let mapsUrl = '';
-    if (currentStop?.lat && currentStop?.lon) {
-        const origin = `${currentStop.lat},${currentStop.lon}`;
-        const destination = encodeURIComponent(dest);
-        mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=transit`;
-    } else {
-        const origin = encodeURIComponent(stopName);
-        const destination = encodeURIComponent(dest);
-        mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=transit`;
+    // Build origin
+    const origin = (currentStop?.lat && currentStop?.lon)
+        ? `${currentStop.lat},${currentStop.lon}`
+        : encodeURIComponent(stopName);
+
+    // Try to get destination stop coordinates for precise navigation
+    let destCoords = '';
+    if (destMakat) {
+        try {
+            const r = await fetch(`${GTFS_API}/gtfs_stops/list?code=${destMakat}&limit=1`);
+            const d = await r.json();
+            const stops = d.value || d;
+            if (stops.length > 0 && stops[0].lat && stops[0].lon) {
+                destCoords = `${stops[0].lat},${stops[0].lon}`;
+            }
+        } catch(e) {}
     }
+    const destination = destCoords || encodeURIComponent(dest);
+    const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=transit`;
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
@@ -896,8 +906,9 @@ function showLineModal(lineNum) {
                 </div>
             </div>
             <div class="modal-body">
-                <div class="modal-section">📍 תחנה: ${esc(stopName)}</div>
+                <div class="modal-section">📍 תחנה: ${esc(stopName)} ${stopType ? '(' + esc(stopType) + ')' : ''}</div>
                 <div class="modal-section" style="margin-top:6px">🗺️ מסלול: ${esc(desc)}</div>
+                ${destMakat ? '<div class="modal-section" style="margin-top:4px;color:#1a73e8">🏁 תחנת יעד: ' + destMakat + '</div>' : ''}
                 <div class="modal-section" style="margin-top:12px">⏱️ הגעות קרובות:</div>
                 <div class="modal-times">${chips || '<span style="color:#aaa">אין נתונים</span>'}</div>
                 <a class="modal-nav-btn" href="${mapsUrl}" target="_blank" rel="noopener">
