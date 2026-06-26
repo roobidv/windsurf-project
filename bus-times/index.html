@@ -301,6 +301,11 @@
             display: inline-block; margin-top: 1px;
             border: 1px solid #ffccbc;
         }
+        .bus-serial {
+            font-size: 9px; font-weight: 600; color: #fff;
+            background: #78909c; border-radius: 6px; padding: 1px 4px;
+            margin-right: 3px; vertical-align: middle;
+        }
 
         .bus-info {
             display: flex;
@@ -847,17 +852,22 @@ function parseMotData(lines, relevantLines) {
         const company = ln.CompanyHebrewName || '';
         const isRealtime = ln.ResponseSuccesed === true;
         const arrList = ln.MinutesToArrivalList || (ln.MinutesToArrival != null ? [ln.MinutesToArrival] : []);
-        arrList.forEach(min => {
+        arrList.forEach((min, idx) => {
             // Estimate stops away: urban ~1.5 min/stop, intercity ~3 min/stop
             const isExpress = ln.TripsPerDay && ln.TripsPerDay < 20;
             const avgMinPerStop = isExpress ? 3 : 1.5;
             const stopsAway = min <= 0 ? 0 : Math.max(1, Math.round(min / avgMinPerStop));
+            // Bus ID: MotLineId + direction + serial index
+            const busId = `${ln.MotLineId || lineNum}-${ln.MotDirection || 0}-${idx+1}`;
             expanded.push({
                 line: lineNum,
                 dest,
                 company,
                 minutes: min,
                 stopsAway,
+                busId,
+                busSerial: idx + 1,
+                totalBuses: arrList.length,
                 hasGps: isRealtime,
                 isPlanned: false,
                 isRelevant: relevantLines.length > 0 && relevantLines.includes(lineNum)
@@ -941,13 +951,18 @@ function renderArrivals(body, arrivals, source) {
             stopsTag = `<div class="bus-stops-away">🚏 ${stLabel}</div>`;
         }
 
+        // Bus serial identifier
+        const serialTag = (a.busSerial && a.totalBuses > 1)
+            ? `<span class="bus-serial">${a.busSerial}/${a.totalBuses}</span>`
+            : '';
+
         const rowClass = a.isRelevant ? 'bus-row relevant' : 'bus-row';
         const lineClass = a.isRelevant ? 'bus-line highlight' : 'bus-line';
         const destClass = a.isRelevant ? 'bus-dest bold' : 'bus-dest';
 
         return `
-            <div class="${rowClass}">
-                <div class="${lineClass}" style="cursor:pointer" onclick="showLineModal('${esc(a.line)}')">${esc(a.line)}</div>
+            <div class="${rowClass}" data-busid="${esc(a.busId || '')}">
+                <div class="${lineClass}" style="cursor:pointer" onclick="showLineModal('${esc(a.line)}')">${esc(a.line)}${serialTag}</div>
                 <div class="${destClass}">${esc(dest)}${stopsTag}</div>
                 <div class="bus-info">
                     <div class="bus-eta ${cls}">${txt}${badge}</div>
