@@ -505,11 +505,31 @@
         .alert-status { font-size: 14px; color: #888; }
         .alert-arrived { background: #d32f2f; color: #fff; padding: 20px; border-radius: 12px; font-size: 20px; font-weight: 800; margin-top: 16px; animation: pulse 1s infinite; }
         @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-        .boarding-progress-passed { padding: 6px 10px; font-size: 13px; color: #999; text-decoration: line-through; }
-        .boarding-progress-current { padding: 8px 10px; font-size: 15px; font-weight: 800; color: #1565c0; background: #e3f2fd; border-radius: 8px; margin: 2px 0; }
-        .boarding-progress-future { padding: 6px 10px; font-size: 13px; color: #333; }
-        .boarding-progress-dest { font-weight: 800; color: #e65100 !important; }
-        .boarding-progress-alert { background: #fff3e0; border-radius: 8px; }
+        /* Route track — Monopoly style */
+        .track-container { position: relative; padding: 8px 0 8px 44px; max-height: 280px; overflow-y: auto; }
+        .track-rail { position: absolute; right: auto; left: 18px; top: 0; bottom: 0; width: 6px; background: #e0e0e0; border-radius: 3px; }
+        .track-rail-fill { position: absolute; right: auto; left: 18px; top: 0; width: 6px; border-radius: 3px; background: linear-gradient(to bottom, #4caf50, #ff9800, #f44336); transition: height 0.8s ease; }
+        .track-stop { position: relative; padding: 6px 8px 6px 12px; display: flex; align-items: center; gap: 8px; min-height: 32px; }
+        .track-dot { position: absolute; left: -32px; width: 18px; height: 18px; border-radius: 50%; border: 3px solid #bdbdbd; background: #fff; z-index: 2; display: flex; align-items: center; justify-content: center; font-size: 10px; transition: all 0.4s; }
+        .track-stop.passed .track-dot { background: #4caf50; border-color: #388e3c; }
+        .track-stop.current .track-dot { background: #fff; border-color: #1565c0; box-shadow: 0 0 12px rgba(21,101,192,0.6); animation: dotPulse 1.5s infinite; }
+        .track-stop.alert-stop .track-dot { background: #fff3e0; border-color: #ff9800; }
+        .track-stop.dest .track-dot { background: #f44336; border-color: #c62828; width: 22px; height: 22px; left: -34px; }
+        .track-name { font-size: 12px; color: #666; flex: 1; }
+        .track-stop.passed .track-name { color: #999; text-decoration: line-through; font-size: 11px; }
+        .track-stop.current .track-name { color: #1565c0; font-weight: 800; font-size: 14px; }
+        .track-stop.dest .track-name { color: #d32f2f; font-weight: 800; font-size: 14px; }
+        .track-stop.alert-stop .track-name { color: #e65100; font-weight: 700; }
+        .track-city { font-size: 10px; color: #aaa; }
+        .track-bus { position: absolute; left: -40px; font-size: 22px; z-index: 3; transition: top 0.8s ease; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+        @keyframes dotPulse { 0%,100% { box-shadow: 0 0 6px rgba(21,101,192,0.3); } 50% { box-shadow: 0 0 16px rgba(21,101,192,0.7); } }
+        .monitor-header { text-align: center; padding: 10px 0; }
+        .monitor-dest { font-size: 20px; font-weight: 900; color: #d32f2f; margin: 4px 0; }
+        .monitor-stats { display: flex; justify-content: space-around; margin: 8px 0; }
+        .monitor-stat { text-align: center; }
+        .monitor-stat-val { font-size: 24px; font-weight: 900; color: #1565c0; }
+        .monitor-stat-label { font-size: 11px; color: #888; }
+        .monitor-stat-val.urgent { color: #d32f2f; animation: pulse 1s infinite; }
         .boarding-boarded-btn {
             display: block; width: calc(100% - 24px); margin: 12px auto;
             padding: 14px; background: #e65100; color: #fff; border: none;
@@ -1336,14 +1356,9 @@ async function boardingPickLine(lineNum) {
         </button>`;
     }
 
-    const debugInfo = `<div style="font-size:10px;color:#999;margin-top:8px;direction:ltr;text-align:left">
-        DEBUG: MotLineId=${motLineId || 'N/A'}, routes=${routes.length}, matched=${routes[0]?.route_long_name || 'none'}
-    </div>`;
-
     showBoardingOverlay('🚌 קו ' + lineNum + ' — כיוון', `
         <div class="boarding-label">לאיזה כיוון אתה נוסע?</div>
         ${btns}
-        ${debugInfo}
     `);
 
     window._boardingRoutes = routes;
@@ -1374,9 +1389,6 @@ function boardingConfirm(lineNum, motDir, routeId) {
         </div>
         <div class="boarding-label" style="text-align:center;font-size:15px;margin:10px 0">
             האם הנתונים נכונים?
-        </div>
-        <div style="font-size:10px;color:#999;direction:ltr;text-align:left;margin:4px 0">
-            DEBUG: routeId=${routeId || 'null'}, mkt=${motEntry?.MotLineId || 'N/A'}
         </div>
         <button class="boarding-btn boarding-btn-primary" style="font-size:16px" onclick="boardingLoadStops('${esc(lineNum)}',${motDir},${routeId || 'null'})">
             ✅ כן, בחר תחנת ירידה
@@ -1613,44 +1625,76 @@ function boardingRenderMonitor(lineNum, dest, stopTimes) {
     const destTime = new Date(stopTimes[stopTimes.length - 1].estArrivalMs);
     const destClock = destTime.toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' });
     const minsLeft = Math.max(0, Math.round((stopTimes[stopTimes.length - 1].estArrivalMs - now) / 60000));
+    const progressPct = Math.min(100, Math.round(((currentStopIdx + 1) / stopTimes.length) * 100));
 
     // Check if 1 stop before destination
     if (stopsLeft <= 1 && !window._boardingAlerted) {
         boardingTriggerAlert(dest);
     }
 
-    // Build stop progress list
-    let progressHTML = '';
+    // Build visual track
+    let trackHTML = '';
     for (let i = 0; i < stopTimes.length; i++) {
         const s = stopTimes[i];
         const passed = now >= s.estArrivalMs;
         const isCurrent = (i === currentStopIdx + 1) && !passed;
-        let cls = passed ? 'boarding-progress-passed' : (isCurrent ? 'boarding-progress-current' : 'boarding-progress-future');
-        if (s.isDest) cls += ' boarding-progress-dest';
-        if (s.isAlert) cls += ' boarding-progress-alert';
-        const icon = s.isDest ? '🏁' : (passed ? '✅' : (isCurrent ? '🚌' : '⬜'));
-        progressHTML += `<div class="${cls}">${icon} ${esc(s.name)} ${s.city ? '<small>(' + esc(s.city) + ')</small>' : ''}</div>`;
+        let cls = 'track-stop';
+        if (passed) cls += ' passed';
+        if (isCurrent) cls += ' current';
+        if (s.isDest) cls += ' dest';
+        if (s.isAlert && !passed) cls += ' alert-stop';
+
+        const dotContent = s.isDest ? '🏁' : (passed ? '✓' : (i + 1));
+        const cityTag = s.city ? ` <span class="track-city">${esc(s.city)}</span>` : '';
+
+        trackHTML += `<div class="${cls}" id="trackStop${i}">
+            <div class="track-dot">${dotContent}</div>
+            <span class="track-name">${esc(s.name)}${cityTag}</span>
+        </div>`;
     }
 
+    // Bus position (relative to current stop)
+    const busStopEl = currentStopIdx >= 0 ? currentStopIdx : 0;
+
     const alertedHTML = window._boardingAlerted
-        ? `<div class="alert-arrived">🔔 תתכונן לרדת! התחנה הבאה: ${esc(dest.gtfs_stop__name)}</div>`
+        ? `<div class="alert-arrived">🔔 תתכונן לרדת!<br>${esc(dest.gtfs_stop__name)}</div>`
         : '';
 
-    showBoardingOverlay('🚌 מעקב — קו ' + lineNum, `
-        <div class="alert-active-screen">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                <div style="font-size:18px;font-weight:800">🏁 ${esc(dest.gtfs_stop__name)}</div>
-                <div style="font-size:22px;font-weight:800;color:${stopsLeft <= 1 ? '#d32f2f' : '#1565c0'}">${stopsLeft > 0 ? stopsLeft + ' תחנות' : 'הגעת!'}</div>
+    const urgentCls = stopsLeft <= 2 ? ' urgent' : '';
+
+    showBoardingOverlay('🚌 קו ' + lineNum, `
+        <div class="monitor-header">
+            <div class="monitor-dest">🏁 ${esc(dest.gtfs_stop__name)}</div>
+            <div class="monitor-stats">
+                <div class="monitor-stat">
+                    <div class="monitor-stat-val${urgentCls}">${stopsLeft > 0 ? stopsLeft : '✓'}</div>
+                    <div class="monitor-stat-label">תחנות</div>
+                </div>
+                <div class="monitor-stat">
+                    <div class="monitor-stat-val${urgentCls}">${minsLeft > 0 ? '~' + minsLeft : '!'}</div>
+                    <div class="monitor-stat-label">דקות</div>
+                </div>
+                <div class="monitor-stat">
+                    <div class="monitor-stat-val">${destClock}</div>
+                    <div class="monitor-stat-label">הגעה</div>
+                </div>
             </div>
-            <div style="font-size:14px;color:#555;margin-bottom:8px">
-                ⏱️ ${minsLeft > 0 ? '~' + minsLeft + ' דקות' : 'עכשיו!'} · 🕐 ${destClock}
-            </div>
-            <div id="boardingGpsDist" style="font-size:12px;color:#888;margin-bottom:6px"></div>
+            <div id="boardingGpsDist" style="font-size:11px;color:#888"></div>
             ${alertedHTML}
-            <div class="boarding-stops" style="max-height:200px">${progressHTML}</div>
+        </div>
+        <div class="track-container" id="trackContainer">
+            <div class="track-rail"></div>
+            <div class="track-rail-fill" style="height:${progressPct}%"></div>
+            ${trackHTML}
         </div>
         <div class="boarding-info">⚠️ אין לסגור מסך זה כל עוד נדרשת התראה</div>
     `);
+
+    // Scroll to current stop
+    setTimeout(() => {
+        const cur = document.getElementById('trackStop' + (currentStopIdx + 1));
+        if (cur) cur.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 200);
 }
 
 function boardingTriggerAlert(dest) {
