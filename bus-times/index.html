@@ -503,8 +503,13 @@
         .alert-dest-name { font-size: 18px; font-weight: 800; color: #e65100; margin: 10px 0; }
         .alert-distance { font-size: 32px; font-weight: 900; color: #1a73e8; margin: 10px 0; }
         .alert-status { font-size: 14px; color: #888; }
-        .alert-arrived { background: #22c55e; color: #fff; padding: 20px; border-radius: 12px; font-size: 20px; font-weight: 800; margin-top: 16px; animation: pulse 1s infinite; }
+        .alert-arrived { background: #d32f2f; color: #fff; padding: 20px; border-radius: 12px; font-size: 20px; font-weight: 800; margin-top: 16px; animation: pulse 1s infinite; }
         @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        .boarding-progress-passed { padding: 6px 10px; font-size: 13px; color: #999; text-decoration: line-through; }
+        .boarding-progress-current { padding: 8px 10px; font-size: 15px; font-weight: 800; color: #1565c0; background: #e3f2fd; border-radius: 8px; margin: 2px 0; }
+        .boarding-progress-future { padding: 6px 10px; font-size: 13px; color: #333; }
+        .boarding-progress-dest { font-weight: 800; color: #e65100 !important; }
+        .boarding-progress-alert { background: #fff3e0; border-radius: 8px; }
         .boarding-boarded-btn {
             display: block; width: calc(100% - 24px); margin: 12px auto;
             padding: 14px; background: #e65100; color: #fff; border: none;
@@ -1196,15 +1201,17 @@ document.getElementById('customInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') searchCustom();
 });
 
-// ===== Boarding Wizard =====
+// ===== Boarding Wizard (v2 — data-driven, no GPS required) =====
 let boardingWatchId = null;
 let boardingWakeLock = null;
+let boardingTimer = null;
 
 function closeBoarding() {
     const ov = document.querySelector('.boarding-overlay');
     if (ov) ov.remove();
     if (boardingWatchId) { navigator.geolocation.clearWatch(boardingWatchId); boardingWatchId = null; }
     if (boardingWakeLock) { boardingWakeLock.release().catch(()=>{}); boardingWakeLock = null; }
+    if (boardingTimer) { clearInterval(boardingTimer); boardingTimer = null; }
 }
 
 function boardingHTML(headerText, bodyHTML) {
@@ -1226,17 +1233,6 @@ function showBoardingOverlay(headerText, bodyHTML) {
     ov.innerHTML = boardingHTML(headerText, bodyHTML);
 }
 
-function getUserPosition() {
-    return new Promise((resolve, reject) => {
-        if (!navigator.geolocation) return reject('GPS לא זמין');
-        navigator.geolocation.getCurrentPosition(
-            pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-            err => reject('לא ניתן לקבל מיקום GPS: ' + err.message),
-            { enableHighAccuracy: true, timeout: 10000 }
-        );
-    });
-}
-
 function haversine(lat1, lon1, lat2, lon2) {
     const R = 6371000;
     const toRad = x => x * Math.PI / 180;
@@ -1245,143 +1241,185 @@ function haversine(lat1, lon1, lat2, lon2) {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-async function startBoarding() {
-    if (!currentStop || !currentStop.lat || !currentStop.lon) {
-        alert('בחר תחנה קודם כדי להשתמש בתכונה זו');
-        return;
+// Step 1: Show lines from current arrivals
+function startBoarding() {
+    if (!currentStop) { alert('בחר תחנה קודם'); return; }
+    if (!lastMotLines || lastMotLines.length === 0) { alert('אין נתוני אוטובוסים. רענן קודם.'); return; }
+
+    // Get unique line numbers from current MOT data
+    const uniqueLines = [];
+    const seen = new Set();
+    for (const ln of lastMotLines) {
+        const key = ln.Shilut;
+        if (!seen.has(key)) {
+            seen.add(key);
+            uniqueLines.push(ln);
+        }
     }
+
+    let btns = uniqueLines.map(ln => {
+        const lineNum = String(ln.Shilut);
+        const dest = ln.DestinationQuarterName || ln.Description || '';
+        const company = ln.CompanyHebrewName || '';
+        const min = ln.MinutesToArrival;
+        const minTxt = min <= 0 ? 'מגיע!' : min + " דק'";
+        return `<button class="boarding-btn-op" onclick="boardingPickLine('${esc(lineNum)}')">
+            <b style="font-size:18px">קו ${esc(lineNum)}</b><br>
+            <small>${esc(dest)} · ${esc(company)} · ${minTxt}</small>
+        </button>`;
+    }).join('');
+
     showBoardingOverlay('🚌 עליתי לאוטובוס', `
         <div class="boarding-label">📍 תחנה: ${esc(currentStop.name)}</div>
-        <div class="boarding-label">מה מספר הקו?</div>
-        <input class="boarding-input" id="boardingLineInput" type="text" inputmode="numeric" placeholder="לדוגמה: 142" autofocus>
-        <button class="boarding-btn boarding-btn-primary" onclick="boardingStep1()">המשך</button>
-    `);
-    setTimeout(() => document.getElementById('boardingLineInput')?.focus(), 300);
-    document.getElementById('boardingLineInput')?.addEventListener('keydown', e => {
-        if (e.key === 'Enter') boardingStep1();
-    });
-}
-
-async function boardingStep1() {
-    const lineNum = document.getElementById('boardingLineInput')?.value.trim();
-    if (!lineNum) return;
-
-    const userPos = { lat: currentStop.lat, lon: currentStop.lon };
-
-    showBoardingOverlay('🚌 קו ' + lineNum, `
-        <div class="boarding-spinner"></div>
-        <div class="boarding-label" style="text-align:center">מחפש קו ${esc(lineNum)}...</div>
-    `);
-
-    let routes;
-    try {
-        const resp = await fetch(`${GTFS_API}/gtfs_routes/list?route_short_name=${encodeURIComponent(lineNum)}&date_from=2026-01-01&limit=30`);
-        routes = await resp.json();
-    } catch(e) {
-        showBoardingOverlay('🚌 קו ' + lineNum, `
-            <div class="boarding-info" style="color:red">⚠️ שגיאה בחיפוש קו</div>
-        `);
-        return;
-    }
-
-    if (!routes || routes.length === 0) {
-        showBoardingOverlay('🚌 קו ' + lineNum, `
-            <div class="boarding-info" style="color:red">⚠️ קו ${esc(lineNum)} לא נמצא</div>
-        `);
-        return;
-    }
-
-    // Group by operator — pick unique operator+direction pairs
-    const operators = {};
-    for (const r of routes) {
-        const key = r.operator_ref + '_' + r.route_direction;
-        if (!operators[key]) operators[key] = r;
-    }
-    const uniqueOps = {};
-    for (const r of Object.values(operators)) {
-        if (!uniqueOps[r.operator_ref]) uniqueOps[r.operator_ref] = [];
-        uniqueOps[r.operator_ref].push(r);
-    }
-    const opKeys = Object.keys(uniqueOps);
-
-    // If only one operator, skip operator selection
-    if (opKeys.length === 1) {
-        boardingSelectDirection(lineNum, uniqueOps[opKeys[0]], userPos);
-    } else {
-        // Find nearest operator by checking a stop from each
-        // For speed, just show all options and let user pick, with GPS hint
-        let btns = '';
-        for (const opRef of opKeys) {
-            const r = uniqueOps[opRef][0];
-            const desc = r.route_long_name || '';
-            const agency = r.agency_name || '';
-            const city = desc.match(/-([^-<]+?)(?:<|$)/)?.[1]?.trim() || '';
-            btns += `<button class="boarding-btn-op" onclick="boardingPickOperator('${esc(lineNum)}',${opRef},${JSON.stringify(userPos).replace(/"/g,'&quot;')})">
-                🏢 ${esc(agency)} ${city ? '(' + esc(city) + ')' : ''}<br>
-                <small style="color:#666">${esc(desc.split('<->').join(' ↔ ').replace(/-\d.*$/,''))}</small>
-            </button>`;
-        }
-        showBoardingOverlay('🚌 קו ' + lineNum, `
-            <div class="boarding-label">נמצאו מספר מפעילים לקו ${esc(lineNum)}:</div>
-            ${btns}
-        `);
-
-        // Store data for next step
-        window._boardingRoutes = uniqueOps;
-    }
-}
-
-function boardingPickOperator(lineNum, opRef, userPos) {
-    const dirs = window._boardingRoutes[opRef];
-    boardingSelectDirection(lineNum, dirs, userPos);
-}
-
-function boardingSelectDirection(lineNum, dirs, userPos) {
-    // dirs is array of routes for one operator, different directions
-    // Extract direction endpoints from route_long_name: "A-city<->B-city-dir"
-    let btns = '';
-    for (const r of dirs) {
-        const desc = r.route_long_name || '';
-        const parts = desc.split('<->');
-        const from = parts[0]?.replace(/-[^-]+$/, '').trim() || '';
-        const to = parts[1]?.replace(/-[^-]*-\d.*$/, '').replace(/-[^-]+$/, '').trim() || '';
-        const label = `${from} ← ${to}`;
-        btns += `<button class="boarding-btn-dir" onclick="boardingPickDirection(${r.id},'${esc(lineNum)}',${JSON.stringify(userPos).replace(/"/g,'&quot;')})">
-            🚌 לכיוון: ${esc(to || from)}<br>
-            <small style="color:#7b1fa2;font-size:12px">${esc(label)}</small>
-        </button>`;
-    }
-    showBoardingOverlay('🚌 קו ' + lineNum + ' — כיוון', `
-        <div class="boarding-label">לאן אתה נוסע?</div>
+        <div class="boarding-label" style="margin-top:8px">על איזה קו עלית?</div>
         ${btns}
     `);
 }
 
-async function boardingPickDirection(routeId, lineNum, userPos) {
+// Step 2: Pick direction for the selected line
+async function boardingPickLine(lineNum) {
+    showBoardingOverlay('🚌 קו ' + lineNum, `
+        <div class="boarding-spinner"></div>
+        <div class="boarding-label" style="text-align:center">מחפש כיוונים...</div>
+    `);
+
+    // Find all MOT entries for this line
+    const motEntries = lastMotLines.filter(ln => String(ln.Shilut) === lineNum);
+
+    // Get GTFS routes for direction info
+    let routes;
+    try {
+        const resp = await fetch(`${GTFS_API}/gtfs_routes/list?route_short_name=${encodeURIComponent(lineNum)}&date_from=2026-01-01&limit=30`);
+        routes = await resp.json();
+    } catch(e) { routes = []; }
+
+    // Build direction buttons from MOT data (each MotDirection is a direction)
+    const dirMap = {};
+    for (const ln of motEntries) {
+        const dirKey = ln.MotDirection || 1;
+        if (!dirMap[dirKey]) dirMap[dirKey] = ln;
+    }
+
+    // Match GTFS routes to get long names
+    const dirEntries = Object.values(dirMap);
+    let btns = '';
+    for (const ln of dirEntries) {
+        const dest = ln.DestinationQuarterName || ln.Description || '';
+        const company = ln.CompanyHebrewName || '';
+        const min = ln.MinutesToArrival;
+        const minTxt = min <= 0 ? 'בתחנה' : min + " דק'";
+        const motDir = ln.MotDirection || 1;
+
+        // Try to find matching GTFS route for this direction
+        const gtfsRoute = routes.find(r => r.route_direction == motDir && r.operator_ref == ln.CompanyId);
+        const routeId = gtfsRoute ? gtfsRoute.id : null;
+        const routeDesc = gtfsRoute?.route_long_name || '';
+        const parts = routeDesc.split('<->');
+        const dirLabel = parts.length >= 2
+            ? parts[0].trim().split(',')[0] + ' → ' + parts[1].trim().split(',')[0]
+            : '';
+
+        btns += `<button class="boarding-btn-dir" onclick="boardingConfirm('${esc(lineNum)}',${motDir},${routeId || 'null'})">
+            🚌 לכיוון: ${esc(dest)}<br>
+            <small style="color:#555">${esc(company)} · ${minTxt}</small>
+            ${dirLabel ? `<br><small style="color:#7b1fa2">${esc(dirLabel)}</small>` : ''}
+        </button>`;
+    }
+
+    showBoardingOverlay('🚌 קו ' + lineNum + ' — כיוון', `
+        <div class="boarding-label">לאיזה כיוון אתה נוסע?</div>
+        ${btns}
+    `);
+
+    window._boardingRoutes = routes;
+}
+
+// Step 3: Confirmation screen
+function boardingConfirm(lineNum, motDir, routeId) {
+    const motEntry = lastMotLines.find(ln =>
+        String(ln.Shilut) === lineNum && (ln.MotDirection || 1) == motDir
+    );
+    if (!motEntry) return;
+
+    const dest = motEntry.DestinationQuarterName || '';
+    const company = motEntry.CompanyHebrewName || '';
+    const nowTime = new Date().toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' });
+    const busId = `${motEntry.MotLineId || lineNum}-${motDir}`;
+
+    showBoardingOverlay('🚌 אישור עלייה', `
+        <div style="text-align:center;padding:10px 0">
+            <div style="font-size:22px;font-weight:800;color:#1565c0">קו ${esc(lineNum)}</div>
+            <div style="font-size:16px;margin:6px 0">לכיוון: <b>${esc(dest)}</b></div>
+            <div style="font-size:14px;color:#555">${esc(company)}</div>
+            <div style="font-size:14px;color:#555;margin:6px 0">
+                🚏 תחנה: ${esc(currentStop.name)}<br>
+                🕐 שעה: ${nowTime}<br>
+                🆔 מזהה: ${esc(busId)}
+            </div>
+        </div>
+        <div class="boarding-label" style="text-align:center;font-size:15px;margin:10px 0">
+            האם הנתונים נכונים?
+        </div>
+        <button class="boarding-btn boarding-btn-primary" style="font-size:16px" onclick="boardingLoadStops('${esc(lineNum)}',${motDir},${routeId || 'null'})">
+            ✅ כן, בחר תחנת ירידה
+        </button>
+        <button class="boarding-btn" style="background:#eee;color:#555;margin-top:6px" onclick="startBoarding()">
+            ← חזרה
+        </button>
+    `);
+
+    window._boardingBusId = busId;
+    window._boardingMotEntry = motEntry;
+    window._boardingDepartTime = new Date();
+}
+
+// Step 4: Load stops and show destination picker
+async function boardingLoadStops(lineNum, motDir, routeId) {
     showBoardingOverlay('🚌 קו ' + lineNum, `
         <div class="boarding-spinner"></div>
         <div class="boarding-label" style="text-align:center">טוען תחנות...</div>
     `);
 
+    // If no routeId from step 2, find it now
+    if (!routeId) {
+        try {
+            const resp = await fetch(`${GTFS_API}/gtfs_routes/list?route_short_name=${encodeURIComponent(lineNum)}&date_from=2026-01-01&limit=30`);
+            const routes = await resp.json();
+            const match = routes.find(r => r.route_direction == motDir);
+            if (match) routeId = match.id;
+        } catch(e) {}
+    }
+
+    if (!routeId) {
+        showBoardingOverlay('🚌 קו ' + lineNum, `
+            <div class="boarding-info" style="color:red">⚠️ לא נמצא מסלול לקו זה</div>
+        `);
+        return;
+    }
+
     try {
-        // Get a ride for this route
         const ridesResp = await fetch(`${GTFS_API}/gtfs_rides/list?gtfs_route_id=${routeId}&limit=1&order_by=start_time%20desc`);
         const rides = await ridesResp.json();
         if (!rides || rides.length === 0) throw new Error('לא נמצאו נסיעות');
 
-        // Get stops for this ride
         const stopsResp = await fetch(`${GTFS_API}/gtfs_ride_stops/list?gtfs_ride_ids=${rides[0].id}&limit=100&order_by=stop_sequence`);
         const stops = await stopsResp.json();
         if (!stops || stops.length === 0) throw new Error('לא נמצאו תחנות');
 
-        // Find nearest stop to user
+        // Find the boarding stop (nearest to currentStop)
         let nearestIdx = 0, nearestDist = Infinity;
-        for (let i = 0; i < stops.length; i++) {
-            const d = haversine(userPos.lat, userPos.lon, stops[i].gtfs_stop__lat, stops[i].gtfs_stop__lon);
-            if (d < nearestDist) { nearestDist = d; nearestIdx = i; }
+        if (currentStop.lat && currentStop.lon) {
+            for (let i = 0; i < stops.length; i++) {
+                const d = haversine(currentStop.lat, currentStop.lon, stops[i].gtfs_stop__lat, stops[i].gtfs_stop__lon);
+                if (d < nearestDist) { nearestDist = d; nearestIdx = i; }
+            }
+        } else {
+            // Match by stop code
+            for (let i = 0; i < stops.length; i++) {
+                if (String(stops[i].gtfs_stop__code) === String(currentStop.code)) { nearestIdx = i; break; }
+            }
         }
 
-        // Show stops from nearest onwards (remaining stops)
         const remaining = stops.slice(nearestIdx + 1);
         if (remaining.length === 0) {
             showBoardingOverlay('🚌 קו ' + lineNum, `
@@ -1395,22 +1433,30 @@ async function boardingPickDirection(routeId, lineNum, userPos) {
         for (let i = 0; i < remaining.length; i++) {
             const s = remaining[i];
             const stopsLeft = i + 1;
+            // Estimate time to this stop from boarding
+            let estMin = '';
+            if (boardingStop.arrival_time && s.arrival_time) {
+                const t1 = new Date(boardingStop.arrival_time).getTime();
+                const t2 = new Date(s.arrival_time).getTime();
+                if (t2 > t1) estMin = Math.round((t2 - t1) / 60000) + " דק'";
+            }
             stopsHTML += `<div class="boarding-stop-item" onclick="boardingSelectDest(${i},'${esc(lineNum)}')">
                 <span>${esc(s.gtfs_stop__name)}</span>
-                <span class="boarding-stop-city">${esc(s.gtfs_stop__city || '')} · ${stopsLeft} תחנות</span>
+                <span class="boarding-stop-city">${esc(s.gtfs_stop__city || '')} · ${stopsLeft} תחנות${estMin ? ' · ' + estMin : ''}</span>
             </div>`;
         }
 
         showBoardingOverlay('🚌 קו ' + lineNum + ' — איפה יורדים?', `
             <div class="boarding-label">📍 עלית ב: ${esc(boardingStop.gtfs_stop__name)}</div>
-            <div class="boarding-label" style="margin-top:8px">בחר תחנת יעד:</div>
+            <div class="boarding-label" style="margin-top:8px">בחר תחנת ירידה:</div>
             <div class="boarding-stops">${stopsHTML}</div>
         `);
 
-        // Store remaining stops for destination selection
+        window._boardingAllStops = stops;
         window._boardingRemaining = remaining;
         window._boardingLineNum = lineNum;
         window._boardingStartStop = boardingStop;
+        window._boardingStartIdx = nearestIdx;
 
     } catch(e) {
         showBoardingOverlay('🚌 קו ' + lineNum, `
@@ -1419,13 +1465,13 @@ async function boardingPickDirection(routeId, lineNum, userPos) {
     }
 }
 
+// Step 5: Destination selected — start monitoring
 function boardingSelectDest(idx, lineNum) {
     const dest = window._boardingRemaining[idx];
     const start = window._boardingStartStop;
     const stopsCount = idx + 1;
     const distKm = (haversine(start.gtfs_stop__lat, start.gtfs_stop__lon, dest.gtfs_stop__lat, dest.gtfs_stop__lon) / 1000).toFixed(1);
 
-    // Estimate time from scheduled arrival times
     let estMin = '';
     if (start.arrival_time && dest.arrival_time) {
         const t1 = new Date(start.arrival_time).getTime();
@@ -1442,80 +1488,166 @@ function boardingSelectDest(idx, lineNum) {
                 ${estMin ? ' · ⏱️ ~' + estMin + ' דקות' : ''}
             </div>
         </div>
-        <button class="boarding-btn boarding-btn-primary" style="margin-top:14px;font-size:16px" onclick="boardingStartAlert()">
-            🔔 כן! תתריע 100 מטר לפני היעד
+        <button class="boarding-btn boarding-btn-primary" style="margin-top:14px;font-size:16px" onclick="boardingStartMonitor()">
+            🔔 התחל מעקב — תתריע תחנה לפני
         </button>
         <button class="boarding-btn" style="background:#eee;color:#555;margin-top:6px" onclick="closeBoarding()">
             לא תודה
         </button>
-        <div class="boarding-info" style="margin-top:10px">⚠️ אין לסגור מסך זה כל עוד נדרשת התראה לפני הגעה ליעד</div>
     `);
 
     window._boardingDest = dest;
+    window._boardingDestIdx = idx;
 }
 
-async function boardingStartAlert() {
+// Step 6: Active monitoring
+async function boardingStartMonitor() {
     const dest = window._boardingDest;
+    const destIdx = window._boardingDestIdx;
     const lineNum = window._boardingLineNum;
-    if (!dest) return;
+    const remaining = window._boardingRemaining;
+    const startStop = window._boardingStartStop;
+    const departTime = window._boardingDepartTime;
+    if (!dest || !remaining) return;
 
     // Request notification permission
     if ('Notification' in window && Notification.permission === 'default') {
         await Notification.requestPermission();
     }
 
-    // Try to keep screen on
+    // Keep screen on
     try {
         if ('wakeLock' in navigator) {
             boardingWakeLock = await navigator.wakeLock.request('screen');
         }
     } catch(e) {}
 
-    showBoardingOverlay('🔔 מעקב — קו ' + lineNum, `
+    // Calculate scheduled time per stop (from boarding stop)
+    const stopTimes = [];
+    for (let i = 0; i <= destIdx; i++) {
+        let estMs = 0;
+        if (startStop.arrival_time && remaining[i].arrival_time) {
+            const t1 = new Date(startStop.arrival_time).getTime();
+            const t2 = new Date(remaining[i].arrival_time).getTime();
+            if (t2 > t1) estMs = t2 - t1;
+        }
+        if (estMs === 0) {
+            // Fallback: 2 min per stop
+            estMs = (i + 1) * 2 * 60000;
+        }
+        stopTimes.push({
+            name: remaining[i].gtfs_stop__name,
+            city: remaining[i].gtfs_stop__city || '',
+            lat: remaining[i].gtfs_stop__lat,
+            lon: remaining[i].gtfs_stop__lon,
+            estArrivalMs: departTime.getTime() + estMs,
+            isDest: (i === destIdx),
+            isAlert: (i === destIdx - 1) // one stop before
+        });
+    }
+
+    window._boardingStopTimes = stopTimes;
+    window._boardingAlerted = false;
+
+    // Build initial monitoring UI
+    boardingRenderMonitor(lineNum, dest, stopTimes);
+
+    // Update every 10 seconds
+    boardingTimer = setInterval(() => {
+        boardingRenderMonitor(lineNum, dest, stopTimes);
+    }, 10000);
+
+    // Also try GPS if available (bonus 100m check)
+    try {
+        boardingWatchId = navigator.geolocation.watchPosition(
+            (pos) => {
+                const distToDest = haversine(pos.coords.latitude, pos.coords.longitude, dest.gtfs_stop__lat, dest.gtfs_stop__lon);
+                const el = document.getElementById('boardingGpsDist');
+                if (el) el.textContent = distToDest >= 1000
+                    ? (distToDest/1000).toFixed(1) + ' ק"מ מהיעד'
+                    : Math.round(distToDest) + ' מטר מהיעד';
+                // GPS-based alert at 100m
+                if (distToDest <= 100 && !window._boardingAlerted) {
+                    boardingTriggerAlert(dest);
+                }
+            },
+            () => {}, // GPS error — silent, we have time-based fallback
+            { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+        );
+    } catch(e) {} // GPS not available — no problem
+}
+
+function boardingRenderMonitor(lineNum, dest, stopTimes) {
+    const now = Date.now();
+
+    // Find current position (which stop are we at/between)
+    let currentStopIdx = -1;
+    for (let i = 0; i < stopTimes.length; i++) {
+        if (now >= stopTimes[i].estArrivalMs) currentStopIdx = i;
+    }
+
+    const stopsLeft = stopTimes.length - 1 - currentStopIdx;
+    const destTime = new Date(stopTimes[stopTimes.length - 1].estArrivalMs);
+    const destClock = destTime.toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' });
+    const minsLeft = Math.max(0, Math.round((stopTimes[stopTimes.length - 1].estArrivalMs - now) / 60000));
+
+    // Check if 1 stop before destination
+    if (stopsLeft <= 1 && !window._boardingAlerted) {
+        boardingTriggerAlert(dest);
+    }
+
+    // Build stop progress list
+    let progressHTML = '';
+    for (let i = 0; i < stopTimes.length; i++) {
+        const s = stopTimes[i];
+        const passed = now >= s.estArrivalMs;
+        const isCurrent = (i === currentStopIdx + 1) && !passed;
+        let cls = passed ? 'boarding-progress-passed' : (isCurrent ? 'boarding-progress-current' : 'boarding-progress-future');
+        if (s.isDest) cls += ' boarding-progress-dest';
+        if (s.isAlert) cls += ' boarding-progress-alert';
+        const icon = s.isDest ? '🏁' : (passed ? '✅' : (isCurrent ? '🚌' : '⬜'));
+        progressHTML += `<div class="${cls}">${icon} ${esc(s.name)} ${s.city ? '<small>(' + esc(s.city) + ')</small>' : ''}</div>`;
+    }
+
+    const alertedHTML = window._boardingAlerted
+        ? `<div class="alert-arrived">🔔 תתכונן לרדת! התחנה הבאה: ${esc(dest.gtfs_stop__name)}</div>`
+        : '';
+
+    showBoardingOverlay('🚌 מעקב — קו ' + lineNum, `
         <div class="alert-active-screen">
-            <div class="alert-status">🎯 יעד:</div>
-            <div class="alert-dest-name">${esc(dest.gtfs_stop__name)}</div>
-            <div class="alert-distance" id="boardingDistText">מחשב...</div>
-            <div class="alert-status" id="boardingAlertStatus">📡 מעקב GPS פעיל</div>
-            <div id="boardingArrived"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <div style="font-size:18px;font-weight:800">🏁 ${esc(dest.gtfs_stop__name)}</div>
+                <div style="font-size:22px;font-weight:800;color:${stopsLeft <= 1 ? '#d32f2f' : '#1565c0'}">${stopsLeft > 0 ? stopsLeft + ' תחנות' : 'הגעת!'}</div>
+            </div>
+            <div style="font-size:14px;color:#555;margin-bottom:8px">
+                ⏱️ ${minsLeft > 0 ? '~' + minsLeft + ' דקות' : 'עכשיו!'} · 🕐 ${destClock}
+            </div>
+            <div id="boardingGpsDist" style="font-size:12px;color:#888;margin-bottom:6px"></div>
+            ${alertedHTML}
+            <div class="boarding-stops" style="max-height:200px">${progressHTML}</div>
         </div>
         <div class="boarding-info">⚠️ אין לסגור מסך זה כל עוד נדרשת התראה</div>
     `);
+}
 
-    // Start GPS watch
-    boardingWatchId = navigator.geolocation.watchPosition(
-        (pos) => {
-            const dist = haversine(pos.coords.latitude, pos.coords.longitude, dest.gtfs_stop__lat, dest.gtfs_stop__lon);
-            const distText = dist >= 1000 ? (dist/1000).toFixed(1) + ' ק"מ' : Math.round(dist) + ' מטר';
-            const el = document.getElementById('boardingDistText');
-            if (el) el.textContent = distText;
+function boardingTriggerAlert(dest) {
+    if (window._boardingAlerted) return;
+    window._boardingAlerted = true;
 
-            const statusEl = document.getElementById('boardingAlertStatus');
-            if (dist <= 100) {
-                // ARRIVED!
-                if (statusEl) statusEl.textContent = '🎉 הגעת!';
-                const arrEl = document.getElementById('boardingArrived');
-                if (arrEl && !arrEl.innerHTML) {
-                    arrEl.innerHTML = `<div class="alert-arrived">🎉 הגעת ליעד! ירד בתחנה הבאה!</div>`;
-                    // Vibrate
-                    if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
-                    // Notification
-                    if ('Notification' in window && Notification.permission === 'granted') {
-                        new Notification('🚌 הגעת ליעד!', { body: dest.gtfs_stop__name + ' — ירד בתחנה הבאה!', icon: '🚌' });
-                    }
-                }
-            } else if (dist <= 300) {
-                if (statusEl) statusEl.textContent = '⚡ מתקרב ליעד!';
-            } else {
-                if (statusEl) statusEl.textContent = '📡 מעקב GPS פעיל';
-            }
-        },
-        (err) => {
-            const statusEl = document.getElementById('boardingAlertStatus');
-            if (statusEl) statusEl.textContent = '⚠️ שגיאת GPS: ' + err.message;
-        },
-        { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
-    );
+    // Vibrate
+    if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
+
+    // Notification
+    if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('🚌 תתכונן לרדת!', {
+            body: dest.gtfs_stop__name + ' — התחנה הבאה שלך!',
+            requireInteraction: true,
+            tag: 'bus-alert'
+        });
+    }
+
+    // Re-render to show alert banner
+    boardingRenderMonitor(window._boardingLineNum, dest, window._boardingStopTimes);
 }
 
 // ===== Init =====
