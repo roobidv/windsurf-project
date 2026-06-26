@@ -574,13 +574,21 @@
             font-size: 18px; font-weight: 800; animation: pulse 1s infinite;
             margin: 0 16px 10px; border-radius: 12px;
         }
+        .action-row {
+            display: flex; gap: 8px; padding: 8px 12px; align-items: center;
+        }
         .boarding-boarded-btn {
-            display: block; width: calc(100% - 24px); margin: 12px auto;
-            padding: 14px; background: #e65100; color: #fff; border: none;
-            border-radius: 14px; font-size: 17px; font-weight: 800;
+            flex: 2; padding: 12px; background: #e65100; color: #fff; border: none;
+            border-radius: 14px; font-size: 15px; font-weight: 800;
             cursor: pointer; text-align: center;
         }
         .boarding-boarded-btn:hover { background: #bf360c; }
+        .action-refresh-btn {
+            flex: 1; padding: 12px; background: var(--primary); color: #fff; border: none;
+            border-radius: 14px; font-size: 15px; font-weight: 800;
+            cursor: pointer; text-align: center;
+        }
+        .action-refresh-btn:hover { background: #1557b0; }
     </style>
 </head>
 <body>
@@ -608,12 +616,11 @@
         <button onclick="saveFavorite()" style="background:#f9a825;" title="שמור במועדפים">⭐</button>
     </div>
     <div class="btn-grid" id="favButtons" style="margin-top:6px;"></div>
-    <button class="boarding-boarded-btn" onclick="startBoarding()">🚌 עליתי לאוטובוס</button>
-</div>
-
-<div class="toolbar">
-    <button onclick="refreshCurrent()">רענן</button>
-    <span class="timer" id="timerText"></span>
+    <div class="action-row">
+        <button class="boarding-boarded-btn" onclick="startBoarding()">🚌 עליתי</button>
+        <button class="action-refresh-btn" onclick="refreshCurrent()">🔄 רענן</button>
+    </div>
+    <div style="text-align:center;padding:2px 0"><span class="timer" id="timerText" style="font-size:11px;color:var(--text-muted)"></span></div>
 </div>
 
 <div id="mainContent" style="padding:0 12px;"></div>
