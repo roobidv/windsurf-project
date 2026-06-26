@@ -1286,12 +1286,22 @@ async function boardingPickLine(lineNum) {
     // Find all MOT entries for this line
     const motEntries = lastMotLines.filter(ln => String(ln.Shilut) === lineNum);
 
-    // Get GTFS routes for direction info
-    let routes;
-    try {
-        const resp = await fetch(`${GTFS_API}/gtfs_routes/list?route_short_name=${encodeURIComponent(lineNum)}&date_from=2026-01-01&limit=30`);
-        routes = await resp.json();
-    } catch(e) { routes = []; }
+    // Use MotLineId (=route_mkt) for precise GTFS matching
+    const motLineId = motEntries[0]?.MotLineId;
+    let routes = [];
+    if (motLineId) {
+        try {
+            const resp = await fetch(`${GTFS_API}/gtfs_routes/list?route_mkt=${motLineId}&date_from=2026-01-01&limit=30`);
+            routes = await resp.json();
+        } catch(e) { routes = []; }
+    }
+    // Fallback: search by name if route_mkt returned nothing
+    if (routes.length === 0) {
+        try {
+            const resp = await fetch(`${GTFS_API}/gtfs_routes/list?route_short_name=${encodeURIComponent(lineNum)}&date_from=2026-01-01&limit=30`);
+            routes = await resp.json();
+        } catch(e) { routes = []; }
+    }
 
     // Build direction buttons from MOT data (each MotDirection is a direction)
     const dirMap = {};
@@ -1310,13 +1320,13 @@ async function boardingPickLine(lineNum) {
         const minTxt = min <= 0 ? 'בתחנה' : min + " דק'";
         const motDir = ln.MotDirection || 1;
 
-        // Try to find matching GTFS route for this direction
-        const gtfsRoute = routes.find(r => r.route_direction == motDir && r.operator_ref == ln.CompanyId);
+        // Match by route_direction (same numbering as MOT MotDirection)
+        const gtfsRoute = routes.find(r => r.route_direction == motDir);
         const routeId = gtfsRoute ? gtfsRoute.id : null;
         const routeDesc = gtfsRoute?.route_long_name || '';
         const parts = routeDesc.split('<->');
         const dirLabel = parts.length >= 2
-            ? parts[0].trim().split(',')[0] + ' → ' + parts[1].trim().split(',')[0]
+            ? parts[0].trim().split('-')[0] + ' → ' + parts[1].trim().split('-')[0]
             : '';
 
         btns += `<button class="boarding-btn-dir" onclick="boardingConfirm('${esc(lineNum)}',${motDir},${routeId || 'null'})">
@@ -1380,10 +1390,15 @@ async function boardingLoadStops(lineNum, motDir, routeId) {
         <div class="boarding-label" style="text-align:center">טוען תחנות...</div>
     `);
 
-    // If no routeId from step 2, find it now
+    // If no routeId from step 2, find it using MotLineId (route_mkt)
     if (!routeId) {
+        const motEntry = window._boardingMotEntry;
+        const motLineId = motEntry?.MotLineId;
         try {
-            const resp = await fetch(`${GTFS_API}/gtfs_routes/list?route_short_name=${encodeURIComponent(lineNum)}&date_from=2026-01-01&limit=30`);
+            let url = motLineId
+                ? `${GTFS_API}/gtfs_routes/list?route_mkt=${motLineId}&date_from=2026-01-01&limit=30`
+                : `${GTFS_API}/gtfs_routes/list?route_short_name=${encodeURIComponent(lineNum)}&date_from=2026-01-01&limit=30`;
+            const resp = await fetch(url);
             const routes = await resp.json();
             const match = routes.find(r => r.route_direction == motDir);
             if (match) routeId = match.id;
