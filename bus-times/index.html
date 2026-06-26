@@ -505,31 +505,75 @@
         .alert-status { font-size: 14px; color: #888; }
         .alert-arrived { background: #d32f2f; color: #fff; padding: 20px; border-radius: 12px; font-size: 20px; font-weight: 800; margin-top: 16px; animation: pulse 1s infinite; }
         @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        /* Floating monitor bar */
+        .monitor-bar {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 1500;
+            background: linear-gradient(135deg, #1a237e, #283593);
+            color: #fff; padding: 10px 16px; cursor: pointer;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease;
+            direction: rtl;
+        }
+        .monitor-bar-top { display: flex; align-items: center; justify-content: space-between; }
+        .monitor-bar-line { font-size: 20px; font-weight: 900; }
+        .monitor-bar-dest { font-size: 13px; opacity: 0.85; margin-top: 2px; }
+        .monitor-bar-stats { display: flex; gap: 16px; align-items: center; }
+        .monitor-bar-stat { text-align: center; }
+        .monitor-bar-num { font-size: 22px; font-weight: 900; }
+        .monitor-bar-num.urgent { color: #ff5252; animation: pulse 1s infinite; }
+        .monitor-bar-lbl { font-size: 9px; opacity: 0.7; }
+        .monitor-bar-progress { height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+        .monitor-bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, #4caf50, #ff9800, #f44336); transition: width 1s ease; }
+        .monitor-bar-expand { text-align: center; font-size: 10px; opacity: 0.5; margin-top: 4px; }
+        .monitor-bar .close-x { position: absolute; top: 6px; left: 10px; font-size: 18px; opacity: 0.5; cursor: pointer; }
+        .monitor-bar .close-x:hover { opacity: 1; }
+        /* Expanded track panel */
+        .monitor-panel {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 1600;
+            background: #fff; border-radius: 20px 20px 0 0;
+            box-shadow: 0 -8px 30px rgba(0,0,0,0.25);
+            max-height: 85vh; overflow-y: auto;
+            transform: translateY(100%); transition: transform 0.35s ease;
+            direction: rtl;
+        }
+        .monitor-panel.open { transform: translateY(0); }
+        .monitor-panel-header {
+            position: sticky; top: 0; background: #fff; z-index: 2;
+            padding: 12px 16px; border-bottom: 1px solid #f0f0f0;
+            display: flex; justify-content: space-between; align-items: center;
+            border-radius: 20px 20px 0 0;
+        }
+        .monitor-panel-handle { width: 40px; height: 4px; background: #ddd; border-radius: 2px; margin: 0 auto 8px; }
+        .monitor-panel-close { font-size: 14px; color: #888; cursor: pointer; padding: 4px 10px; }
         /* Route track — Monopoly style */
-        .track-container { position: relative; padding: 8px 0 8px 44px; max-height: 280px; overflow-y: auto; }
-        .track-rail { position: absolute; right: auto; left: 18px; top: 0; bottom: 0; width: 6px; background: #e0e0e0; border-radius: 3px; }
-        .track-rail-fill { position: absolute; right: auto; left: 18px; top: 0; width: 6px; border-radius: 3px; background: linear-gradient(to bottom, #4caf50, #ff9800, #f44336); transition: height 0.8s ease; }
-        .track-stop { position: relative; padding: 6px 8px 6px 12px; display: flex; align-items: center; gap: 8px; min-height: 32px; }
-        .track-dot { position: absolute; left: -32px; width: 18px; height: 18px; border-radius: 50%; border: 3px solid #bdbdbd; background: #fff; z-index: 2; display: flex; align-items: center; justify-content: center; font-size: 10px; transition: all 0.4s; }
-        .track-stop.passed .track-dot { background: #4caf50; border-color: #388e3c; }
+        .track-container { position: relative; padding: 8px 0 8px 44px; }
+        .track-rail { position: absolute; left: 18px; top: 0; bottom: 0; width: 6px; background: #e0e0e0; border-radius: 3px; }
+        .track-rail-fill { position: absolute; left: 18px; top: 0; width: 6px; border-radius: 3px; background: linear-gradient(to bottom, #4caf50, #ff9800, #f44336); transition: height 0.8s ease; }
+        .track-stop { position: relative; padding: 6px 8px 6px 12px; display: flex; align-items: center; gap: 8px; min-height: 34px; transition: all 0.4s; }
+        .track-dot { position: absolute; left: -32px; width: 18px; height: 18px; border-radius: 50%; border: 3px solid #bdbdbd; background: #fff; z-index: 2; display: flex; align-items: center; justify-content: center; font-size: 9px; transition: all 0.4s; }
+        .track-stop.passed .track-dot { background: #4caf50; border-color: #388e3c; color: #fff; }
         .track-stop.current .track-dot { background: #fff; border-color: #1565c0; box-shadow: 0 0 12px rgba(21,101,192,0.6); animation: dotPulse 1.5s infinite; }
         .track-stop.alert-stop .track-dot { background: #fff3e0; border-color: #ff9800; }
-        .track-stop.dest .track-dot { background: #f44336; border-color: #c62828; width: 22px; height: 22px; left: -34px; }
-        .track-name { font-size: 12px; color: #666; flex: 1; }
-        .track-stop.passed .track-name { color: #999; text-decoration: line-through; font-size: 11px; }
+        .track-stop.dest .track-dot { background: #f44336; border-color: #c62828; width: 22px; height: 22px; left: -34px; font-size: 11px; }
+        .track-name { font-size: 12px; color: #666; flex: 1; direction: rtl; }
+        .track-stop.passed .track-name { color: #bbb; text-decoration: line-through; font-size: 11px; }
         .track-stop.current .track-name { color: #1565c0; font-weight: 800; font-size: 14px; }
         .track-stop.dest .track-name { color: #d32f2f; font-weight: 800; font-size: 14px; }
         .track-stop.alert-stop .track-name { color: #e65100; font-weight: 700; }
-        .track-city { font-size: 10px; color: #aaa; }
-        .track-bus { position: absolute; left: -40px; font-size: 22px; z-index: 3; transition: top 0.8s ease; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+        .track-time { font-size: 10px; color: #aaa; min-width: 36px; text-align: left; direction: ltr; }
+        .track-stop.current .track-time { color: #1565c0; font-weight: 700; }
+        .track-city { font-size: 10px; color: #ccc; }
         @keyframes dotPulse { 0%,100% { box-shadow: 0 0 6px rgba(21,101,192,0.3); } 50% { box-shadow: 0 0 16px rgba(21,101,192,0.7); } }
-        .monitor-header { text-align: center; padding: 10px 0; }
-        .monitor-dest { font-size: 20px; font-weight: 900; color: #d32f2f; margin: 4px 0; }
-        .monitor-stats { display: flex; justify-content: space-around; margin: 8px 0; }
+        .monitor-panel-stats { display: flex; justify-content: space-around; padding: 12px 0; }
         .monitor-stat { text-align: center; }
-        .monitor-stat-val { font-size: 24px; font-weight: 900; color: #1565c0; }
+        .monitor-stat-val { font-size: 26px; font-weight: 900; color: #1565c0; }
         .monitor-stat-label { font-size: 11px; color: #888; }
         .monitor-stat-val.urgent { color: #d32f2f; animation: pulse 1s infinite; }
+        .monitor-alert-banner {
+            background: #d32f2f; color: #fff; text-align: center; padding: 14px;
+            font-size: 18px; font-weight: 800; animation: pulse 1s infinite;
+            margin: 0 16px 10px; border-radius: 12px;
+        }
         .boarding-boarded-btn {
             display: block; width: calc(100% - 24px); margin: 12px auto;
             padding: 14px; background: #e65100; color: #fff; border: none;
@@ -1229,6 +1273,8 @@ let boardingTimer = null;
 function closeBoarding() {
     const ov = document.querySelector('.boarding-overlay');
     if (ov) ov.remove();
+    // Remove monitor bar, panel, backdrop
+    document.querySelectorAll('.monitor-bar, .monitor-panel, .monitor-backdrop').forEach(el => el.remove());
     if (boardingWatchId) { navigator.geolocation.clearWatch(boardingWatchId); boardingWatchId = null; }
     if (boardingWakeLock) { boardingWakeLock.release().catch(()=>{}); boardingWakeLock = null; }
     if (boardingTimer) { clearInterval(boardingTimer); boardingTimer = null; }
@@ -1584,12 +1630,16 @@ async function boardingStartMonitor() {
     window._boardingStopTimes = stopTimes;
     window._boardingAlerted = false;
 
-    // Build initial monitoring UI
-    boardingRenderMonitor(lineNum, dest, stopTimes);
+    // Close the wizard overlay — monitoring uses floating bar
+    closeBoarding();
 
-    // Update every 10 seconds
+    // Build initial monitoring UI (bar + panel)
+    boardingCreateMonitorUI(lineNum, dest, stopTimes);
+    boardingUpdateMonitor(lineNum, dest, stopTimes);
+
+    // Update every 10 seconds — smooth, no rebuild
     boardingTimer = setInterval(() => {
-        boardingRenderMonitor(lineNum, dest, stopTimes);
+        boardingUpdateMonitor(lineNum, dest, stopTimes);
     }, 10000);
 
     // Also try GPS if available (bonus 100m check)
@@ -1597,44 +1647,177 @@ async function boardingStartMonitor() {
         boardingWatchId = navigator.geolocation.watchPosition(
             (pos) => {
                 const distToDest = haversine(pos.coords.latitude, pos.coords.longitude, dest.gtfs_stop__lat, dest.gtfs_stop__lon);
-                const el = document.getElementById('boardingGpsDist');
-                if (el) el.textContent = distToDest >= 1000
+                const el = document.getElementById('monGpsDist');
+                if (el) el.textContent = '📍 ' + (distToDest >= 1000
                     ? (distToDest/1000).toFixed(1) + ' ק"מ מהיעד'
-                    : Math.round(distToDest) + ' מטר מהיעד';
-                // GPS-based alert at 100m
+                    : Math.round(distToDest) + ' מטר מהיעד');
                 if (distToDest <= 100 && !window._boardingAlerted) {
                     boardingTriggerAlert(dest);
                 }
             },
-            () => {}, // GPS error — silent, we have time-based fallback
+            () => {},
             { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
         );
-    } catch(e) {} // GPS not available — no problem
+    } catch(e) {}
 }
 
-function boardingRenderMonitor(lineNum, dest, stopTimes) {
+// Create the monitor DOM elements once (bar + panel)
+function boardingCreateMonitorUI(lineNum, dest, stopTimes) {
+    // Remove any existing monitor elements
+    document.querySelectorAll('.monitor-bar, .monitor-panel, .monitor-backdrop').forEach(el => el.remove());
+
+    // === Floating bottom bar ===
+    const bar = document.createElement('div');
+    bar.className = 'monitor-bar';
+    bar.id = 'monitorBar';
+    bar.innerHTML = `
+        <span class="close-x" onclick="event.stopPropagation();closeBoarding()">✕</span>
+        <div class="monitor-bar-top">
+            <div>
+                <div class="monitor-bar-line">🚌 קו ${esc(lineNum)}</div>
+                <div class="monitor-bar-dest">🏁 ${esc(dest.gtfs_stop__name)}</div>
+            </div>
+            <div class="monitor-bar-stats">
+                <div class="monitor-bar-stat">
+                    <div class="monitor-bar-num" id="barStops">-</div>
+                    <div class="monitor-bar-lbl">תחנות</div>
+                </div>
+                <div class="monitor-bar-stat">
+                    <div class="monitor-bar-num" id="barMins">-</div>
+                    <div class="monitor-bar-lbl">דקות</div>
+                </div>
+            </div>
+        </div>
+        <div class="monitor-bar-progress"><div class="monitor-bar-fill" id="barFill" style="width:0%"></div></div>
+        <div class="monitor-bar-expand">▲ הקש לפרטים</div>
+    `;
+    bar.onclick = () => toggleMonitorPanel(true);
+    document.body.appendChild(bar);
+
+    // === Expandable panel ===
+    const panel = document.createElement('div');
+    panel.className = 'monitor-panel';
+    panel.id = 'monitorPanel';
+
+    // Build track HTML once
+    let trackHTML = '';
+    for (let i = 0; i < stopTimes.length; i++) {
+        const s = stopTimes[i];
+        const etaTime = new Date(s.estArrivalMs).toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' });
+        const cityTag = s.city ? ` <span class="track-city">${esc(s.city)}</span>` : '';
+        trackHTML += `<div class="track-stop" id="trackStop${i}" data-idx="${i}">
+            <div class="track-dot" id="trackDot${i}">${i + 1}</div>
+            <span class="track-name" id="trackName${i}">${esc(s.name)}${cityTag}</span>
+            <span class="track-time">${etaTime}</span>
+        </div>`;
+    }
+
+    panel.innerHTML = `
+        <div class="monitor-panel-handle"></div>
+        <div class="monitor-panel-header">
+            <div style="font-weight:800;font-size:16px">🚌 קו ${esc(lineNum)} → ${esc(dest.gtfs_stop__name)}</div>
+            <div class="monitor-panel-close" onclick="toggleMonitorPanel(false)">▼ סגור</div>
+        </div>
+        <div class="monitor-panel-stats">
+            <div class="monitor-stat">
+                <div class="monitor-stat-val" id="panelStops">-</div>
+                <div class="monitor-stat-label">תחנות</div>
+            </div>
+            <div class="monitor-stat">
+                <div class="monitor-stat-val" id="panelMins">-</div>
+                <div class="monitor-stat-label">דקות</div>
+            </div>
+            <div class="monitor-stat">
+                <div class="monitor-stat-val" id="panelEta">-</div>
+                <div class="monitor-stat-label">הגעה</div>
+            </div>
+        </div>
+        <div id="monGpsDist" style="font-size:11px;color:#888;text-align:center;margin-bottom:4px"></div>
+        <div id="monAlertBanner"></div>
+        <div class="track-container" id="trackContainer">
+            <div class="track-rail"></div>
+            <div class="track-rail-fill" id="trackFill" style="height:0%"></div>
+            ${trackHTML}
+        </div>
+        <div style="padding:10px 16px;text-align:center">
+            <button onclick="closeBoarding()" style="background:#eee;border:none;padding:10px 24px;border-radius:10px;font-size:14px;color:#555;font-weight:700;cursor:pointer">
+                ✕ סיים מעקב
+            </button>
+        </div>
+    `;
+    document.body.appendChild(panel);
+
+    // Backdrop for panel
+    const bd = document.createElement('div');
+    bd.className = 'monitor-backdrop';
+    bd.id = 'monitorBackdrop';
+    bd.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:1550;display:none';
+    bd.onclick = () => toggleMonitorPanel(false);
+    document.body.appendChild(bd);
+}
+
+function toggleMonitorPanel(open) {
+    const panel = document.getElementById('monitorPanel');
+    const bd = document.getElementById('monitorBackdrop');
+    if (!panel) return;
+    if (open) {
+        panel.classList.add('open');
+        if (bd) bd.style.display = 'block';
+        // Scroll to current stop
+        setTimeout(() => {
+            const cur = panel.querySelector('.track-stop.current');
+            if (cur) cur.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 400);
+    } else {
+        panel.classList.remove('open');
+        if (bd) bd.style.display = 'none';
+    }
+}
+
+// Incremental update — only change values, no full rebuild
+function boardingUpdateMonitor(lineNum, dest, stopTimes) {
     const now = Date.now();
 
-    // Find current position (which stop are we at/between)
     let currentStopIdx = -1;
     for (let i = 0; i < stopTimes.length; i++) {
         if (now >= stopTimes[i].estArrivalMs) currentStopIdx = i;
     }
 
     const stopsLeft = stopTimes.length - 1 - currentStopIdx;
-    const destTime = new Date(stopTimes[stopTimes.length - 1].estArrivalMs);
-    const destClock = destTime.toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' });
     const minsLeft = Math.max(0, Math.round((stopTimes[stopTimes.length - 1].estArrivalMs - now) / 60000));
+    const destClock = new Date(stopTimes[stopTimes.length - 1].estArrivalMs)
+        .toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' });
     const progressPct = Math.min(100, Math.round(((currentStopIdx + 1) / stopTimes.length) * 100));
+    const isUrgent = stopsLeft <= 2;
 
-    // Check if 1 stop before destination
+    // Check alert
     if (stopsLeft <= 1 && !window._boardingAlerted) {
         boardingTriggerAlert(dest);
     }
 
-    // Build visual track
-    let trackHTML = '';
+    // Update bar values
+    const barStops = document.getElementById('barStops');
+    const barMins = document.getElementById('barMins');
+    const barFill = document.getElementById('barFill');
+    if (barStops) { barStops.textContent = stopsLeft > 0 ? stopsLeft : '✓'; barStops.className = 'monitor-bar-num' + (isUrgent ? ' urgent' : ''); }
+    if (barMins) { barMins.textContent = minsLeft > 0 ? '~' + minsLeft : '!'; barMins.className = 'monitor-bar-num' + (isUrgent ? ' urgent' : ''); }
+    if (barFill) barFill.style.width = progressPct + '%';
+
+    // Update panel values
+    const panelStops = document.getElementById('panelStops');
+    const panelMins = document.getElementById('panelMins');
+    const panelEta = document.getElementById('panelEta');
+    const trackFill = document.getElementById('trackFill');
+    if (panelStops) { panelStops.textContent = stopsLeft > 0 ? stopsLeft : '✓'; panelStops.className = 'monitor-stat-val' + (isUrgent ? ' urgent' : ''); }
+    if (panelMins) { panelMins.textContent = minsLeft > 0 ? '~' + minsLeft : '!'; panelMins.className = 'monitor-stat-val' + (isUrgent ? ' urgent' : ''); }
+    if (panelEta) panelEta.textContent = destClock;
+    if (trackFill) trackFill.style.height = progressPct + '%';
+
+    // Update track stop states (only change classes, no innerHTML rebuild)
     for (let i = 0; i < stopTimes.length; i++) {
+        const el = document.getElementById('trackStop' + i);
+        const dot = document.getElementById('trackDot' + i);
+        if (!el) continue;
         const s = stopTimes[i];
         const passed = now >= s.estArrivalMs;
         const isCurrent = (i === currentStopIdx + 1) && !passed;
@@ -1643,58 +1826,23 @@ function boardingRenderMonitor(lineNum, dest, stopTimes) {
         if (isCurrent) cls += ' current';
         if (s.isDest) cls += ' dest';
         if (s.isAlert && !passed) cls += ' alert-stop';
-
-        const dotContent = s.isDest ? '🏁' : (passed ? '✓' : (i + 1));
-        const cityTag = s.city ? ` <span class="track-city">${esc(s.city)}</span>` : '';
-
-        trackHTML += `<div class="${cls}" id="trackStop${i}">
-            <div class="track-dot">${dotContent}</div>
-            <span class="track-name">${esc(s.name)}${cityTag}</span>
-        </div>`;
+        el.className = cls;
+        if (dot) dot.textContent = s.isDest ? '🏁' : (passed ? '✓' : (i + 1));
     }
 
-    // Bus position (relative to current stop)
-    const busStopEl = currentStopIdx >= 0 ? currentStopIdx : 0;
+    // Alert banner in panel
+    const alertEl = document.getElementById('monAlertBanner');
+    if (alertEl && window._boardingAlerted) {
+        alertEl.innerHTML = `<div class="monitor-alert-banner">🔔 תתכונן לרדת! ${esc(dest.gtfs_stop__name)}</div>`;
+    }
 
-    const alertedHTML = window._boardingAlerted
-        ? `<div class="alert-arrived">🔔 תתכונן לרדת!<br>${esc(dest.gtfs_stop__name)}</div>`
-        : '';
-
-    const urgentCls = stopsLeft <= 2 ? ' urgent' : '';
-
-    showBoardingOverlay('🚌 קו ' + lineNum, `
-        <div class="monitor-header">
-            <div class="monitor-dest">🏁 ${esc(dest.gtfs_stop__name)}</div>
-            <div class="monitor-stats">
-                <div class="monitor-stat">
-                    <div class="monitor-stat-val${urgentCls}">${stopsLeft > 0 ? stopsLeft : '✓'}</div>
-                    <div class="monitor-stat-label">תחנות</div>
-                </div>
-                <div class="monitor-stat">
-                    <div class="monitor-stat-val${urgentCls}">${minsLeft > 0 ? '~' + minsLeft : '!'}</div>
-                    <div class="monitor-stat-label">דקות</div>
-                </div>
-                <div class="monitor-stat">
-                    <div class="monitor-stat-val">${destClock}</div>
-                    <div class="monitor-stat-label">הגעה</div>
-                </div>
-            </div>
-            <div id="boardingGpsDist" style="font-size:11px;color:#888"></div>
-            ${alertedHTML}
-        </div>
-        <div class="track-container" id="trackContainer">
-            <div class="track-rail"></div>
-            <div class="track-rail-fill" style="height:${progressPct}%"></div>
-            ${trackHTML}
-        </div>
-        <div class="boarding-info">⚠️ אין לסגור מסך זה כל עוד נדרשת התראה</div>
-    `);
-
-    // Scroll to current stop
-    setTimeout(() => {
-        const cur = document.getElementById('trackStop' + (currentStopIdx + 1));
-        if (cur) cur.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 200);
+    // Change bar color when urgent
+    const bar = document.getElementById('monitorBar');
+    if (bar) {
+        bar.style.background = isUrgent
+            ? 'linear-gradient(135deg, #b71c1c, #d32f2f)'
+            : 'linear-gradient(135deg, #1a237e, #283593)';
+    }
 }
 
 function boardingTriggerAlert(dest) {
@@ -1713,8 +1861,11 @@ function boardingTriggerAlert(dest) {
         });
     }
 
-    // Re-render to show alert banner
-    boardingRenderMonitor(window._boardingLineNum, dest, window._boardingStopTimes);
+    // Force panel open when alert triggers
+    toggleMonitorPanel(true);
+
+    // Update the display
+    boardingUpdateMonitor(window._boardingLineNum, dest, window._boardingStopTimes);
 }
 
 // ===== Init =====
