@@ -1336,9 +1336,14 @@ async function boardingPickLine(lineNum) {
         </button>`;
     }
 
+    const debugInfo = `<div style="font-size:10px;color:#999;margin-top:8px;direction:ltr;text-align:left">
+        DEBUG: MotLineId=${motLineId || 'N/A'}, routes=${routes.length}, matched=${routes[0]?.route_long_name || 'none'}
+    </div>`;
+
     showBoardingOverlay('🚌 קו ' + lineNum + ' — כיוון', `
         <div class="boarding-label">לאיזה כיוון אתה נוסע?</div>
         ${btns}
+        ${debugInfo}
     `);
 
     window._boardingRoutes = routes;
@@ -1369,6 +1374,9 @@ function boardingConfirm(lineNum, motDir, routeId) {
         </div>
         <div class="boarding-label" style="text-align:center;font-size:15px;margin:10px 0">
             האם הנתונים נכונים?
+        </div>
+        <div style="font-size:10px;color:#999;direction:ltr;text-align:left;margin:4px 0">
+            DEBUG: routeId=${routeId || 'null'}, mkt=${motEntry?.MotLineId || 'N/A'}
         </div>
         <button class="boarding-btn boarding-btn-primary" style="font-size:16px" onclick="boardingLoadStops('${esc(lineNum)}',${motDir},${routeId || 'null'})">
             ✅ כן, בחר תחנת ירידה
