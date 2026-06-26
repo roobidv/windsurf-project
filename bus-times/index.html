@@ -1174,11 +1174,15 @@ function haversine(lat1, lon1, lat2, lon2) {
 }
 
 async function startBoarding() {
+    if (!currentStop || !currentStop.lat || !currentStop.lon) {
+        alert('בחר תחנה קודם כדי להשתמש בתכונה זו');
+        return;
+    }
     showBoardingOverlay('🚌 עליתי לאוטובוס', `
+        <div class="boarding-label">📍 תחנה: ${esc(currentStop.name)}</div>
         <div class="boarding-label">מה מספר הקו?</div>
         <input class="boarding-input" id="boardingLineInput" type="text" inputmode="numeric" placeholder="לדוגמה: 142" autofocus>
         <button class="boarding-btn boarding-btn-primary" onclick="boardingStep1()">המשך</button>
-        <div class="boarding-info">📍 המיקום שלך ישמש לזיהוי הקו הנכון</div>
     `);
     setTimeout(() => document.getElementById('boardingLineInput')?.focus(), 300);
     document.getElementById('boardingLineInput')?.addEventListener('keydown', e => {
@@ -1190,18 +1194,12 @@ async function boardingStep1() {
     const lineNum = document.getElementById('boardingLineInput')?.value.trim();
     if (!lineNum) return;
 
+    const userPos = { lat: currentStop.lat, lon: currentStop.lon };
+
     showBoardingOverlay('🚌 קו ' + lineNum, `
         <div class="boarding-spinner"></div>
-        <div class="boarding-label" style="text-align:center">מאתר מיקום ומחפש קו...</div>
+        <div class="boarding-label" style="text-align:center">מחפש קו ${esc(lineNum)}...</div>
     `);
-
-    let userPos;
-    try { userPos = await getUserPosition(); } catch(e) {
-        showBoardingOverlay('🚌 קו ' + lineNum, `
-            <div class="boarding-info" style="color:red">⚠️ ${e}<br>נסה לאשר הרשאת מיקום</div>
-        `);
-        return;
-    }
 
     let routes;
     try {
