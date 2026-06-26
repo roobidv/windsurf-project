@@ -1588,14 +1588,13 @@ function boardingSelectDest(idx, lineNum) {
     window._boardingDestIdx = idx;
 }
 
-// Step 6: Active monitoring
+// Step 6: Active monitoring — API-based, NO GPS
 async function boardingStartMonitor() {
     const dest = window._boardingDest;
     const destIdx = window._boardingDestIdx;
     const lineNum = window._boardingLineNum;
     const remaining = window._boardingRemaining;
     const startStop = window._boardingStartStop;
-    const departTime = window._boardingDepartTime;
     if (!dest || !remaining) return;
 
     // Request notification permission
@@ -1610,67 +1609,136 @@ async function boardingStartMonitor() {
         }
     } catch(e) {}
 
-    // Calculate scheduled time per stop (from boarding stop)
-    const stopTimes = [];
+    // Build stops list: boarding stop (index 0) + remaining up to dest
+    const trackStops = [];
+    // First entry = boarding stop (already passed — we're ON the bus)
+    trackStops.push({
+        name: startStop.gtfs_stop__name,
+        city: startStop.gtfs_stop__city || '',
+        code: String(startStop.gtfs_stop__code || ''),
+        isDest: false, isAlert: false
+    });
     for (let i = 0; i <= destIdx; i++) {
-        let estMs = 0;
-        if (startStop.arrival_time && remaining[i].arrival_time) {
-            const t1 = new Date(startStop.arrival_time).getTime();
-            const t2 = new Date(remaining[i].arrival_time).getTime();
-            if (t2 > t1) estMs = t2 - t1;
-        }
-        if (estMs === 0) {
-            // Fallback: 2 min per stop
-            estMs = (i + 1) * 2 * 60000;
-        }
-        stopTimes.push({
+        trackStops.push({
             name: remaining[i].gtfs_stop__name,
             city: remaining[i].gtfs_stop__city || '',
-            lat: remaining[i].gtfs_stop__lat,
-            lon: remaining[i].gtfs_stop__lon,
-            estArrivalMs: departTime.getTime() + estMs,
+            code: String(remaining[i].gtfs_stop__code || ''),
             isDest: (i === destIdx),
-            isAlert: (i === destIdx - 1) // one stop before
+            isAlert: (i === destIdx - 1)
         });
     }
 
-    window._boardingStopTimes = stopTimes;
+    // State: bus is at stop 0 (boarding stop), next to check is stop 1
+    window._boardingTrackStops = trackStops;
+    window._boardingCurrentIdx = 0;       // bus is HERE
+    window._boardingLineNum = lineNum;
+    window._boardingDest = dest;
     window._boardingAlerted = false;
+    window._boardingLastEta = null;        // last ETA minutes seen at next stop
+    window._boardingPollBusy = false;
 
-    // Close the wizard overlay — monitoring uses floating bar
+    // Close wizard overlay
     closeBoarding();
 
-    // Build initial monitoring UI (bar + panel)
-    boardingCreateMonitorUI(lineNum, dest, stopTimes);
-    boardingUpdateMonitor(lineNum, dest, stopTimes);
+    // Build UI
+    boardingCreateMonitorUI(lineNum, dest, trackStops);
+    boardingRefreshUI();
 
-    // Update every 10 seconds — smooth, no rebuild
-    boardingTimer = setInterval(() => {
-        boardingUpdateMonitor(lineNum, dest, stopTimes);
-    }, 10000);
+    // Start API polling every 15 seconds
+    boardingTimer = setInterval(() => boardingPollNextStop(), 15000);
+    // First poll immediately
+    boardingPollNextStop();
+}
 
-    // Also try GPS if available (bonus 100m check)
+// Poll MOT API at the NEXT stop to detect when our bus arrives there
+async function boardingPollNextStop() {
+    if (window._boardingPollBusy) return;
+    window._boardingPollBusy = true;
+
     try {
-        boardingWatchId = navigator.geolocation.watchPosition(
-            (pos) => {
-                const distToDest = haversine(pos.coords.latitude, pos.coords.longitude, dest.gtfs_stop__lat, dest.gtfs_stop__lon);
-                const el = document.getElementById('monGpsDist');
-                if (el) el.textContent = '📍 ' + (distToDest >= 1000
-                    ? (distToDest/1000).toFixed(1) + ' ק"מ מהיעד'
-                    : Math.round(distToDest) + ' מטר מהיעד');
-                if (distToDest <= 100 && !window._boardingAlerted) {
+        const trackStops = window._boardingTrackStops;
+        const curIdx = window._boardingCurrentIdx;
+        const nextIdx = curIdx + 1;
+        const lineNum = window._boardingLineNum;
+        const dest = window._boardingDest;
+
+        if (nextIdx >= trackStops.length) {
+            // Already at destination — should not happen, but handle
+            window._boardingPollBusy = false;
+            return;
+        }
+
+        const nextStop = trackStops[nextIdx];
+        const stopCode = nextStop.code;
+        if (!stopCode) { window._boardingPollBusy = false; return; }
+
+        // Fetch MOT real-time data for the next stop
+        const ts = Date.now();
+        const url = `${PROXY}${encodeURIComponent(MOT_API + '/GetRealtimeBusLineListByBustop/' + stopCode + '/he/false')}&_t=${ts}`;
+        const resp = await fetch(url, { cache: 'no-store' });
+        const data = await resp.json();
+        const lines = data?.value || data || [];
+
+        // Find our line at this stop
+        const match = lines.find(ln => String(ln.Shilut) === lineNum);
+
+        // Update status display
+        const statusEl = document.getElementById('monPollStatus');
+
+        if (match) {
+            // Get the soonest arrival for this line
+            const arrivals = match.MinutesToArrivalList || (match.MinutesToArrival != null ? [match.MinutesToArrival] : []);
+            const minEta = arrivals.length > 0 ? Math.min(...arrivals) : null;
+            window._boardingLastEta = minEta;
+
+            if (statusEl) statusEl.textContent = `🔍 קו ${lineNum} → ${esc(nextStop.name)}: ${minEta != null ? minEta + " דק'" : 'ממתין...'}`;
+
+            // Is this the DESTINATION stop?
+            if (nextStop.isDest) {
+                // At destination: alert when ≤ 2 minutes
+                if (minEta != null && minEta <= 2 && !window._boardingAlerted) {
                     boardingTriggerAlert(dest);
                 }
-            },
-            () => {},
-            { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
-        );
-    } catch(e) {}
+                // When bus arrives (0 or negative) — advance and stop polling
+                if (minEta != null && minEta <= 0) {
+                    window._boardingCurrentIdx = nextIdx;
+                    boardingRefreshUI();
+                    clearInterval(boardingTimer);
+                    boardingTimer = null;
+                }
+            } else {
+                // Normal stop: advance when bus arrives (MinutesToArrival ≤ 0)
+                if (minEta != null && minEta <= 0) {
+                    window._boardingCurrentIdx = nextIdx;
+                    boardingRefreshUI();
+                    if (statusEl) statusEl.textContent = `✅ הגענו ל${nextStop.name}!`;
+                    // Check: is the NEXT stop the destination?
+                    // If so and alert stop: notify
+                    if (nextStop.isAlert && !window._boardingAlerted) {
+                        // One stop before destination — start alerting
+                    }
+                }
+            }
+        } else {
+            // Line not found at next stop — could mean:
+            // a) Bus already passed (advance!)  b) API didn't return it yet
+            // Be conservative: show "searching" status
+            if (statusEl) statusEl.textContent = `🔍 מחפש קו ${lineNum} בתחנת ${nextStop.name}...`;
+            window._boardingLastEta = null;
+        }
+
+        boardingRefreshUI();
+
+    } catch(e) {
+        const statusEl = document.getElementById('monPollStatus');
+        if (statusEl) statusEl.textContent = '⚠️ שגיאת תקשורת, ממשיך לנסות...';
+    }
+
+    window._boardingPollBusy = false;
 }
 
 // Create the monitor DOM elements once (bar + panel)
-function boardingCreateMonitorUI(lineNum, dest, stopTimes) {
-    // Remove any existing monitor elements
+function boardingCreateMonitorUI(lineNum, dest, trackStops) {
     document.querySelectorAll('.monitor-bar, .monitor-panel, .monitor-backdrop').forEach(el => el.remove());
 
     // === Floating bottom bar ===
@@ -1683,6 +1751,7 @@ function boardingCreateMonitorUI(lineNum, dest, stopTimes) {
             <div>
                 <div class="monitor-bar-line">🚌 קו ${esc(lineNum)}</div>
                 <div class="monitor-bar-dest">🏁 ${esc(dest.gtfs_stop__name)}</div>
+                <div id="barCurrentStop" style="font-size:11px;opacity:0.8;margin-top:2px"></div>
             </div>
             <div class="monitor-bar-stats">
                 <div class="monitor-bar-stat">
@@ -1706,16 +1775,14 @@ function boardingCreateMonitorUI(lineNum, dest, stopTimes) {
     panel.className = 'monitor-panel';
     panel.id = 'monitorPanel';
 
-    // Build track HTML once
     let trackHTML = '';
-    for (let i = 0; i < stopTimes.length; i++) {
-        const s = stopTimes[i];
-        const etaTime = new Date(s.estArrivalMs).toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' });
+    for (let i = 0; i < trackStops.length; i++) {
+        const s = trackStops[i];
         const cityTag = s.city ? ` <span class="track-city">${esc(s.city)}</span>` : '';
         trackHTML += `<div class="track-stop" id="trackStop${i}" data-idx="${i}">
             <div class="track-dot" id="trackDot${i}">${i + 1}</div>
             <span class="track-name" id="trackName${i}">${esc(s.name)}${cityTag}</span>
-            <span class="track-time">${etaTime}</span>
+            <span class="track-time" id="trackTime${i}"></span>
         </div>`;
     }
 
@@ -1728,18 +1795,14 @@ function boardingCreateMonitorUI(lineNum, dest, stopTimes) {
         <div class="monitor-panel-stats">
             <div class="monitor-stat">
                 <div class="monitor-stat-val" id="panelStops">-</div>
-                <div class="monitor-stat-label">תחנות</div>
+                <div class="monitor-stat-label">תחנות נותרו</div>
             </div>
             <div class="monitor-stat">
                 <div class="monitor-stat-val" id="panelMins">-</div>
-                <div class="monitor-stat-label">דקות</div>
-            </div>
-            <div class="monitor-stat">
-                <div class="monitor-stat-val" id="panelEta">-</div>
-                <div class="monitor-stat-label">הגעה</div>
+                <div class="monitor-stat-label">דקות לתחנה הבאה</div>
             </div>
         </div>
-        <div id="monGpsDist" style="font-size:11px;color:#888;text-align:center;margin-bottom:4px"></div>
+        <div id="monPollStatus" style="font-size:12px;color:#888;text-align:center;margin:4px 0;direction:rtl"></div>
         <div id="monAlertBanner"></div>
         <div class="track-container" id="trackContainer">
             <div class="track-rail"></div>
@@ -1754,7 +1817,6 @@ function boardingCreateMonitorUI(lineNum, dest, stopTimes) {
     `;
     document.body.appendChild(panel);
 
-    // Backdrop for panel
     const bd = document.createElement('div');
     bd.className = 'monitor-backdrop';
     bd.id = 'monitorBackdrop';
@@ -1770,7 +1832,6 @@ function toggleMonitorPanel(open) {
     if (open) {
         panel.classList.add('open');
         if (bd) bd.style.display = 'block';
-        // Scroll to current stop
         setTimeout(() => {
             const cur = panel.querySelector('.track-stop.current');
             if (cur) cur.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1781,98 +1842,114 @@ function toggleMonitorPanel(open) {
     }
 }
 
-// Incremental update — only change values, no full rebuild
-function boardingUpdateMonitor(lineNum, dest, stopTimes) {
-    const now = Date.now();
+// Refresh UI based on _boardingCurrentIdx — no full rebuild, just class/text changes
+function boardingRefreshUI() {
+    const trackStops = window._boardingTrackStops;
+    const curIdx = window._boardingCurrentIdx;
+    const dest = window._boardingDest;
+    const lineNum = window._boardingLineNum;
+    if (!trackStops) return;
 
-    let currentStopIdx = -1;
-    for (let i = 0; i < stopTimes.length; i++) {
-        if (now >= stopTimes[i].estArrivalMs) currentStopIdx = i;
-    }
-
-    const stopsLeft = stopTimes.length - 1 - currentStopIdx;
-    const minsLeft = Math.max(0, Math.round((stopTimes[stopTimes.length - 1].estArrivalMs - now) / 60000));
-    const destClock = new Date(stopTimes[stopTimes.length - 1].estArrivalMs)
-        .toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' });
-    const progressPct = Math.min(100, Math.round(((currentStopIdx + 1) / stopTimes.length) * 100));
+    const stopsLeft = trackStops.length - 1 - curIdx;
+    const progressPct = Math.min(100, Math.round((curIdx / (trackStops.length - 1)) * 100));
     const isUrgent = stopsLeft <= 2;
+    const eta = window._boardingLastEta;
+    const currentStopName = trackStops[curIdx]?.name || '';
 
-    // Check alert
-    if (stopsLeft <= 1 && !window._boardingAlerted) {
-        boardingTriggerAlert(dest);
-    }
-
-    // Update bar values
+    // Bar
     const barStops = document.getElementById('barStops');
     const barMins = document.getElementById('barMins');
     const barFill = document.getElementById('barFill');
+    const barCurrent = document.getElementById('barCurrentStop');
     if (barStops) { barStops.textContent = stopsLeft > 0 ? stopsLeft : '✓'; barStops.className = 'monitor-bar-num' + (isUrgent ? ' urgent' : ''); }
-    if (barMins) { barMins.textContent = minsLeft > 0 ? '~' + minsLeft : '!'; barMins.className = 'monitor-bar-num' + (isUrgent ? ' urgent' : ''); }
+    if (barMins) { barMins.textContent = eta != null ? '~' + eta : '?'; barMins.className = 'monitor-bar-num' + (isUrgent ? ' urgent' : ''); }
     if (barFill) barFill.style.width = progressPct + '%';
+    if (barCurrent) barCurrent.textContent = '📍 ' + currentStopName;
 
-    // Update panel values
+    // Panel stats
     const panelStops = document.getElementById('panelStops');
     const panelMins = document.getElementById('panelMins');
-    const panelEta = document.getElementById('panelEta');
     const trackFill = document.getElementById('trackFill');
     if (panelStops) { panelStops.textContent = stopsLeft > 0 ? stopsLeft : '✓'; panelStops.className = 'monitor-stat-val' + (isUrgent ? ' urgent' : ''); }
-    if (panelMins) { panelMins.textContent = minsLeft > 0 ? '~' + minsLeft : '!'; panelMins.className = 'monitor-stat-val' + (isUrgent ? ' urgent' : ''); }
-    if (panelEta) panelEta.textContent = destClock;
+    if (panelMins) { panelMins.textContent = eta != null ? '~' + eta : '?'; panelMins.className = 'monitor-stat-val' + (isUrgent ? ' urgent' : ''); }
     if (trackFill) trackFill.style.height = progressPct + '%';
 
-    // Update track stop states (only change classes, no innerHTML rebuild)
-    for (let i = 0; i < stopTimes.length; i++) {
+    // Track dots and names
+    for (let i = 0; i < trackStops.length; i++) {
         const el = document.getElementById('trackStop' + i);
         const dot = document.getElementById('trackDot' + i);
+        const timeEl = document.getElementById('trackTime' + i);
         if (!el) continue;
-        const s = stopTimes[i];
-        const passed = now >= s.estArrivalMs;
-        const isCurrent = (i === currentStopIdx + 1) && !passed;
+        const s = trackStops[i];
+        const passed = i < curIdx;
+        const isCurrent = i === curIdx;
+        const isNext = i === curIdx + 1;
         let cls = 'track-stop';
         if (passed) cls += ' passed';
         if (isCurrent) cls += ' current';
         if (s.isDest) cls += ' dest';
-        if (s.isAlert && !passed) cls += ' alert-stop';
+        if (s.isAlert && !passed && !isCurrent) cls += ' alert-stop';
         el.className = cls;
-        if (dot) dot.textContent = s.isDest ? '🏁' : (passed ? '✓' : (i + 1));
+        if (dot) dot.textContent = s.isDest ? '🏁' : (passed ? '✓' : (isCurrent ? '🚌' : (i + 1)));
+        // Show ETA only on the next stop
+        if (timeEl) {
+            if (isNext && eta != null) {
+                timeEl.textContent = eta + " דק'";
+                timeEl.style.fontWeight = '700';
+                timeEl.style.color = eta <= 2 ? '#d32f2f' : '#1565c0';
+            } else {
+                timeEl.textContent = '';
+            }
+        }
     }
 
-    // Alert banner in panel
+    // Alert banner
     const alertEl = document.getElementById('monAlertBanner');
     if (alertEl && window._boardingAlerted) {
         alertEl.innerHTML = `<div class="monitor-alert-banner">🔔 תתכונן לרדת! ${esc(dest.gtfs_stop__name)}</div>`;
     }
 
-    // Change bar color when urgent
+    // Bar color
     const bar = document.getElementById('monitorBar');
     if (bar) {
         bar.style.background = isUrgent
             ? 'linear-gradient(135deg, #b71c1c, #d32f2f)'
             : 'linear-gradient(135deg, #1a237e, #283593)';
     }
+
+    // Scroll to current
+    setTimeout(() => {
+        const cur = document.getElementById('trackStop' + curIdx);
+        if (cur && document.getElementById('monitorPanel')?.classList.contains('open')) {
+            cur.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }, 200);
 }
 
 function boardingTriggerAlert(dest) {
     if (window._boardingAlerted) return;
     window._boardingAlerted = true;
 
-    // Vibrate
-    if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
+    // Double vibration series (user requested two series, one is not enough)
+    if (navigator.vibrate) {
+        navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
+        setTimeout(() => {
+            navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
+        }, 3000);
+    }
 
     // Notification
     if ('Notification' in window && Notification.permission === 'granted') {
         new Notification('🚌 תתכונן לרדת!', {
-            body: dest.gtfs_stop__name + ' — התחנה הבאה שלך!',
+            body: dest.gtfs_stop__name + ' — עוד 2 דקות!',
             requireInteraction: true,
             tag: 'bus-alert'
         });
     }
 
-    // Force panel open when alert triggers
+    // Force panel open
     toggleMonitorPanel(true);
-
-    // Update the display
-    boardingUpdateMonitor(window._boardingLineNum, dest, window._boardingStopTimes);
+    boardingRefreshUI();
 }
 
 // ===== Init =====
