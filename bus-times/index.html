@@ -296,9 +296,10 @@
         }
         .bus-dest.bold { font-weight: 800; font-size: 14px; color: #e65100; }
         .bus-stops-away {
-            font-size: 11px; font-weight: 700; color: #1565c0;
-            background: #e3f2fd; border-radius: 8px; padding: 1px 6px;
-            display: inline-block; margin-top: 2px;
+            font-size: 12px; font-weight: 800; color: #d84315;
+            background: #fbe9e7; border-radius: 8px; padding: 2px 8px;
+            display: inline-block; margin-top: 1px;
+            border: 1px solid #ffccbc;
         }
 
         .bus-info {
@@ -752,7 +753,7 @@ async function loadStop(stop) {
 
     try {
         // Primary: bus.gov.il real-time SIRI (MOT official)
-        const motUrl = `${MOT_API}/GetRealtimeBusLineListByBustop/${stop.code}/he/false`;
+        const motUrl = `${MOT_API}/GetRealtimeBusLineListByBustop/${stop.code}/he/false?_t=${Date.now()}`;
         const proxies = [
             PROXY,
             'https://api.allorigins.win/raw?url=',
@@ -763,7 +764,7 @@ async function loadStop(stop) {
             try {
                 const ctrl = new AbortController();
                 const tid = setTimeout(() => ctrl.abort(), 8000);
-                const resp = await fetch(px + encodeURIComponent(motUrl) + '&_t=' + Date.now(), { signal: ctrl.signal, cache: 'no-store', headers: {'Cache-Control':'no-cache'} });
+                const resp = await fetch(px + encodeURIComponent(motUrl), { signal: ctrl.signal, cache: 'no-store', headers: {'Cache-Control':'no-cache','Pragma':'no-cache'} });
                 clearTimeout(tid);
                 if (!resp.ok) continue;
                 raw = await resp.json();
@@ -934,9 +935,11 @@ function renderArrivals(body, arrivals, source) {
         const etaClock = etaTime.toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' });
 
         // Stops away indicator
-        const stopsTag = (a.hasGps && a.stopsAway != null && a.minutes > 0)
-            ? `<div class="bus-stops-away">-${a.stopsAway} תחנות</div>`
-            : '';
+        let stopsTag = '';
+        if (a.hasGps && a.stopsAway != null && a.minutes > 0) {
+            const stLabel = a.stopsAway === 1 ? 'תחנה אחת לפניך' : a.stopsAway + ' תחנות לפניך';
+            stopsTag = `<div class="bus-stops-away">🚏 ${stLabel}</div>`;
+        }
 
         const rowClass = a.isRelevant ? 'bus-row relevant' : 'bus-row';
         const lineClass = a.isRelevant ? 'bus-line highlight' : 'bus-line';
