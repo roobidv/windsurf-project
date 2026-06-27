@@ -1969,36 +1969,10 @@ function startBoarding() {
     `);
 }
 
-// Step 2: Pick direction for the selected line
-async function boardingPickLine(lineNum) {
-    showBoardingOverlay('🚌 קו ' + lineNum, `
-        <div class="boarding-spinner"></div>
-        <div class="boarding-label" style="text-align:center">מחפש כיוונים...</div>
-    `);
-
+// Step 2: Pick direction for the selected line (uses MOT data only — fast, no GTFS needed)
+function boardingPickLine(lineNum) {
     // Find all MOT entries for this line
     const motEntries = lastMotLines.filter(ln => String(ln.Shilut) === lineNum);
-
-    // Use MotLineId (=route_mkt) for precise GTFS matching
-    const motLineId = motEntries[0]?.MotLineId;
-    // Use 3-day range (GTFS data may lag or be absent on weekends)
-    const dTo = new Date();
-    const dFrom = new Date(dTo); dFrom.setDate(dFrom.getDate() - 3);
-    const dateTo = dTo.toISOString().slice(0,10);
-    const dateFrom = dFrom.toISOString().slice(0,10);
-    let routes = [];
-    // Primary: search by route_short_name (most reliable)
-    try {
-        const resp = await fetch(`${GTFS_API}/gtfs_routes/list?route_short_name=${encodeURIComponent(lineNum)}&date_from=${dateFrom}&date_to=${dateTo}&limit=30&order_by=date%20desc`);
-        routes = await resp.json();
-    } catch(e) { routes = []; }
-    // Fallback: try route_mkt if short_name gave nothing
-    if (routes.length === 0 && motLineId) {
-        try {
-            const resp = await fetch(`${GTFS_API}/gtfs_routes/list?route_mkt=${motLineId}&date_from=${dateFrom}&date_to=${dateTo}&limit=30&order_by=date%20desc`);
-            routes = await resp.json();
-        } catch(e) { routes = []; }
-    }
 
     // Build direction buttons from MOT data (each MotDirection is a direction)
     const dirMap = {};
@@ -2007,8 +1981,15 @@ async function boardingPickLine(lineNum) {
         if (!dirMap[dirKey]) dirMap[dirKey] = ln;
     }
 
-    // Match GTFS routes to get long names
     const dirEntries = Object.values(dirMap);
+
+    // If only one direction, skip straight to confirm
+    if (dirEntries.length === 1) {
+        const ln = dirEntries[0];
+        boardingConfirm(lineNum, ln.MotDirection || 1, null);
+        return;
+    }
+
     let btns = '';
     for (const ln of dirEntries) {
         const dest = ln.DestinationQuarterName || ln.Description || '';
@@ -2017,19 +1998,9 @@ async function boardingPickLine(lineNum) {
         const minTxt = min <= 0 ? 'בתחנה' : min + " דק'";
         const motDir = ln.MotDirection || 1;
 
-        // Match by route_direction (same numbering as MOT MotDirection)
-        const gtfsRoute = routes.find(r => r.route_direction == motDir);
-        const routeId = gtfsRoute ? gtfsRoute.id : null;
-        const routeDesc = gtfsRoute?.route_long_name || '';
-        const parts = routeDesc.split('<->');
-        const dirLabel = parts.length >= 2
-            ? parts[0].trim().split('-')[0] + ' → ' + parts[1].trim().split('-')[0]
-            : '';
-
-        btns += `<button class="boarding-btn-dir" onclick="boardingConfirm('${esc(lineNum)}',${motDir},${routeId || 'null'})">
+        btns += `<button class="boarding-btn-dir" onclick="boardingConfirm('${esc(lineNum)}',${motDir},null)">
             🚌 לכיוון: ${esc(dest)}<br>
             <small style="color:#555">${esc(company)} · ${minTxt}</small>
-            ${dirLabel ? `<br><small style="color:#7b1fa2">${esc(dirLabel)}</small>` : ''}
         </button>`;
     }
 
@@ -2037,8 +2008,6 @@ async function boardingPickLine(lineNum) {
         <div class="boarding-label">לאיזה כיוון אתה נוסע?</div>
         ${btns}
     `);
-
-    window._boardingRoutes = routes;
 }
 
 // Step 3: Confirmation screen
@@ -2087,61 +2056,61 @@ async function boardingLoadStops(lineNum, motDir, routeId) {
         <div class="boarding-label" style="text-align:center">טוען תחנות...</div>
     `);
 
-    const dTo = new Date();
-    const dFrom = new Date(dTo); dFrom.setDate(dFrom.getDate() - 3);
-    const dateTo = dTo.toISOString().slice(0,10);
-    const dateFrom = dFrom.toISOString().slice(0,10);
     const stopCode = String(currentStop.code);
-
-    // Find all GTFS routes for this line number
-    let routes = [];
-    try {
-        const resp = await fetch(`${GTFS_API}/gtfs_routes/list?route_short_name=${encodeURIComponent(lineNum)}&date_from=${dateFrom}&date_to=${dateTo}&limit=50&order_by=date%20desc`);
-        routes = await resp.json();
-    } catch(e) { routes = []; }
-    // Fallback: try route_mkt
-    if (routes.length === 0) {
-        const motLineId = window._boardingMotEntry?.MotLineId;
-        if (motLineId) {
-            try {
-                const resp = await fetch(`${GTFS_API}/gtfs_routes/list?route_mkt=${motLineId}&date_from=${dateFrom}&date_to=${dateTo}&limit=50&order_by=date%20desc`);
-                routes = await resp.json();
-            } catch(e) { routes = []; }
-        }
-    }
-
-    if (routes.length === 0) {
-        showBoardingOverlay('🚌 קו ' + lineNum, `
-            <div class="boarding-info" style="color:red">⚠️ לא נמצא מסלול לקו זה</div>
-        `);
-        return;
-    }
-
-    // Prefer routes matching the selected direction, keep all as fallback
-    const dirRoutes = routes.filter(r => r.route_direction == motDir);
-    const candidates = dirRoutes.length > 0 ? dirRoutes : routes;
-
-    // Try each candidate route: verify it passes through our stop
     let stops = null;
-    for (const route of candidates.slice(0, 8)) {
+
+    // Direct approach: find rides passing through THIS stop for THIS line
+    // Query gtfs_ride_stops by stop code, then filter by line number
+    try {
+        const now = new Date();
+        const from = new Date(now); from.setDate(from.getDate() - 2);
+        const timeFrom = from.toISOString().replace('Z', '+00:00');
+        const timeTo = now.toISOString().replace('Z', '+00:00');
+        const url = `${GTFS_API}/gtfs_ride_stops/list?gtfs_stop__code=${stopCode}&arrival_time_from=${encodeURIComponent(timeFrom)}&arrival_time_to=${encodeURIComponent(timeTo)}&limit=50&order_by=arrival_time%20desc`;
+        const resp = await fetch(url);
+        const rideStops = await resp.json();
+
+        // Find a ride for our line number (and matching direction if possible)
+        let matchRide = rideStops.find(rs => rs.gtfs_route__route_short_name === lineNum && rs.gtfs_route__route_direction == motDir);
+        if (!matchRide) matchRide = rideStops.find(rs => rs.gtfs_route__route_short_name === lineNum);
+        if (!matchRide) matchRide = rideStops.find(rs => String(rs.gtfs_route__route_short_name) === String(lineNum));
+
+        if (matchRide) {
+            // Get all stops for this ride
+            const allStopsResp = await fetch(`${GTFS_API}/gtfs_ride_stops/list?gtfs_ride_ids=${matchRide.gtfs_ride_id}&limit=100&order_by=stop_sequence`);
+            stops = await allStopsResp.json();
+            if (stops && stops.length === 0) stops = null;
+        }
+    } catch(e) { stops = null; }
+
+    // Fallback: old route-based approach if direct method failed
+    if (!stops) {
         try {
-            const ridesResp = await fetch(`${GTFS_API}/gtfs_rides/list?gtfs_route_id=${route.id}&start_date_from=${dateFrom}&start_date_to=${dateTo}&limit=1&order_by=start_time%20desc`);
-            const rides = await ridesResp.json();
-            if (!rides || rides.length === 0) continue;
-            const stopsResp = await fetch(`${GTFS_API}/gtfs_ride_stops/list?gtfs_ride_ids=${rides[0].id}&limit=100&order_by=stop_sequence`);
-            const stopsData = await stopsResp.json();
-            if (!stopsData || stopsData.length === 0) continue;
-            // Verify: does this ride pass through our boarding stop?
-            if (stopsData.some(s => String(s.gtfs_stop__code) === stopCode)) {
-                stops = stopsData;
-                break;
+            const dTo = new Date();
+            const dFrom = new Date(dTo); dFrom.setDate(dFrom.getDate() - 3);
+            const dateTo = dTo.toISOString().slice(0,10);
+            const dateFrom = dFrom.toISOString().slice(0,10);
+            const resp = await fetch(`${GTFS_API}/gtfs_routes/list?route_short_name=${encodeURIComponent(lineNum)}&date_from=${dateFrom}&date_to=${dateTo}&limit=20&order_by=date%20desc`);
+            const routes = await resp.json();
+            const dirRoutes = routes.filter(r => r.route_direction == motDir);
+            const candidates = dirRoutes.length > 0 ? dirRoutes : routes;
+            for (const route of candidates.slice(0, 5)) {
+                const ridesResp = await fetch(`${GTFS_API}/gtfs_rides/list?gtfs_route_id=${route.id}&start_date_from=${dateFrom}&start_date_to=${dateTo}&limit=1&order_by=start_time%20desc`);
+                const rides = await ridesResp.json();
+                if (!rides || rides.length === 0) continue;
+                const stopsResp = await fetch(`${GTFS_API}/gtfs_ride_stops/list?gtfs_ride_ids=${rides[0].id}&limit=100&order_by=stop_sequence`);
+                const stopsData = await stopsResp.json();
+                if (stopsData && stopsData.length > 0 && stopsData.some(s => String(s.gtfs_stop__code) === stopCode)) {
+                    stops = stopsData;
+                    break;
+                }
             }
-        } catch(e) { continue; }
+        } catch(e) {}
     }
 
     if (!stops) {
         showBoardingOverlay('🚌 קו ' + lineNum, `
-            <div class="boarding-info" style="color:red">⚠️ לא נמצא מסלול לקו זה דרך התחנה שלך</div>
+            <div class="boarding-info" style="color:red">⚠️ לא נמצא מסלול לקו ${lineNum} דרך תחנה ${stopCode}</div>
         `);
         return;
     }
