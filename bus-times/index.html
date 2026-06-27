@@ -109,16 +109,18 @@
         /* Custom stop search */
         .custom-search {
             display: flex;
-            gap: 6px;
+            gap: 4px;
             margin-top: 2px;
             align-items: center;
+            max-width: 100%;
         }
         .custom-search input {
             flex: 1;
-            padding: 7px 10px;
+            min-width: 0;
+            padding: 6px 8px;
             border: 1.5px solid #d1d5db;
             border-radius: 8px;
-            font-size: 13px;
+            font-size: 12px;
             font-family: inherit;
         }
         .custom-search input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(26,115,232,0.2); }
@@ -127,12 +129,13 @@
             color: white;
             border: none;
             border-radius: 8px;
-            padding: 7px 14px;
-            font-size: 13px;
+            padding: 6px 10px;
+            font-size: 12px;
             font-weight: 600;
             cursor: pointer;
             font-family: inherit;
             white-space: nowrap;
+            flex-shrink: 0;
         }
 
         /* Nearby stops results */
@@ -645,11 +648,13 @@
     <div class="btn-grid" id="baseButtons"></div>
     <div class="btn-section-label lbl-home">🏠 חזרה הביתה</div>
     <div class="btn-grid" id="homeButtons"></div>
-    <div class="btn-section-label" style="color:var(--primary)">🔍 תחנה אקראית</div>
+    <div class="btn-section-label" style="color:var(--primary);display:flex;align-items:center;justify-content:space-between">
+        <span>🔍 תחנה אקראית</span>
+        <button onclick="searchMyLocation()" style="background:#e65100;color:white;border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer" title="תחנות לידי לפי GPS">📍 מיקומי</button>
+    </div>
     <div class="custom-search">
-        <input type="text" id="customInput" placeholder="מספר תחנה / כתובת רחוב / קואורדינטות" dir="rtl" inputmode="text">
+        <input type="text" id="customInput" placeholder="מס' תחנה / כתובת / קואורדינטות" dir="rtl" inputmode="text">
         <button onclick="searchCustom()">חפש</button>
-        <button onclick="searchMyLocation()" style="background:#e65100;" title="תחנות לידי">📍</button>
         <button onclick="saveFavorite()" style="background:#f9a825;" title="שמור במועדפים">⭐</button>
     </div>
     <div class="btn-grid" id="favButtons" style="margin-top:6px;"></div>
