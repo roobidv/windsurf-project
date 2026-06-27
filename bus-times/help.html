@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מדריך שימוש - זמני אוטובוס</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #1a1a2e;
+            line-height: 1.7;
+            padding: 16px;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        h1 { font-size: 22px; text-align: center; margin-bottom: 8px; color: #1a73e8; }
+        h2 { font-size: 17px; color: #1565c0; margin: 20px 0 8px; padding-bottom: 4px; border-bottom: 2px solid #e3f2fd; }
+        h3 { font-size: 14px; color: #333; margin: 12px 0 4px; }
+        p { margin: 6px 0; font-size: 13px; }
+        .section {
+            background: white;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+        .feature-item {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            margin: 8px 0;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .feature-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            width: 32px;
+            text-align: center;
+        }
+        .feature-text { flex: 1; }
+        .feature-text b { color: #1a73e8; }
+        .btn-example {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            color: white;
+            margin: 0 2px;
+        }
+        .btn-green { background: #43a047; }
+        .btn-red { background: #e53935; }
+        .btn-blue { background: #1a73e8; }
+        .btn-orange { background: #e65100; }
+        .btn-yellow { background: #f9a825; color: #333; }
+        .btn-purple { background: #7b1fa2; }
+        .tip {
+            background: #fff3e0;
+            border-right: 3px solid #e65100;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            margin: 8px 0;
+        }
+        .tip::before { content: "💡 טיפ: "; font-weight: 700; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 8px 0; }
+        th, td { padding: 6px 8px; border: 1px solid #e0e0e0; text-align: right; }
+        th { background: #e3f2fd; font-weight: 600; }
+        .footer-help { text-align: center; font-size: 11px; color: #999; margin-top: 16px; padding-top: 12px; border-top: 1px solid #eee; }
+        .download-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            margin: 16px 0;
+            text-align: center;
+        }
+        .download-btn:hover { background: #1557b0; }
+        .back-link { display: block; text-align: center; margin: 10px 0; font-size: 13px; }
+        @media print {
+            body { padding: 20px; max-width: none; background: white; }
+            .download-btn, .back-link { display: none; }
+            .section { box-shadow: none; border: 1px solid #eee; }
+        }
+    </style>
+</head>
+<body>
+
+<h1>🚌 מדריך שימוש — זמני אוטובוס</h1>
+<p style="text-align:center;font-size:12px;color:#666">אפליקציית זמן אמת לאוטובוסים ורכבות בישראל</p>
+
+<button class="download-btn" onclick="window.print()">📄 הורד כ-PDF (הדפס)</button>
+<a href="index.html" class="back-link">← חזרה לאפליקציה</a>
+
+<div class="section">
+    <h2>📱 סקירה כללית</h2>
+    <p>האפליקציה מציגה <b>זמני הגעה בזמן אמת</b> של אוטובוסים לתחנות שבחרת, ו<b>לוח יציאות רכבת</b> לכל תחנת רכבת בישראל.</p>
+    <p>הנתונים מגיעים ישירות מ<b>משרד התחבורה (bus.gov.il)</b> ומ<b>רכבת ישראל</b>.</p>
+</div>
+
+<div class="section">
+    <h2>🟢🔴 כפתורי תחנות קבועות</h2>
+    <div class="feature-item">
+        <div class="feature-icon">🚌</div>
+        <div class="feature-text">
+            <b>כפתורים ירוקים — לכיוון הבסיס</b><br>
+            תחנות מוגדרות מראש לכיוון מקום העבודה. לחיצה טוענת את זמני ההגעה של התחנה.
+        </div>
+    </div>
+    <div class="feature-item">
+        <div class="feature-icon">🏠</div>
+        <div class="feature-text">
+            <b>כפתורים אדומים — חזרה הביתה</b><br>
+            תחנות מוגדרות מראש לכיוון הבית.
+        </div>
+    </div>
+    <div class="tip">לחיצה על כפתור תחנה טוענת מיד את כל האוטובוסים הקרובים. הנתונים מתרעננים כל 30 שניות.</div>
+</div>
+
+<div class="section">
+    <h2>🔍 שדה חיפוש חכם</h2>
+    <p>שדה החיפוש מזהה אוטומטית מה הכנסת:</p>
+    <table>
+        <tr><th>מה כותבים</th><th>מה קורה</th></tr>
+        <tr><td><code>37018</code></td><td>חיפוש לפי מספר תחנת אוטובוס</td></tr>
+        <tr><td><code>ויצמן כפר סבא</code></td><td>מתרגם כתובת למיקום → מוצא תחנות קרובות</td></tr>
+        <tr><td><code>32.177,34.903</code></td><td>קואורדינטות (lat,lon או lon,lat — מזהה אוטומטית)</td></tr>
+        <tr><td>לינק Google Maps</td><td>מחלץ מיקום מהלינק ומוצא תחנות</td></tr>
+        <tr><td><code>תל אביב אוניברסיטה</code></td><td>מזהה תחנת רכבת → פותח לוח יציאות</td></tr>
+        <tr><td><code>רכבת הרצליה</code></td><td>מילת "רכבת" + שם → לוח רכבת</td></tr>
+    </table>
+    <div class="tip">הסדר לא חשוב! כתבו <code>34.903,32.177</code> או <code>32.177,34.903</code> — המערכת מזהה לבד מה lat ומה lon.</div>
+</div>
+
+<div class="section">
+    <h2>📍 כפתור "מיקומי"</h2>
+    <div class="feature-item">
+        <div class="feature-icon">📍</div>
+        <div class="feature-text">
+            <b>תחנות לידי לפי GPS</b><br>
+            לוחצים על <span class="btn-example btn-orange">📍 מיקומי</span> — הטלפון משתמש ב-GPS למציאת תחנות אוטובוס ברדיוס 200 מטר.<br>
+            <b>דרוש:</b> אישור מיקום בדפדפן (Chrome → הגדרות אתר → מיקום → אפשר).
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <h2>🚏 רשימת תחנות קרובות</h2>
+    <p>כשמחפשים לפי כתובת, קואורדינטות או GPS, מופיעה רשימה נגללת עם:</p>
+    <div class="feature-item">
+        <div class="feature-icon">🚏</div>
+        <div class="feature-text">
+            <b>שם התחנה</b> — כפי שמופיע ב-OpenStreetMap<br>
+            <b>מרחק</b> — כמה מטרים מהנקודה שחיפשת<br>
+            <b>כיוון</b> — לאן נוסעים האוטובוסים (יעד מה-API)<br>
+            <b>מספר תחנה</b> — מימין
+        </div>
+    </div>
+    <p>לחיצה על תחנה מהרשימה — טוענת אותה ומציגה את כל הקווים.</p>
+</div>
+
+<div class="section">
+    <h2>⭐ מועדפים</h2>
+    <div class="feature-item">
+        <div class="feature-icon">⭐</div>
+        <div class="feature-text">
+            <b>שמירת תחנה במועדפים</b><br>
+            חפשו תחנה → לחצו <span class="btn-example btn-yellow">⭐</span> → התחנה נשמרת.<br>
+            כפתור <span class="btn-example btn-purple">סגול</span> מופיע עם שם התחנה ומספרה.<br>
+            לחיצה על ✕ בפינה — מסירה מהמועדפים.
+        </div>
+    </div>
+    <div class="tip">המועדפים נשמרים בזיכרון הדפדפן (localStorage). אם תמחקו היסטוריה — הם יימחקו.</div>
+</div>
+
+<div class="section">
+    <h2>📋 תצוגת אוטובוסים</h2>
+    <p>לאחר בחירת תחנה, מוצגים כל האוטובוסים הקרובים:</p>
+    <table>
+        <tr><th>סימון</th><th>משמעות</th></tr>
+        <tr><td style="color:#22c55e;font-weight:700">ירוק</td><td>🛰️ זמן אמת מאומת (נתוני GPS מהאוטובוס)</td></tr>
+        <tr><td style="color:#f59e0b;font-weight:700">כתום</td><td>פחות מ-5 דקות / לא מאומת</td></tr>
+        <tr><td style="color:#333;font-weight:700">שחור</td><td>📋 לוח מתוכנן (אין GPS)</td></tr>
+    </table>
+    <p><b>כל שורה מציגה:</b> מספר קו | יעד | זמן הגעה | שעת הגעה משוערת</p>
+    <div class="feature-item">
+        <div class="feature-icon">🚏</div>
+        <div class="feature-text">
+            <b>תחנות לפניך</b> — אם יש נתוני GPS, מוצג כמה תחנות האוטובוס לפניך.
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <h2>🚌 כפתור "עליתי" — מעקב נסיעה</h2>
+    <div class="feature-item">
+        <div class="feature-icon">🚌</div>
+        <div class="feature-text">
+            <b>עליתי</b> — מפעיל מצב מעקב נסיעה:<br>
+            1. בוחרים כיוון ותחנת יעד<br>
+            2. המערכת עוקבת אחרי התקדמות האוטובוס<br>
+            3. כשהאוטובוס 2 דקות מהיעד — רטט + התראה<br>
+            4. סרגל צף מציג: תחנה נוכחית, תחנות שנותרו, ETA
+        </div>
+    </div>
+    <div class="tip">המעקב מבוסס על API בלבד (לא GPS של הטלפון). הוא בודק כל 15 שניות אם האוטובוס הגיע לתחנה הבאה.</div>
+</div>
+
+<div class="section">
+    <h2>🔄 רענון</h2>
+    <div class="feature-item">
+        <div class="feature-icon">🔄</div>
+        <div class="feature-text">
+            <b>רענן</b> — מרענן את הנתונים מיד (בלי לחכות 30 שניות).<br>
+            ספירה לאחור מופיעה בתחתית — מראה כמה שניות עד הרענון הבא.
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <h2>🚆 רכבת ישראל</h2>
+    <p>כתבו שם תחנת רכבת בשדה החיפוש:</p>
+    <div class="feature-item">
+        <div class="feature-icon">🚆</div>
+        <div class="feature-text">
+            <b>לוח יציאות</b> — טבלה מחולקת לשניים:<br>
+            ⬆️ <b>צפונה</b> (כחול) — כל הרכבות צפונה מעכשיו<br>
+            ⬇️ <b>דרומה</b> (אדום) — כל הרכבות דרומה מעכשיו<br>
+            כל רכבת מציגה: שעת יציאה | יעד | מספר רכבת | רציף
+        </div>
+    </div>
+    <div class="feature-item">
+        <div class="feature-icon">👆</div>
+        <div class="feature-text">
+            <b>לחיצה על רכבת</b> — פותח חלון מפורט:<br>
+            • <b>רציף</b> — מודגש בכחול<br>
+            • <b>מסלול גרפי</b> — כל התחנות שהרכבת עוצרת בהן<br>
+            • התחנה שלכם מסומנת ב-📍<br>
+            • שעת הגעה ליד כל תחנה<br>
+            • אם יש החלפה — מוצג 🔄
+        </div>
+    </div>
+    <div class="tip">אם יש איחור בזמן אמת, הוא מוצג באדום ליד השעה (למשל +5').</div>
+    
+    <h3>תחנות רכבת לדוגמה:</h3>
+    <table>
+        <tr><td>תל אביב אוניברסיטה</td><td>הרצליה</td><td>נתניה</td></tr>
+        <tr><td>חיפה מרכז</td><td>באר שבע מרכז</td><td>ירושלים נבון</td></tr>
+        <tr><td>כפר סבא נורדאו</td><td>בנימינה</td><td>לוד</td></tr>
+    </table>
+</div>
+
+<div class="section">
+    <h2>ℹ️ מידע נוסף</h2>
+    <div class="feature-item">
+        <div class="feature-icon">📋</div>
+        <div class="feature-text">
+            <b>העתקת מספר תחנה</b> — לחצו על 📋 ליד מספר התחנה להעתקה ללוח.
+        </div>
+    </div>
+    <div class="feature-item">
+        <div class="feature-icon">🚏</div>
+        <div class="feature-text">
+            <b>שם תחנה רשמי</b> — מופיע מתחת לכותרת הכרטיס (נשלף ממאגר GTFS).
+        </div>
+    </div>
+    <div class="feature-item">
+        <div class="feature-icon">🔢</div>
+        <div class="feature-text">
+            <b>סינון לפי קו</b> — לחצו על מספר קו ברשימת האוטובוסים לסינון (רק הקו הזה מוצג).
+        </div>
+    </div>
+    <div class="feature-item">
+        <div class="feature-icon">📅</div>
+        <div class="feature-text">
+            <b>"נעים בסופ"ש"</b> — בשבת/שישי אחה"צ, אם אין תוצאות מהAPI, מוצגת הודעה עם לינק לאתר busofash.co.il.
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <h2>⚙️ דרישות טכניות</h2>
+    <p>• דפדפן מודרני (Chrome, Safari, Firefox)<br>
+    • חיבור אינטרנט<br>
+    • לחצן GPS — דורש אישור מיקום בדפדפן<br>
+    • עובד בטלפון ובמחשב</p>
+</div>
+
+<div class="section">
+    <h2>🎨 מקרא צבעים</h2>
+    <table>
+        <tr><th>צבע/סימון</th><th>משמעות</th></tr>
+        <tr><td>🛰️</td><td>נתוני זמן אמת (GPS מהאוטובוס)</td></tr>
+        <tr><td>📋</td><td>לוח זמנים מתוכנן בלבד</td></tr>
+        <tr><td><span style="color:green">● ירוק</span></td><td>מערכת תקינה / נתונים עודכנו</td></tr>
+        <tr><td><span style="color:orange">● כתום</span></td><td>טוען נתונים...</td></tr>
+        <tr><td><span style="color:red">● אדום</span></td><td>שגיאה בטעינה</td></tr>
+        <tr><td>🔄</td><td>רכבת עם החלפה</td></tr>
+        <tr><td style="color:red">+5'</td><td>איחור רכבת בזמן אמת</td></tr>
+    </table>
+</div>
+
+<button class="download-btn" onclick="window.print()">📄 הורד כ-PDF (הדפס)</button>
+
+<div class="footer-help">
+    גרסה 2.0 | נכתב על ידי רובי דביר | roobid@gmail.com<br>
+    נתונים: משרד התחבורה (bus.gov.il) | רכבת ישראל
+</div>
+
+</body>
+</html>
