@@ -1981,18 +1981,21 @@ async function boardingPickLine(lineNum) {
 
     // Use MotLineId (=route_mkt) for precise GTFS matching
     const motLineId = motEntries[0]?.MotLineId;
-    const today = new Date().toISOString().slice(0,10);
+    // Use 3-day range (GTFS data may lag or be absent on weekends)
+    const dTo = new Date();
+    const dFrom = new Date(dTo); dFrom.setDate(dFrom.getDate() - 3);
+    const dateTo = dTo.toISOString().slice(0,10);
+    const dateFrom = dFrom.toISOString().slice(0,10);
     let routes = [];
-    if (motLineId) {
+    // Primary: search by route_short_name (most reliable)
+    try {
+        const resp = await fetch(`${GTFS_API}/gtfs_routes/list?route_short_name=${encodeURIComponent(lineNum)}&date_from=${dateFrom}&date_to=${dateTo}&limit=30&order_by=date%20desc`);
+        routes = await resp.json();
+    } catch(e) { routes = []; }
+    // Fallback: try route_mkt if short_name gave nothing
+    if (routes.length === 0 && motLineId) {
         try {
-            const resp = await fetch(`${GTFS_API}/gtfs_routes/list?route_mkt=${motLineId}&date_from=${today}&date_to=${today}&limit=30`);
-            routes = await resp.json();
-        } catch(e) { routes = []; }
-    }
-    // Fallback: search by name if route_mkt returned nothing
-    if (routes.length === 0) {
-        try {
-            const resp = await fetch(`${GTFS_API}/gtfs_routes/list?route_short_name=${encodeURIComponent(lineNum)}&date_from=${today}&date_to=${today}&limit=30`);
+            const resp = await fetch(`${GTFS_API}/gtfs_routes/list?route_mkt=${motLineId}&date_from=${dateFrom}&date_to=${dateTo}&limit=30&order_by=date%20desc`);
             routes = await resp.json();
         } catch(e) { routes = []; }
     }
@@ -2084,17 +2087,21 @@ async function boardingLoadStops(lineNum, motDir, routeId) {
         <div class="boarding-label" style="text-align:center">טוען תחנות...</div>
     `);
 
-    // If no routeId from step 2, find it using MotLineId (route_mkt)
+    // If no routeId from step 2, find it using route_short_name or route_mkt
     if (!routeId) {
         const motEntry = window._boardingMotEntry;
         const motLineId = motEntry?.MotLineId;
+        const dTo = new Date();
+        const dFrom = new Date(dTo); dFrom.setDate(dFrom.getDate() - 3);
+        const dateTo = dTo.toISOString().slice(0,10);
+        const dateFrom = dFrom.toISOString().slice(0,10);
         try {
-            const today = new Date().toISOString().slice(0,10);
-            let url = motLineId
-                ? `${GTFS_API}/gtfs_routes/list?route_mkt=${motLineId}&date_from=${today}&date_to=${today}&limit=30`
-                : `${GTFS_API}/gtfs_routes/list?route_short_name=${encodeURIComponent(lineNum)}&date_from=${today}&date_to=${today}&limit=30`;
-            const resp = await fetch(url);
-            const routes = await resp.json();
+            let resp = await fetch(`${GTFS_API}/gtfs_routes/list?route_short_name=${encodeURIComponent(lineNum)}&date_from=${dateFrom}&date_to=${dateTo}&limit=30&order_by=date%20desc`);
+            let routes = await resp.json();
+            if (routes.length === 0 && motLineId) {
+                resp = await fetch(`${GTFS_API}/gtfs_routes/list?route_mkt=${motLineId}&date_from=${dateFrom}&date_to=${dateTo}&limit=30&order_by=date%20desc`);
+                routes = await resp.json();
+            }
             const match = routes.find(r => r.route_direction == motDir);
             if (match) routeId = match.id;
         } catch(e) {}
@@ -2108,8 +2115,12 @@ async function boardingLoadStops(lineNum, motDir, routeId) {
     }
 
     try {
-        const todayRides = new Date().toISOString().slice(0,10);
-        const ridesResp = await fetch(`${GTFS_API}/gtfs_rides/list?gtfs_route_id=${routeId}&start_date_from=${todayRides}&start_date_to=${todayRides}&limit=1&order_by=start_time%20desc`);
+        // Use 3-day range for rides (stop list is same regardless of date)
+        const rTo = new Date();
+        const rFrom = new Date(rTo); rFrom.setDate(rFrom.getDate() - 3);
+        const rideDateTo = rTo.toISOString().slice(0,10);
+        const rideDateFrom = rFrom.toISOString().slice(0,10);
+        const ridesResp = await fetch(`${GTFS_API}/gtfs_rides/list?gtfs_route_id=${routeId}&start_date_from=${rideDateFrom}&start_date_to=${rideDateTo}&limit=1&order_by=start_time%20desc`);
         const rides = await ridesResp.json();
         if (!rides || rides.length === 0) throw new Error('לא נמצאו נסיעות');
 
@@ -2117,19 +2128,21 @@ async function boardingLoadStops(lineNum, motDir, routeId) {
         const stops = await stopsResp.json();
         if (!stops || stops.length === 0) throw new Error('לא נמצאו תחנות');
 
-        // Find the boarding stop (nearest to currentStop)
-        let nearestIdx = 0, nearestDist = Infinity;
-        if (currentStop.lat && currentStop.lon) {
+        // Find the boarding stop: try stop code first, then GPS distance
+        let nearestIdx = -1;
+        // Primary: match by stop code
+        for (let i = 0; i < stops.length; i++) {
+            if (String(stops[i].gtfs_stop__code) === String(currentStop.code)) { nearestIdx = i; break; }
+        }
+        // Fallback: match by GPS distance
+        if (nearestIdx < 0 && currentStop.lat && currentStop.lon) {
+            let nearestDist = Infinity;
             for (let i = 0; i < stops.length; i++) {
                 const d = haversine(currentStop.lat, currentStop.lon, stops[i].gtfs_stop__lat, stops[i].gtfs_stop__lon);
                 if (d < nearestDist) { nearestDist = d; nearestIdx = i; }
             }
-        } else {
-            // Match by stop code
-            for (let i = 0; i < stops.length; i++) {
-                if (String(stops[i].gtfs_stop__code) === String(currentStop.code)) { nearestIdx = i; break; }
-            }
         }
+        if (nearestIdx < 0) nearestIdx = 0;
 
         const remaining = stops.slice(nearestIdx + 1);
         if (remaining.length === 0) {
