@@ -2255,34 +2255,44 @@ async function boardingStartMonitor() {
     } catch(e) {}
 
     // Build stops list: boarding stop (index 0) + remaining up to dest
+    // Include scheduled minutes from boarding for time-based tracking
+    const startTime = startStop.arrival_time ? new Date(startStop.arrival_time).getTime() : null;
     const trackStops = [];
-    // First entry = boarding stop (already passed — we're ON the bus)
     trackStops.push({
         name: startStop.gtfs_stop__name,
         city: startStop.gtfs_stop__city || '',
         code: String(startStop.gtfs_stop__code || ''),
-        isDest: false, isAlert: false
+        isDest: false, isAlert: false,
+        minFromStart: 0
     });
     for (let i = 0; i <= destIdx; i++) {
+        const s = remaining[i];
+        let minFromStart = null;
+        if (startTime && s.arrival_time) {
+            const t = new Date(s.arrival_time).getTime();
+            minFromStart = (t - startTime) / 60000; // fractional minutes
+        }
         trackStops.push({
-            name: remaining[i].gtfs_stop__name,
-            city: remaining[i].gtfs_stop__city || '',
-            code: String(remaining[i].gtfs_stop__code || ''),
+            name: s.gtfs_stop__name,
+            city: s.gtfs_stop__city || '',
+            code: String(s.gtfs_stop__code || ''),
             isDest: (i === destIdx),
-            isAlert: (i === destIdx - 1)
+            isAlert: (i === destIdx - 1),
+            minFromStart: minFromStart
         });
     }
 
     // State: bus is at stop 0 (boarding stop), next to check is stop 1
     window._boardingTrackStops = trackStops;
-    window._boardingCurrentIdx = 0;       // bus is HERE
+    window._boardingCurrentIdx = 0;
     window._boardingLineNum = lineNum;
     window._boardingDest = dest;
     window._boardingAlerted = false;
     window._boardingLastEta = null;
     window._boardingPollBusy = false;
-    window._boardingSeenAtNext = false;    // true once line was seen at next stop's API
-    window._boardingMissedPolls = 0;       // consecutive polls where line vanished after being seen
+    window._boardingSeenAtNext = false;
+    window._boardingMissedPolls = 0;
+    window._boardingDepartTime = new Date(); // monitoring starts NOW
 
     // Close wizard overlay
     closeBoarding();
@@ -2297,78 +2307,111 @@ async function boardingStartMonitor() {
     boardingPollNextStop();
 }
 
-// Poll MOT API at the NEXT stop to detect when our bus arrives there
+// Poll: time-based progression (primary) + MOT API confirmation (secondary)
 async function boardingPollNextStop() {
     if (window._boardingPollBusy) return;
     window._boardingPollBusy = true;
 
-    try {
-        const trackStops = window._boardingTrackStops;
-        const curIdx = window._boardingCurrentIdx;
-        const nextIdx = curIdx + 1;
-        const lineNum = window._boardingLineNum;
-        const dest = window._boardingDest;
+    const trackStops = window._boardingTrackStops;
+    const lineNum = window._boardingLineNum;
+    const dest = window._boardingDest;
+    const statusEl = document.getElementById('monPollStatus');
+    let curIdx = window._boardingCurrentIdx;
 
-        if (nextIdx >= trackStops.length) {
+    // === PHASE 1: Time-based advancement ===
+    // Use GTFS scheduled times to advance the slider
+    const elapsedMin = (Date.now() - window._boardingDepartTime.getTime()) / 60000;
+    let timeIdx = curIdx;
+    for (let i = curIdx + 1; i < trackStops.length; i++) {
+        if (trackStops[i].minFromStart != null && elapsedMin >= trackStops[i].minFromStart) {
+            timeIdx = i;
+        } else {
+            break;
+        }
+    }
+    if (timeIdx > curIdx) {
+        // Schedule says we've passed stops — advance
+        window._boardingCurrentIdx = timeIdx;
+        window._boardingSeenAtNext = false;
+        window._boardingMissedPolls = 0;
+        curIdx = timeIdx;
+        const advStop = trackStops[timeIdx];
+        if (advStop.isAlert && !window._boardingAlerted) {
+            boardingTriggerAlert(dest);
+        }
+        if (advStop.isDest) {
+            if (!window._boardingAlerted) boardingTriggerAlert(dest);
+            if (statusEl) statusEl.textContent = `🏁 הגעת ליעד: ${advStop.name}!`;
+            clearInterval(boardingTimer); boardingTimer = null;
+            boardingRefreshUI();
             window._boardingPollBusy = false;
             return;
         }
+        if (statusEl) statusEl.textContent = `📍 ${advStop.name}`;
+        boardingRefreshUI();
+    }
 
-        const nextStop = trackStops[nextIdx];
-        const stopCode = nextStop.code;
-        if (!stopCode) { window._boardingPollBusy = false; return; }
+    // === PHASE 2: MOT API check (can advance EARLIER than schedule) ===
+    const nextIdx = curIdx + 1;
+    if (nextIdx >= trackStops.length) {
+        window._boardingPollBusy = false;
+        return;
+    }
 
-        // Fetch MOT real-time data for the next stop
+    const nextStop = trackStops[nextIdx];
+    const stopCode = nextStop.code;
+    if (!stopCode) { window._boardingPollBusy = false; return; }
+
+    try {
         const ts = Date.now();
         const url = `${PROXY}${encodeURIComponent(MOT_API + '/GetRealtimeBusLineListByBustop/' + stopCode + '/he/false')}&_t=${ts}`;
         const resp = await fetch(url, { cache: 'no-store' });
         const data = await resp.json();
         const lines = data?.value || data || [];
 
-        // Find our line at this stop
         const match = lines.find(ln => String(ln.Shilut) === lineNum);
-        const statusEl = document.getElementById('monPollStatus');
 
         if (match) {
-            // Line found at next stop — bus is approaching
             window._boardingSeenAtNext = true;
             window._boardingMissedPolls = 0;
-
             const arrivals = match.MinutesToArrivalList || (match.MinutesToArrival != null ? [match.MinutesToArrival] : []);
             const minEta = arrivals.length > 0 ? Math.min(...arrivals) : null;
             window._boardingLastEta = minEta;
 
-            if (statusEl) statusEl.textContent = `🔍 קו ${lineNum} → ${nextStop.name}: ${minEta != null ? minEta + " דק'" : 'ממתין...'}`;
+            if (statusEl) statusEl.textContent = `🚌 קו ${lineNum} → ${nextStop.name}: ${minEta != null ? minEta + " דק'" : 'מתקרב'}`;
 
             if (minEta != null && minEta <= 0) {
-                // Bus arrived at this stop → advance
                 boardingAdvanceStop(nextIdx, nextStop);
             } else if (nextStop.isDest && minEta != null && minEta <= 2 && !window._boardingAlerted) {
                 boardingTriggerAlert(dest);
             }
         } else {
-            // Line NOT found at next stop
             if (window._boardingSeenAtNext) {
-                // Was previously seen here → bus passed between polls
                 window._boardingMissedPolls++;
                 if (window._boardingMissedPolls >= 2) {
-                    // Confirmed: 2 consecutive misses → advance
                     boardingAdvanceStop(nextIdx, nextStop);
                 } else {
-                    if (statusEl) statusEl.textContent = `🔍 מאמת שקו ${lineNum} עבר את ${nextStop.name}...`;
+                    if (statusEl) statusEl.textContent = `🔍 מאמת מעבר ב${nextStop.name}...`;
                 }
             } else {
-                // Never seen at this stop yet — bus still far away, keep waiting
-                if (statusEl) statusEl.textContent = `🔍 מחפש קו ${lineNum} בתחנת ${nextStop.name}...`;
-                window._boardingLastEta = null;
+                // Calculate ETA from schedule if available
+                const nextMin = nextStop.minFromStart;
+                if (nextMin != null) {
+                    const etaEst = Math.max(0, Math.round(nextMin - elapsedMin));
+                    window._boardingLastEta = etaEst;
+                    if (statusEl) statusEl.textContent = `⏱️ ${nextStop.name}: ~${etaEst} דק' (לפי לו"ז)`;
+                } else {
+                    if (statusEl) statusEl.textContent = `🔍 מחפש קו ${lineNum}...`;
+                }
             }
         }
 
         boardingRefreshUI();
 
     } catch(e) {
-        const statusEl = document.getElementById('monPollStatus');
-        if (statusEl) statusEl.textContent = '⚠️ שגיאת תקשורת, ממשיך לנסות...';
+        // API failed — time-based tracking still works
+        if (statusEl) statusEl.textContent = `⏱️ מעקב לפי לו"ז (אין תקשורת)`;
+        boardingRefreshUI();
     }
 
     window._boardingPollBusy = false;
