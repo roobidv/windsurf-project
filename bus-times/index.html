@@ -750,6 +750,84 @@ const STOPS = [
     }
 ];
 
+// ===== Train Stations =====
+const RAIL_API = 'https://rail-api.rail.co.il/rjpa/api/v1/timetable/searchTrain';
+const RAIL_KEY = '5e64d66cf03f4547bcac5de2de06b566';
+const TRAIN_STATIONS = [
+    {id:'3600',name:'תל אביב אוניברסיטה'},
+    {id:'3700',name:'תל אביב סבידור מרכז'},
+    {id:'4600',name:'תל אביב השלום'},
+    {id:'4900',name:'תל אביב ההגנה'},
+    {id:'3500',name:'הרצליה'},
+    {id:'3400',name:'בית יהושע'},
+    {id:'3300',name:'נתניה'},
+    {id:'3310',name:'נתניה ספיר'},
+    {id:'3100',name:'חדרה מערב'},
+    {id:'2800',name:'בנימינה'},
+    {id:'2820',name:'קיסריה פרדס חנה'},
+    {id:'2500',name:'עתלית'},
+    {id:'2200',name:'חיפה בת גלים'},
+    {id:'2100',name:'חיפה מרכז השמונה'},
+    {id:'2300',name:'חיפה חוף הכרמל'},
+    {id:'1300',name:'חוצות המפרץ'},
+    {id:'1220',name:'מרכזית המפרץ'},
+    {id:'700',name:'קריית חיים'},
+    {id:'1400',name:'קריית מוצקין'},
+    {id:'1500',name:'עכו'},
+    {id:'1600',name:'נהריה'},
+    {id:'1820',name:'אחיהוד'},
+    {id:'1840',name:'כרמיאל'},
+    {id:'1240',name:'יקנעם כפר יהושע'},
+    {id:'1250',name:'מגדל העמק כפר ברוך'},
+    {id:'1260',name:'עפולה'},
+    {id:'1280',name:'בית שאן'},
+    {id:'8700',name:'כפר סבא נורדאו'},
+    {id:'8800',name:'ראש העין צפון'},
+    {id:'9200',name:'הוד השרון סוקולוב'},
+    {id:'2940',name:'רעננה מערב'},
+    {id:'2960',name:'רעננה דרום'},
+    {id:'4100',name:'בני ברק'},
+    {id:'4170',name:'פתח תקווה קריית אריה'},
+    {id:'4250',name:'פתח תקווה סגולה'},
+    {id:'5000',name:'לוד'},
+    {id:'5150',name:'לוד גני אביב'},
+    {id:'5010',name:'רמלה'},
+    {id:'4800',name:'כפר חבד'},
+    {id:'5300',name:'באר יעקב'},
+    {id:'5200',name:'רחובות'},
+    {id:'5410',name:'יבנה מזרח'},
+    {id:'9000',name:'יבנה מערב'},
+    {id:'9100',name:'ראשון לציון הראשונים'},
+    {id:'9800',name:'ראשון לציון משה דיין'},
+    {id:'4640',name:'צומת חולון'},
+    {id:'4660',name:'חולון וולפסון'},
+    {id:'4680',name:'בת ים יוספטל'},
+    {id:'4690',name:'בת ים קוממיות'},
+    {id:'5800',name:'אשדוד'},
+    {id:'5900',name:'אשקלון'},
+    {id:'9600',name:'שדרות'},
+    {id:'9650',name:'נתיבות'},
+    {id:'9700',name:'אופקים'},
+    {id:'7000',name:'קריית גת'},
+    {id:'6150',name:'קריית מלאכי יואב'},
+    {id:'6900',name:'מזכרת בתיה'},
+    {id:'7300',name:'באר שבע צפון אוניברסיטה'},
+    {id:'7320',name:'באר שבע מרכז'},
+    {id:'8550',name:'להבים רהט'},
+    {id:'7500',name:'דימונה'},
+    {id:'8600',name:'נמל תעופה בן גוריון'},
+    {id:'6300',name:'בית שמש'},
+    {id:'6500',name:'ירושלים גן החיות'},
+    {id:'6700',name:'ירושלים מלחה'},
+    {id:'680',name:'ירושלים יצחק נבון'},
+    {id:'300',name:'פאתי מודיעין'},
+    {id:'400',name:'מודיעין מרכז'}
+];
+// North termini for departure board queries
+const RAIL_NORTH_DESTS = ['1600','1840','1280'];
+// South termini
+const RAIL_SOUTH_DESTS = ['7320','680','5900','9700','400'];
+
 const MOT_API = 'https://bus.gov.il/WebApi/api/passengerinfo';
 const GTFS_API = 'https://open-bus-stride-api.hasadna.org.il';
 const PROXY = 'https://corsproxy.io/?';
@@ -1269,6 +1347,13 @@ function searchCustom() {
         selectCustomStop(val);
         return;
     }
+    // Check if it's a train station name (fuzzy match)
+    const trainStation = findTrainStation(val);
+    if (trainStation) {
+        document.getElementById('nearbyResults').classList.remove('show');
+        loadTrainBoard(trainStation);
+        return;
+    }
     // Check if it's coordinates or a Google Maps link
     const coords = extractCoords(val);
     if (coords) {
@@ -1277,6 +1362,186 @@ function searchCustom() {
     }
     // Otherwise treat as address — geocode it
     geocodeAndSearch(val);
+}
+
+function findTrainStation(query) {
+    const q = query.replace(/[-–]/g,' ').replace(/"/g,'').trim();
+    // Exact match first
+    let found = TRAIN_STATIONS.find(s => s.name === q);
+    if (found) return found;
+    // Contains match
+    found = TRAIN_STATIONS.find(s => s.name.includes(q) || q.includes(s.name));
+    if (found) return found;
+    // Fuzzy: all words in query appear in station name
+    const words = q.split(/\s+/).filter(w => w.length > 1);
+    if (words.length >= 1) {
+        found = TRAIN_STATIONS.find(s => words.every(w => s.name.includes(w)));
+        if (found) return found;
+    }
+    // Check keywords that indicate train
+    const trainKeywords = ['רכבת','תחנת רכבת','train'];
+    const isTrainQuery = trainKeywords.some(k => q.includes(k));
+    if (isTrainQuery) {
+        const cleaned = q.replace(/רכבת|תחנת|train/g,'').trim();
+        found = TRAIN_STATIONS.find(s => s.name.includes(cleaned) || cleaned.includes(s.name));
+        if (found) return found;
+        const cWords = cleaned.split(/\s+/).filter(w => w.length > 1);
+        if (cWords.length >= 1) {
+            found = TRAIN_STATIONS.find(s => cWords.every(w => s.name.includes(w)));
+        }
+    }
+    return found || null;
+}
+
+async function loadTrainBoard(station) {
+    const main = document.getElementById('mainContent');
+    // Stop bus timers
+    if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+    if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+    document.getElementById('timerText').textContent = '';
+    document.getElementById('statusDot').className = 'dot dot-load';
+    document.getElementById('statusText').textContent = '🚆 טוען רכבות...';
+
+    main.innerHTML = `
+    <div class="stop-card" style="border-right:4px solid #1565c0">
+        <div class="stop-header" style="background:#1565c0;color:white">
+            <div class="stop-header-row">
+                <span class="stop-name" style="color:white">🚆 ${esc(station.name)}</span>
+                <span class="stop-code" style="color:#bbdefb">${esc(station.id)}</span>
+            </div>
+            <div style="font-size:11px;color:#bbdefb">לוח יציאות רכבת ישראל</div>
+        </div>
+        <div id="trainBody" style="padding:10px">
+            <div style="text-align:center;padding:20px;color:#666">🔄 טוען לוח זמנים...</div>
+        </div>
+    </div>`;
+
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-CA', {timeZone:'Asia/Jerusalem'});
+    const timeStr = now.toLocaleTimeString('he-IL', {timeZone:'Asia/Jerusalem',hour:'2-digit',minute:'2-digit',hour12:false});
+
+    try {
+        // Query north and south destinations in parallel
+        const fetchDir = async (destIds) => {
+            const results = [];
+            for (const destId of destIds) {
+                if (destId === station.id) continue; // skip self
+                try {
+                    const payload = JSON.stringify({
+                        methodName: 'searchTrainLuzForDateTime',
+                        fromStation: station.id,
+                        toStation: destId,
+                        date: dateStr,
+                        hour: timeStr,
+                        systemType: '2',
+                        scheduleType: 'ByDeparture',
+                        languageId: 'Hebrew'
+                    });
+                    // Try direct first (works from Israel), fallback to CORS proxy
+                    let resp;
+                    try {
+                        resp = await fetch(RAIL_API, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'ocp-apim-subscription-key': RAIL_KEY },
+                            body: payload
+                        });
+                    } catch(_) {
+                        resp = await fetch(PROXY + encodeURIComponent(RAIL_API), {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'ocp-apim-subscription-key': RAIL_KEY },
+                            body: payload
+                        });
+                    }
+                    if (!resp.ok) continue;
+                    const data = await resp.json();
+                    if (data?.result?.travels) {
+                        data.result.travels.forEach(t => {
+                            if (t.trains && t.trains.length > 0) {
+                                const firstTrain = t.trains[0];
+                                const lastTrain = t.trains[t.trains.length - 1];
+                                const depTime = firstTrain.departureTime || t.departureTime;
+                                const destName = TRAIN_STATIONS.find(s => s.id === String(lastTrain.destinationStation))?.name || destId;
+                                const trainNum = firstTrain.trainNumber || '';
+                                const delay = firstTrain.delay || 0;
+                                results.push({
+                                    depTime,
+                                    trainNum,
+                                    dest: destName,
+                                    delay,
+                                    platform: firstTrain.platform || '',
+                                    isTransfer: t.trains.length > 1
+                                });
+                            }
+                        });
+                    }
+                } catch(_) {}
+            }
+            return results;
+        };
+
+        const [northTrains, southTrains] = await Promise.all([
+            fetchDir(RAIL_NORTH_DESTS),
+            fetchDir(RAIL_SOUTH_DESTS)
+        ]);
+
+        // Deduplicate by trainNum+depTime, sort by time
+        const dedup = (arr) => {
+            const seen = new Set();
+            return arr.filter(t => {
+                const key = t.trainNum + '|' + t.depTime;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            }).sort((a,b) => a.depTime.localeCompare(b.depTime)).slice(0,10);
+        };
+
+        const north = dedup(northTrains);
+        const south = dedup(southTrains);
+
+        const renderCol = (trains, label, color) => {
+            if (trains.length === 0) return `<div style="text-align:center;color:#999;padding:10px;font-size:12px">אין רכבות כרגע</div>`;
+            return trains.map(t => {
+                const time = t.depTime ? new Date(t.depTime).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}) : '?';
+                const delayTag = t.delay > 0 ? `<span style="color:red;font-size:10px"> +${t.delay}'</span>` : '';
+                const platTag = t.platform ? `<span style="font-size:10px;color:#666">רצ' ${t.platform}</span>` : '';
+                const transferTag = t.isTransfer ? '<span style="font-size:9px;color:#e65100">🔄</span>' : '';
+                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 4px;border-bottom:1px solid #f0f0f0;font-size:12px">
+                    <div>
+                        <b style="color:${color}">${time}</b>${delayTag} ${transferTag}
+                        <div style="font-size:10px;color:#555">${esc(t.dest)}</div>
+                    </div>
+                    <div style="text-align:left">
+                        <span style="font-size:11px;font-family:monospace">${esc(String(t.trainNum))}</span>
+                        ${platTag}
+                    </div>
+                </div>`;
+            }).join('');
+        };
+
+        const body = document.getElementById('trainBody');
+        body.innerHTML = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div>
+                    <div style="text-align:center;font-weight:700;font-size:12px;padding:4px;background:#e3f2fd;border-radius:6px;margin-bottom:4px">⬆️ צפונה</div>
+                    ${renderCol(north, 'צפון', '#1565c0')}
+                </div>
+                <div>
+                    <div style="text-align:center;font-weight:700;font-size:12px;padding:4px;background:#fce4ec;border-radius:6px;margin-bottom:4px">⬇️ דרומה</div>
+                    ${renderCol(south, 'דרום', '#c62828')}
+                </div>
+            </div>
+            <div style="text-align:center;margin-top:8px;font-size:10px;color:#999">
+                🚆 נתונים: רכבת ישראל | ${time} | 🔄=החלפה
+                ${north.some(t=>t.delay>0)||south.some(t=>t.delay>0) ? ' | <span style="color:red">+דק\'=איחור בזמן אמת</span>' : ''}
+            </div>`;
+
+        document.getElementById('statusDot').className = 'dot dot-ok';
+        document.getElementById('statusText').textContent = '🚆 ' + station.name;
+    } catch(e) {
+        document.getElementById('trainBody').innerHTML = `<div style="padding:15px;text-align:center;color:red;font-size:13px">שגיאה בטעינת לוח רכבות: ${esc(e.message)}</div>`;
+        document.getElementById('statusDot').className = 'dot dot-err';
+        document.getElementById('statusText').textContent = 'שגיאה';
+    }
 }
 
 // ===== Location-based search =====
