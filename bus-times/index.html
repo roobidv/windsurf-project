@@ -1088,9 +1088,9 @@ function renderArrivals(body, arrivals, source) {
 
         let dest = a.dest;
         if (dest) {
-            const parts = dest.split('-');
-            if (parts.length >= 2) dest = parts[parts.length-1].trim();
-            if (dest.length > 25) dest = dest.substring(0,25) + '...';
+            const dashIdx = dest.indexOf('-');
+            if (dashIdx > 0) dest = dest.substring(dashIdx + 1).trim();
+            if (dest.length > 30) dest = dest.substring(0,30) + '...';
         }
 
         const badge = a.hasGps ? ' 🛰️' : (a.isPlanned ? ' 📋' : '');
