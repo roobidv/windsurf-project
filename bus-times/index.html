@@ -840,6 +840,8 @@ let isCustom = false;
 let lastMotLines = []; // store raw MOT data for modal
 let activeLineFilter = null; // currently filtered line number
 let lastArrivals = []; // store last arrivals for filtering
+let trainTravelsCache = []; // store full train travel data for route display
+let trainBoardStation = null; // current train station being viewed
 let lastArrivalSource = ''; // store last source for re-render
 
 // ===== Helpers =====
@@ -1395,6 +1397,8 @@ function findTrainStation(query) {
 
 async function loadTrainBoard(station) {
     const main = document.getElementById('mainContent');
+    trainTravelsCache = [];
+    trainBoardStation = station;
     // Stop bus timers
     if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
     if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
@@ -1463,13 +1467,16 @@ async function loadTrainBoard(station) {
                                 const destName = TRAIN_STATIONS.find(s => s.id === String(lastTrain.destinationStation))?.name || destId;
                                 const trainNum = firstTrain.trainNumber || '';
                                 const delay = firstTrain.delay || 0;
+                                const travelIdx = trainTravelsCache.length;
+                                trainTravelsCache.push(t); // store full travel for route display
                                 results.push({
                                     depTime,
                                     trainNum,
                                     dest: destName,
                                     delay,
                                     platform: firstTrain.platform || '',
-                                    isTransfer: t.trains.length > 1
+                                    isTransfer: t.trains.length > 1,
+                                    travelIdx
                                 });
                             }
                         });
@@ -1505,7 +1512,7 @@ async function loadTrainBoard(station) {
                 const delayTag = t.delay > 0 ? `<span style="color:red;font-size:10px"> +${t.delay}'</span>` : '';
                 const platTag = t.platform ? `<span style="font-size:10px;color:#666">רצ' ${t.platform}</span>` : '';
                 const transferTag = t.isTransfer ? '<span style="font-size:9px;color:#e65100">🔄</span>' : '';
-                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 4px;border-bottom:1px solid #f0f0f0;font-size:12px">
+                return `<div onclick="showTrainRoute(${t.travelIdx})" style="display:flex;justify-content:space-between;align-items:center;padding:5px 4px;border-bottom:1px solid #f0f0f0;font-size:12px;cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''">
                     <div>
                         <b style="color:${color}">${time}</b>${delayTag} ${transferTag}
                         <div style="font-size:10px;color:#555">${esc(t.dest)}</div>
@@ -1542,6 +1549,92 @@ async function loadTrainBoard(station) {
         document.getElementById('statusDot').className = 'dot dot-err';
         document.getElementById('statusText').textContent = 'שגיאה';
     }
+}
+
+// ===== Train Route Modal =====
+function showTrainRoute(travelIdx) {
+    const travel = trainTravelsCache[travelIdx];
+    if (!travel || !travel.trains) return;
+
+    const stationId = trainBoardStation?.id || '';
+    let routeHtml = '';
+
+    travel.trains.forEach((train, segIdx) => {
+        const trainNum = train.trainNumber || '?';
+        const route = train.routeStations || train.route || [];
+        const platform = train.platform || '';
+        const destStation = TRAIN_STATIONS.find(s => s.id === String(train.destinationStation))?.name || train.destinationStation;
+        const origStation = TRAIN_STATIONS.find(s => s.id === String(train.originStation))?.name || train.originStation;
+
+        if (segIdx > 0) {
+            routeHtml += `<div style="text-align:center;padding:6px;color:#e65100;font-size:11px;font-weight:700">🔄 החלפה</div>`;
+        }
+
+        routeHtml += `<div style="background:#f8f9fa;border-radius:8px;padding:8px;margin-bottom:6px">`;
+        routeHtml += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #e0e0e0">
+            <span style="font-weight:700;font-size:13px">🚆 רכבת ${esc(String(trainNum))}</span>
+            <span style="font-size:11px;color:#666">${esc(origStation)} → ${esc(destStation)}</span>
+        </div>`;
+
+        if (platform) {
+            routeHtml += `<div style="text-align:center;margin-bottom:6px">
+                <span style="background:#1565c0;color:white;padding:3px 12px;border-radius:12px;font-size:13px;font-weight:700">רציף ${esc(platform)}</span>
+            </div>`;
+        }
+
+        // Route timeline
+        if (route.length > 0) {
+            routeHtml += `<div style="padding:0 4px">`;
+            route.forEach((stop, i) => {
+                const sId = String(stop.stationId || stop.id || '');
+                const sName = TRAIN_STATIONS.find(s => s.id === sId)?.name || sId;
+                const arrTime = stop.arrivalTime ? new Date(stop.arrivalTime).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}) : '';
+                const depTimeS = stop.departureTime ? new Date(stop.departureTime).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}) : '';
+                const timeShow = depTimeS || arrTime || '';
+                const isHere = sId === stationId;
+                const isFirst = i === 0;
+                const isLast = i === route.length - 1;
+                const stopPlatform = stop.platform || '';
+
+                const dotColor = isHere ? '#e65100' : (isFirst || isLast ? '#1565c0' : '#9e9e9e');
+                const dotSize = isHere ? '12px' : (isFirst || isLast ? '10px' : '8px');
+                const fontWeight = isHere ? '700' : (isFirst || isLast ? '600' : '400');
+                const bgColor = isHere ? '#fff3e0' : 'transparent';
+                const lineColor = '#bdbdbd';
+
+                routeHtml += `<div style="display:flex;align-items:stretch;min-height:28px">
+                    <div style="display:flex;flex-direction:column;align-items:center;width:20px;flex-shrink:0">
+                        ${i > 0 ? `<div style="width:2px;flex:1;background:${lineColor}"></div>` : '<div style="flex:1"></div>'}
+                        <div style="width:${dotSize};height:${dotSize};border-radius:50%;background:${dotColor};flex-shrink:0;border:${isHere?'2px solid #e65100':'none'}"></div>
+                        ${i < route.length-1 ? `<div style="width:2px;flex:1;background:${lineColor}"></div>` : '<div style="flex:1"></div>'}
+                    </div>
+                    <div style="flex:1;display:flex;justify-content:space-between;align-items:center;padding:2px 6px;border-radius:4px;background:${bgColor};font-size:11px;font-weight:${fontWeight}">
+                        <span>${isHere ? '📍 ' : ''}${esc(sName)}${isHere && stopPlatform ? ' <b style=\"color:#1565c0\">(רציף '+esc(stopPlatform)+')</b>' : ''}</span>
+                        <span style="color:#666;font-family:monospace;font-size:10px">${timeShow}</span>
+                    </div>
+                </div>`;
+            });
+            routeHtml += `</div>`;
+        } else {
+            // No route stations - show basic info
+            const depT = train.departureTime ? new Date(train.departureTime).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}) : '';
+            const arrT = train.arrivalTime ? new Date(train.arrivalTime).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}) : '';
+            routeHtml += `<div style="font-size:12px;padding:4px">יציאה ${depT} → הגעה ${arrT}</div>`;
+        }
+        routeHtml += `</div>`;
+    });
+
+    // Show modal
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+    overlay.innerHTML = `
+        <div class="modal-content" style="max-height:80vh;overflow-y:auto;direction:rtl;max-width:360px">
+            <div style="font-size:14px;font-weight:700;text-align:center;margin-bottom:8px">🚆 מסלול רכבת</div>
+            ${routeHtml}
+            <div class="modal-close" onclick="this.closest('.modal-overlay').remove()">סגור ✕</div>
+        </div>`;
+    document.body.appendChild(overlay);
 }
 
 // ===== Location-based search =====
