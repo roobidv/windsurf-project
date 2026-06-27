@@ -135,23 +135,7 @@
             white-space: nowrap;
         }
 
-        /* Nearby stops search */
-        .nearby-row {
-            display: flex;
-            gap: 6px;
-            margin-top: 6px;
-            align-items: center;
-        }
-        .nearby-row input {
-            flex: 1;
-            padding: 7px 10px;
-            border: 1.5px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 11px;
-            font-family: inherit;
-            direction: ltr;
-        }
-        .nearby-row input:focus { outline: none; border-color: #e65100; box-shadow: 0 0 0 2px rgba(230,81,0,0.15); }
+        /* Nearby stops results */
         .nearby-results {
             max-height: 140px;
             overflow-y: auto;
@@ -663,15 +647,12 @@
     <div class="btn-grid" id="homeButtons"></div>
     <div class="btn-section-label" style="color:var(--primary)">🔍 תחנה אקראית</div>
     <div class="custom-search">
-        <input type="text" id="customInput" placeholder="מספר תחנה..." dir="rtl" inputmode="numeric">
+        <input type="text" id="customInput" placeholder="מספר תחנה / כתובת רחוב / קואורדינטות" dir="rtl" inputmode="text">
         <button onclick="searchCustom()">חפש</button>
+        <button onclick="searchMyLocation()" style="background:#e65100;" title="תחנות לידי">📍</button>
         <button onclick="saveFavorite()" style="background:#f9a825;" title="שמור במועדפים">⭐</button>
     </div>
     <div class="btn-grid" id="favButtons" style="margin-top:6px;"></div>
-    <div class="nearby-row">
-        <input type="text" id="nearbyInput" placeholder="הדבק לינק גוגל מפות או קואורדינטות..." dir="ltr">
-        <button onclick="searchNearby()" style="background:#e65100;padding:7px 10px;font-size:12px;">📍 חפש</button>
-    </div>
     <div class="nearby-results" id="nearbyResults"></div>
     <div class="action-row">
         <button class="boarding-boarded-btn" onclick="startBoarding()">🚌 עליתי</button>
@@ -1277,33 +1258,46 @@ function closeModal() {
 function searchCustom() {
     const val = document.getElementById('customInput').value.trim();
     if (!val) return;
+    // Pure digits = stop code
     if (/^\d+$/.test(val)) {
+        document.getElementById('nearbyResults').classList.remove('show');
         selectCustomStop(val);
-    } else {
-        selectCustomStop(val, val);
+        return;
     }
+    // Check if it's coordinates or a Google Maps link
+    const coords = extractCoords(val);
+    if (coords) {
+        findNearbyStops(coords);
+        return;
+    }
+    // Otherwise treat as address — geocode it
+    geocodeAndSearch(val);
 }
 
-// ===== Nearby stops search =====
+// ===== Location-based search =====
 function extractCoords(input) {
-    // Try: 32.177906,34.894049 or 32.177906, 34.894049
-    let m = input.match(/([\d.]+)\s*,\s*([\d.]+)/);
-    if (m && parseFloat(m[1]) > 29 && parseFloat(m[1]) < 34 && parseFloat(m[2]) > 34 && parseFloat(m[2]) < 36) {
-        return { lat: parseFloat(m[1]), lon: parseFloat(m[2]) };
-    }
     // Try Google Maps link: /@32.177906,34.894049
-    m = input.match(/@([\d.]+),([\d.]+)/);
-    if (m) return { lat: parseFloat(m[1]), lon: parseFloat(m[2]) };
+    let m = input.match(/@(-?[\d.]+),(-?[\d.]+)/);
+    if (m) return normalizeCoords(parseFloat(m[1]), parseFloat(m[2]));
     // Try: ?q=32.177906,34.894049
-    m = input.match(/[?&]q=([\d.]+),([\d.]+)/);
-    if (m) return { lat: parseFloat(m[1]), lon: parseFloat(m[2]) };
-    // Try: /place/.../@32.177906,34.894049,
-    m = input.match(/\/([\d.]+),([\d.]+),/);
-    if (m && parseFloat(m[1]) > 29) return { lat: parseFloat(m[1]), lon: parseFloat(m[2]) };
+    m = input.match(/[?&]q=(-?[\d.]+),(-?[\d.]+)/);
+    if (m) return normalizeCoords(parseFloat(m[1]), parseFloat(m[2]));
     // Try: !3d32.177906!4d34.894049
-    m = input.match(/!3d([\d.]+)!4d([\d.]+)/);
-    if (m) return { lat: parseFloat(m[1]), lon: parseFloat(m[2]) };
+    m = input.match(/!3d(-?[\d.]+)!4d(-?[\d.]+)/);
+    if (m) return normalizeCoords(parseFloat(m[1]), parseFloat(m[2]));
+    // Try raw: number,number (could be lat,lon or lon,lat)
+    m = input.match(/(-?[\d.]+)\s*,\s*(-?[\d.]+)/);
+    if (m) return normalizeCoords(parseFloat(m[1]), parseFloat(m[2]));
     return null;
+}
+
+function normalizeCoords(a, b) {
+    // Israel: lat 29-34, lon 34-36. Auto-detect order.
+    if (a >= 29 && a <= 34 && b >= 34 && b <= 36) return { lat: a, lon: b };
+    if (b >= 29 && b <= 34 && a >= 34 && a <= 36) return { lat: b, lon: a };
+    // Fallback: assume lat,lon if first is smaller
+    if (a < b) return { lat: a, lon: b };
+    return { lat: b, lon: a };
 }
 
 function haversineMeters(lat1, lon1, lat2, lon2) {
@@ -1314,24 +1308,51 @@ function haversineMeters(lat1, lon1, lat2, lon2) {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-async function searchNearby() {
-    const input = document.getElementById('nearbyInput').value.trim();
+function searchMyLocation() {
     const resultsDiv = document.getElementById('nearbyResults');
-    if (!input) return;
-
-    const coords = extractCoords(input);
-    if (!coords) {
-        resultsDiv.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px;color:red">לא הצלחתי לחלץ קואורדינטות. הדבק לינק גוגל מפות או lat,lon</div>';
+    if (!navigator.geolocation) {
+        resultsDiv.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px;color:red">הדפדפן לא תומך במיקום</div>';
         resultsDiv.classList.add('show');
         return;
     }
+    resultsDiv.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px">📍 מאתר מיקום...</div>';
+    resultsDiv.classList.add('show');
+    navigator.geolocation.getCurrentPosition(
+        pos => findNearbyStops({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+        err => {
+            resultsDiv.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px;color:red">לא התקבל אישור מיקום</div>';
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+    );
+}
 
+async function geocodeAndSearch(address) {
+    const resultsDiv = document.getElementById('nearbyResults');
+    resultsDiv.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px">🔍 מחפש כתובת...</div>';
+    resultsDiv.classList.add('show');
+    try {
+        const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=il&limit=1`, {
+            headers: { 'Accept-Language': 'he' }
+        });
+        const results = await resp.json();
+        if (!results || results.length === 0) {
+            resultsDiv.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px;color:red">לא נמצאה כתובת. נסה: "רחוב עיר" או "ויצמן 5, כפר סבא"</div>';
+            return;
+        }
+        const coords = { lat: parseFloat(results[0].lat), lon: parseFloat(results[0].lon) };
+        findNearbyStops(coords);
+    } catch(e) {
+        resultsDiv.innerHTML = `<div style="padding:10px;text-align:center;font-size:12px;color:red">שגיאה: ${esc(e.message)}</div>`;
+    }
+}
+
+async function findNearbyStops(coords) {
+    const resultsDiv = document.getElementById('nearbyResults');
     resultsDiv.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px">🔄 מחפש תחנות קרובות...</div>';
     resultsDiv.classList.add('show');
 
     try {
-        // Use Overpass API to find bus stops within 150m radius
-        const query = `[out:json];node["highway"="bus_stop"](around:150,${coords.lat},${coords.lon});out body;`;
+        const query = `[out:json];node["highway"="bus_stop"](around:200,${coords.lat},${coords.lon});out body;`;
         const resp = await fetch('https://overpass-api.de/api/interpreter', {
             method: 'POST',
             body: 'data=' + encodeURIComponent(query),
@@ -1340,11 +1361,10 @@ async function searchNearby() {
         const data = await resp.json();
 
         if (!data.elements || data.elements.length === 0) {
-            resultsDiv.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px;color:#666">אין תחנות ברדיוס 150 מטר</div>';
+            resultsDiv.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px;color:#666">אין תחנות ברדיוס 200 מטר</div>';
             return;
         }
 
-        // Filter stops that have a ref (stop code) and calculate distance
         let stops = data.elements
             .filter(el => el.tags && el.tags.ref)
             .map(el => ({
@@ -1354,12 +1374,11 @@ async function searchNearby() {
             }))
             .sort((a, b) => a.dist - b.dist);
 
-        // Remove duplicates by code
         const seen = new Set();
         stops = stops.filter(s => { if (seen.has(s.code)) return false; seen.add(s.code); return true; });
 
         if (stops.length === 0) {
-            resultsDiv.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px;color:#666">נמצאו תחנות אבל בלי מספר תחנה</div>';
+            resultsDiv.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px;color:#666">נמצאו תחנות אבל בלי מספר תחנה מוכר</div>';
             return;
         }
 
@@ -1377,7 +1396,6 @@ async function searchNearby() {
 function selectFromNearby(code, name) {
     document.getElementById('customInput').value = code;
     document.getElementById('nearbyResults').classList.remove('show');
-    document.getElementById('nearbyInput').value = '';
     selectCustomStop(code, name || undefined);
 }
 
