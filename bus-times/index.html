@@ -1010,7 +1010,19 @@ function renderArrivals(body, arrivals, source) {
     lastArrivals = arrivals;
     lastArrivalSource = source;
     if (!arrivals || arrivals.length === 0) {
-        body.innerHTML = '<div class="no-data">אין אוטובוסים קרובים כרגע</div>';
+        // Check if it's Friday afternoon or Saturday — suggest "נעים בסופש"
+        const now = new Date();
+        const day = now.getDay(); // 5=Fri, 6=Sat
+        const hour = now.getHours();
+        const isWeekendTime = (day === 5 && hour >= 16) || (day === 6) || (day === 0 && hour < 2);
+        const weekendNotice = isWeekendTime
+            ? `<div style="margin-top:12px;padding:12px;background:#fff3e0;border-radius:10px;text-align:center;direction:rtl;font-size:13px">
+                🚌 <b>קווי "נעים בסופ"ש"</b> (714, 718 ועוד) אינם מופיעים ב-bus.gov.il<br>
+                <span style="font-size:11px;color:#555">שירות עירוני חינמי — שישי 16:30-02:00 | שבת 09:00-17:30</span><br>
+                <a href="https://busofash.co.il" target="_blank" style="color:#e65100;font-weight:700;text-decoration:none">🔗 busofash.co.il — לוח זמנים ותחנות</a>
+               </div>`
+            : '';
+        body.innerHTML = '<div class="no-data">אין אוטובוסים קרובים כרגע</div>' + weekendNotice;
         return;
     }
 
