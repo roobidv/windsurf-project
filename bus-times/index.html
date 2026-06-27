@@ -856,6 +856,21 @@ async function loadStop(stop) {
     document.getElementById('statusDot').className = 'dot dot-load';
     document.getElementById('statusText').textContent = 'מעדכן...';
 
+    // Always fetch official stop name from GTFS stops DB (works even on weekends)
+    try {
+        const stopsResp = await fetch(`${GTFS_API}/gtfs_stops/list?code=${stop.code}&limit=1&order_by=date%20desc`);
+        const stopsData = await stopsResp.json();
+        if (stopsData && stopsData.length > 0 && stopsData[0].name) {
+            const officialEl = document.getElementById('stopOfficialName');
+            if (officialEl) officialEl.textContent = '🚏 ' + stopsData[0].name + (stopsData[0].city ? ' | ' + stopsData[0].city : '');
+            if (isCustom && (!currentStop.name || currentStop.name.startsWith('תחנה '))) {
+                currentStop.name = stopsData[0].name;
+                const nameEl = document.querySelector('.stop-name');
+                if (nameEl) nameEl.textContent = stopsData[0].name;
+            }
+        }
+    } catch(_) {}
+
     const now = new Date();
     let source = '';
 
