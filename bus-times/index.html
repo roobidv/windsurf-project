@@ -1308,17 +1308,37 @@ function haversineMeters(lat1, lon1, lat2, lon2) {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-function calcBearing(lat1, lon1, lat2, lon2) {
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const y = Math.sin(dLon) * Math.cos(lat2 * Math.PI / 180);
-    const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) -
-              Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos(dLon);
-    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-}
-
-function bearingToHebrew(deg) {
-    const dirs = ['צפון','צפון-מזרח','מזרח','דרום-מזרח','דרום','דרום-מערב','מערב','צפון-מערב'];
-    return dirs[Math.round(deg / 45) % 8];
+async function enrichStopDirections(stops) {
+    // For each stop without a 'towards' tag, fetch MOT API to get bus destinations
+    for (const stop of stops) {
+        try {
+            const motUrl = `${MOT_API}/GetRealtimeBusLineListByBustop/${stop.code}/he/false?_t=${Date.now()}`;
+            const resp = await fetch(PROXY + encodeURIComponent(motUrl), { cache: 'no-store' });
+            if (!resp.ok) continue;
+            const raw = await resp.json();
+            const lines = raw?.value || raw || [];
+            if (lines.length > 0) {
+                // Get unique destinations
+                const dests = [...new Set(lines.map(l => {
+                    let d = l.DestinationQuarterName || l.Description || '';
+                    const dashIdx = d.indexOf('-');
+                    if (dashIdx > 0) d = d.substring(dashIdx + 1).trim();
+                    return d;
+                }).filter(d => d))].slice(0, 2);
+                const dirEl = document.getElementById('dir_' + stop.code);
+                if (dirEl && dests.length > 0) {
+                    dirEl.textContent = '→ ל' + dests.join(', ');
+                    dirEl.style.color = '#1a73e8';
+                }
+            } else {
+                const dirEl = document.getElementById('dir_' + stop.code);
+                if (dirEl) dirEl.textContent = '';
+            }
+        } catch(_) {
+            const dirEl = document.getElementById('dir_' + stop.code);
+            if (dirEl) dirEl.textContent = '';
+        }
+    }
 }
 
 function searchMyLocation() {
@@ -1380,18 +1400,12 @@ async function findNearbyStops(coords) {
 
         let stops = data.elements
             .filter(el => el.tags && el.tags.ref)
-            .map(el => {
-                const bearing = calcBearing(coords.lat, coords.lon, el.lat, el.lon);
-                const compassDir = bearingToHebrew(bearing);
-                const towards = el.tags.towards || el.tags['towards:he'] || '';
-                const direction = towards || ('לכיוון ' + compassDir);
-                return {
-                    code: el.tags.ref,
-                    name: el.tags.name || el.tags['name:he'] || '',
-                    dist: Math.round(haversineMeters(coords.lat, coords.lon, el.lat, el.lon)),
-                    direction
-                };
-            })
+            .map(el => ({
+                code: el.tags.ref,
+                name: el.tags.name || el.tags['name:he'] || '',
+                dist: Math.round(haversineMeters(coords.lat, coords.lon, el.lat, el.lon)),
+                towards: el.tags.towards || el.tags['towards:he'] || ''
+            }))
             .sort((a, b) => a.dist - b.dist);
 
         const seen = new Set();
@@ -1407,11 +1421,14 @@ async function findNearbyStops(coords) {
                 <span>
                     <span class="ni-name">${esc(s.name || 'תחנה')}</span>
                     <span class="ni-dist">${s.dist} מ'</span>
-                    <span style="font-size:10px;color:#555;display:block">→ ${esc(s.direction)}</span>
+                    <span id="dir_${esc(s.code)}" style="font-size:10px;color:#555;display:block">${s.towards ? '→ ' + esc(s.towards) : '⏳ טוען כיוון...'}</span>
                 </span>
                 <span class="ni-code">${esc(s.code)}</span>
             </div>`
         ).join('');
+
+        // Enrich with real destinations from MOT API
+        enrichStopDirections(stops.filter(s => !s.towards));
     } catch(e) {
         resultsDiv.innerHTML = `<div style="padding:10px;text-align:center;font-size:12px;color:red">שגיאה: ${esc(e.message)}</div>`;
     }
