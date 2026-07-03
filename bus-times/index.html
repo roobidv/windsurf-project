@@ -1957,15 +1957,20 @@ function startBoarding() {
     if (!currentStop) { alert('בחר תחנה קודם'); return; }
     if (!lastMotLines || lastMotLines.length === 0) { alert('אין נתוני אוטובוסים. רענן קודם.'); return; }
 
-    // Get unique line numbers from current MOT data
+    // Get unique line numbers from current MOT data — only buses arriving within 10 minutes
+    const nearLines = lastMotLines.filter(ln => ln.MinutesToArrival <= 10);
     const uniqueLines = [];
     const seen = new Set();
-    for (const ln of lastMotLines) {
+    for (const ln of nearLines) {
         const key = ln.Shilut;
         if (!seen.has(key)) {
             seen.add(key);
             uniqueLines.push(ln);
         }
+    }
+    if (uniqueLines.length === 0) {
+        alert('אין אוטובוסים בטווח 10 דקות. רענן ונסה שוב.');
+        return;
     }
 
     let btns = uniqueLines.map(ln => {
