@@ -100,6 +100,16 @@
             overflow: hidden;
             text-align: center;
             transition: transform 0.1s, box-shadow 0.1s;
+            position: relative;
+        }
+        .stop-btn-num {
+            position: absolute;
+            top: 2px;
+            right: 3px;
+            font-size: 8px;
+            font-weight: 900;
+            opacity: 0.75;
+            line-height: 1;
         }
         .stop-btn:active { transform: scale(0.96); }
         .stop-btn.btn-base { background: var(--green-btn); }
@@ -617,14 +627,14 @@
             display: flex; gap: 8px; padding: 8px 12px; align-items: center;
         }
         .boarding-boarded-btn {
-            flex: 2; padding: 12px; background: #e65100; color: #fff; border: none;
-            border-radius: 14px; font-size: 15px; font-weight: 800;
+            flex: 2; padding: 7px 12px; background: #e65100; color: #fff; border: none;
+            border-radius: 10px; font-size: 13px; font-weight: 700;
             cursor: pointer; text-align: center;
         }
         .boarding-boarded-btn:hover { background: #bf360c; }
         .action-refresh-btn {
-            flex: 1; padding: 12px; background: var(--primary); color: #fff; border: none;
-            border-radius: 14px; font-size: 15px; font-weight: 800;
+            flex: 1; padding: 7px 12px; background: var(--primary); color: #fff; border: none;
+            border-radius: 10px; font-size: 13px; font-weight: 700;
             cursor: pointer; text-align: center;
         }
         .action-refresh-btn:hover { background: #1557b0; }
@@ -748,6 +758,15 @@ const STOPS = [
         dir: 'home',
         img: '38243.jpg',
         lat: 32.102663, lon: 34.898345
+    },
+    {
+        code: '27063',
+        name: 'צומת גהה הביתה',
+        desc: 'תחנה בצומת גהה לכיוון הבית',
+        lines: [],
+        dir: 'home',
+        img: '',
+        lat: 32.085, lon: 34.888
     }
 ];
 
@@ -889,7 +908,8 @@ function buildButtons() {
     STOPS.forEach((s, i) => {
         const btn = document.createElement('button');
         btn.className = 'stop-btn ' + (s.dir === 'base' ? 'btn-base' : 'btn-home');
-        btn.textContent = s.name;
+        const num = i + 1;
+        btn.innerHTML = `<span class="stop-btn-num">${num}</span>${s.name}`;
         btn.title = s.code + ' — ' + s.desc;
         btn.dataset.idx = i;
         btn.onclick = () => selectStop(i);
@@ -1202,8 +1222,16 @@ function renderArrivals(body, arrivals, source) {
 
         let dest = a.dest;
         if (dest) {
+            // Only strip prefix before dash if the part after it is meaningful and longer
             const dashIdx = dest.indexOf('-');
-            if (dashIdx > 0) dest = dest.substring(dashIdx + 1).trim();
+            if (dashIdx > 0) {
+                const afterDash = dest.substring(dashIdx + 1).trim();
+                const beforeDash = dest.substring(0, dashIdx).trim();
+                // Only cut if the before part is short (city code / operator prefix)
+                if (beforeDash.length <= 6 && afterDash.length > 2) {
+                    dest = afterDash;
+                }
+            }
             if (dest.length > 30) dest = dest.substring(0,30) + '...';
         }
 
