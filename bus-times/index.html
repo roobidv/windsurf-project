@@ -566,11 +566,12 @@
         .monitor-bar-top { display: flex; align-items: center; justify-content: space-between; }
         .monitor-bar-line { font-size: 20px; font-weight: 900; }
         .monitor-bar-dest { font-size: 13px; opacity: 0.85; margin-top: 2px; }
-        .monitor-bar-stats { display: flex; gap: 16px; align-items: center; }
+        .monitor-bar-stats { display: flex; gap: 12px; align-items: center; }
         .monitor-bar-stat { text-align: center; }
-        .monitor-bar-num { font-size: 22px; font-weight: 900; }
+        .monitor-bar-num { font-size: 20px; font-weight: 900; }
         .monitor-bar-num.urgent { color: #ff5252; animation: pulse 1s infinite; }
         .monitor-bar-lbl { font-size: 9px; opacity: 0.7; }
+        .monitor-bar-dist { font-size: 11px; opacity: 0.8; margin-top: 3px; direction: rtl; }
         .monitor-bar-progress { height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; margin-top: 8px; overflow: hidden; }
         .monitor-bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, #4caf50, #ff9800, #f44336); transition: width 1s ease; }
         .monitor-bar-expand { text-align: center; font-size: 10px; opacity: 0.5; margin-top: 4px; }
@@ -613,11 +614,16 @@
         .track-stop.current .track-time { color: #1565c0; font-weight: 700; }
         .track-city { font-size: 10px; color: #ccc; }
         @keyframes dotPulse { 0%,100% { box-shadow: 0 0 6px rgba(21,101,192,0.3); } 50% { box-shadow: 0 0 16px rgba(21,101,192,0.7); } }
-        .monitor-panel-stats { display: flex; justify-content: space-around; padding: 12px 0; }
+        .monitor-panel-stats { display: flex; justify-content: space-around; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
         .monitor-stat { text-align: center; }
-        .monitor-stat-val { font-size: 26px; font-weight: 900; color: #1565c0; }
-        .monitor-stat-label { font-size: 11px; color: #888; }
+        .monitor-stat-val { font-size: 24px; font-weight: 900; color: #1565c0; }
+        .monitor-stat-label { font-size: 10px; color: #888; margin-top: 2px; }
         .monitor-stat-val.urgent { color: #d32f2f; animation: pulse 1s infinite; }
+        .monitor-dist-row { display: flex; justify-content: space-around; padding: 8px 16px; background: #f8f9fa; border-bottom: 1px solid #f0f0f0; }
+        .monitor-dist-item { text-align: center; }
+        .monitor-dist-val { font-size: 18px; font-weight: 800; color: #2e7d32; }
+        .monitor-dist-val.near { color: #d32f2f; }
+        .monitor-dist-lbl { font-size: 10px; color: #888; }
         .monitor-alert-banner {
             background: #d32f2f; color: #fff; text-align: center; padding: 14px;
             font-size: 18px; font-weight: 800; animation: pulse 1s infinite;
@@ -2255,7 +2261,10 @@ async function boardingStartMonitor() {
         city: startStop.gtfs_stop__city || '',
         code: String(startStop.gtfs_stop__code || ''),
         isDest: false, isAlert: false,
-        minFromStart: 0
+        minFromStart: 0,
+        lat: startStop.gtfs_stop__lat || null,
+        lon: startStop.gtfs_stop__lon || null,
+        arrivalTime: startStop.arrival_time || null
     });
     for (let i = 0; i <= destIdx; i++) {
         const s = remaining[i];
@@ -2270,7 +2279,10 @@ async function boardingStartMonitor() {
             code: String(s.gtfs_stop__code || ''),
             isDest: (i === destIdx),
             isAlert: (i === destIdx - 1),
-            minFromStart: minFromStart
+            minFromStart: minFromStart,
+            lat: s.gtfs_stop__lat || null,
+            lon: s.gtfs_stop__lon || null,
+            arrivalTime: s.arrival_time || null
         });
     }
 
@@ -2464,7 +2476,8 @@ function boardingCreateMonitorUI(lineNum, dest, trackStops) {
                 </div>
             </div>
         </div>
-        <div class="monitor-bar-progress"><div class="monitor-bar-fill" id="barFill" style="width:0%"></div></div>
+        <div id="barDistRow" style="font-size:11px;opacity:0.75;margin-top:3px;direction:rtl"></div>
+        <div class="monitor-bar-progress" style="margin-top:6px"><div class="monitor-bar-fill" id="barFill" style="width:0%"></div></div>
         <div class="monitor-bar-expand">▲ הקש לפרטים</div>
     `;
     bar.onclick = () => toggleMonitorPanel(true);
@@ -2500,6 +2513,20 @@ function boardingCreateMonitorUI(lineNum, dest, trackStops) {
             <div class="monitor-stat">
                 <div class="monitor-stat-val" id="panelMins">-</div>
                 <div class="monitor-stat-label">דקות לתחנה הבאה</div>
+            </div>
+            <div class="monitor-stat">
+                <div class="monitor-stat-val" id="panelETA" style="font-size:18px">-</div>
+                <div class="monitor-stat-label">הגעה צפויה ליעד</div>
+            </div>
+        </div>
+        <div class="monitor-dist-row">
+            <div class="monitor-dist-item">
+                <div class="monitor-dist-val" id="panelDistKm">-</div>
+                <div class="monitor-dist-lbl">ק"מ ליעד</div>
+            </div>
+            <div class="monitor-dist-item">
+                <div class="monitor-dist-val" id="panelDistStops">-</div>
+                <div class="monitor-dist-lbl">תחנות ליעד</div>
             </div>
         </div>
         <div id="monPollStatus" style="font-size:12px;color:#888;text-align:center;margin:4px 0;direction:rtl"></div>
@@ -2555,23 +2582,47 @@ function boardingRefreshUI() {
     const isUrgent = stopsLeft <= 2;
     const eta = window._boardingLastEta;
     const currentStopName = trackStops[curIdx]?.name || '';
+    const destStop = trackStops[trackStops.length - 1];
+
+    // === מרחק ליעד ===
+    let distKmText = '-';
+    const curStop = trackStops[curIdx];
+    if (curStop?.lat && destStop?.lat) {
+        const distM = haversine(curStop.lat, curStop.lon, destStop.lat, destStop.lon);
+        distKmText = (distM / 1000).toFixed(1);
+    }
+
+    // === זמן הגעה צפוי ליעד מ-GTFS ===
+    let destEtaText = '-';
+    if (destStop?.arrivalTime) {
+        const destTime = new Date(destStop.arrivalTime);
+        destEtaText = destTime.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+    }
 
     // Bar
     const barStops = document.getElementById('barStops');
     const barMins = document.getElementById('barMins');
     const barFill = document.getElementById('barFill');
     const barCurrent = document.getElementById('barCurrentStop');
+    const barDistRow = document.getElementById('barDistRow');
     if (barStops) { barStops.textContent = stopsLeft > 0 ? stopsLeft : '✓'; barStops.className = 'monitor-bar-num' + (isUrgent ? ' urgent' : ''); }
     if (barMins) { barMins.textContent = eta != null ? '~' + eta : '?'; barMins.className = 'monitor-bar-num' + (isUrgent ? ' urgent' : ''); }
     if (barFill) barFill.style.width = progressPct + '%';
     if (barCurrent) barCurrent.textContent = '📍 ' + currentStopName;
+    if (barDistRow) barDistRow.textContent = distKmText !== '-' ? `📏 ${distKmText} ק"מ ליעד${destEtaText !== '-' ? ' · הגעה ~' + destEtaText : ''}` : '';
 
     // Panel stats
     const panelStops = document.getElementById('panelStops');
     const panelMins = document.getElementById('panelMins');
+    const panelETA = document.getElementById('panelETA');
+    const panelDistKm = document.getElementById('panelDistKm');
+    const panelDistStops = document.getElementById('panelDistStops');
     const trackFill = document.getElementById('trackFill');
     if (panelStops) { panelStops.textContent = stopsLeft > 0 ? stopsLeft : '✓'; panelStops.className = 'monitor-stat-val' + (isUrgent ? ' urgent' : ''); }
     if (panelMins) { panelMins.textContent = eta != null ? '~' + eta : '?'; panelMins.className = 'monitor-stat-val' + (isUrgent ? ' urgent' : ''); }
+    if (panelETA) panelETA.textContent = destEtaText;
+    if (panelDistKm) { panelDistKm.textContent = distKmText !== '-' ? distKmText : '-'; panelDistKm.className = 'monitor-dist-val' + (stopsLeft <= 3 ? ' near' : ''); }
+    if (panelDistStops) { panelDistStops.textContent = stopsLeft > 0 ? stopsLeft : '✓'; panelDistStops.className = 'monitor-dist-val' + (isUrgent ? ' near' : ''); }
     if (trackFill) trackFill.style.height = progressPct + '%';
 
     // Track dots and names
