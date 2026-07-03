@@ -2677,11 +2677,38 @@ function boardingRefreshUI() {
     }, 200);
 }
 
+function playVictorySound() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const notes = [
+            { freq: 523, start: 0.0,  dur: 0.15 },  // C5
+            { freq: 659, start: 0.15, dur: 0.15 },  // E5
+            { freq: 784, start: 0.30, dur: 0.15 },  // G5
+            { freq: 1047,start: 0.45, dur: 0.40 },  // C6 — צליל ניצחון ארוך
+            { freq: 784, start: 0.90, dur: 0.12 },  // G5
+            { freq: 1047,start: 1.05, dur: 0.55 },  // C6 — סיום
+        ];
+        notes.forEach(n => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(n.freq, ctx.currentTime + n.start);
+            gain.gain.setValueAtTime(0.5, ctx.currentTime + n.start);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + n.start + n.dur);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(ctx.currentTime + n.start);
+            osc.stop(ctx.currentTime + n.start + n.dur);
+        });
+    } catch(e) {}
+}
+
 function boardingTriggerAlert(dest) {
     if (window._boardingAlerted) return;
     window._boardingAlerted = true;
 
-    // Double vibration series (user requested two series, one is not enough)
+    // Victory sound + vibration
+    playVictorySound();
     if (navigator.vibrate) {
         navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
         setTimeout(() => {
