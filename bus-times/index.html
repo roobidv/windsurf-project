@@ -2296,7 +2296,22 @@ async function boardingStartMonitor() {
     window._boardingPollBusy = false;
     window._boardingSeenAtNext = false;
     window._boardingMissedPolls = 0;
-    window._boardingDepartTime = new Date(); // monitoring starts NOW
+    // DepartTime = now, but offset so minFromStart=0 matches boarding stop GTFS time
+    // This ensures time-based progression is relative to actual current time
+    const gtfsStartMs = startTime || Date.now();
+    const realNowMs = Date.now();
+    // If GTFS time is in the past (bus already departed) — use now as anchor
+    // If GTFS time is in the future (we boarded early) — still use now
+    window._boardingDepartTime = new Date(realNowMs - 0); // anchor = now
+    // Recalculate minFromStart relative to NOW vs GTFS arrival times
+    const nowMs = Date.now();
+    for (let i = 1; i < trackStops.length; i++) {
+        if (trackStops[i].arrivalTime) {
+            const stopMs = new Date(trackStops[i].arrivalTime).getTime();
+            trackStops[i].minFromStart = Math.max(0, (stopMs - nowMs) / 60000);
+        }
+    }
+    trackStops[0].minFromStart = 0;
 
     // Close wizard overlay
     closeBoarding();
@@ -2592,11 +2607,16 @@ function boardingRefreshUI() {
         distKmText = (distM / 1000).toFixed(1);
     }
 
-    // === זמן הגעה צפוי ליעד מ-GTFS (אזור זמן ישראל) ===
+    // === זמן הגעה צפוי ליעד — לפי minFromStart שנשאר ===
     let destEtaText = '-';
-    if (destStop?.arrivalTime) {
-        const destTime = new Date(destStop.arrivalTime);
-        destEtaText = destTime.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem' });
+    if (destStop?.minFromStart != null && destStop.minFromStart >= 0) {
+        const etaMs = Date.now() + destStop.minFromStart * 60000;
+        destEtaText = new Date(etaMs).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem' });
+    } else if (destStop?.arrivalTime) {
+        const destMs = new Date(destStop.arrivalTime).getTime();
+        if (destMs > Date.now()) {
+            destEtaText = new Date(destMs).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem' });
+        }
     }
 
     // Bar
