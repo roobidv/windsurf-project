@@ -630,16 +630,16 @@
             margin: 0 16px 10px; border-radius: 12px;
         }
         .action-row {
-            display: flex; gap: 8px; padding: 8px 12px; align-items: center;
+            display: flex; gap: 8px; padding: 8px 12px; align-items: center; justify-content: flex-end;
         }
         .boarding-boarded-btn {
-            flex: 2; padding: 4px 8px; background: #e65100; color: #fff; border: none;
-            border-radius: 8px; font-size: 11px; font-weight: 700;
+            padding: 7px 12px; background: #e65100; color: #fff; border: none;
+            border-radius: 10px; font-size: 13px; font-weight: 700;
             cursor: pointer; text-align: center;
         }
         .boarding-boarded-btn:hover { background: #bf360c; }
         .action-refresh-btn {
-            flex: 1; padding: 7px 12px; background: var(--primary); color: #fff; border: none;
+            padding: 7px 12px; background: var(--primary); color: #fff; border: none;
             border-radius: 10px; font-size: 13px; font-weight: 700;
             cursor: pointer; text-align: center;
         }
@@ -677,8 +677,8 @@
     <div class="btn-grid" id="favButtons" style="margin-top:6px;"></div>
     <div class="nearby-results" id="nearbyResults"></div>
     <div class="action-row">
-        <button class="boarding-boarded-btn" onclick="startBoarding()">🚌 עליתי</button>
         <button class="action-refresh-btn" onclick="refreshCurrent()">🔄 רענן</button>
+        <button class="boarding-boarded-btn" onclick="startBoarding()">🚌 עליתי</button>
     </div>
     <div style="text-align:center;padding:2px 0"><span class="timer" id="timerText" style="font-size:11px;color:var(--text-muted)"></span></div>
 </div>
