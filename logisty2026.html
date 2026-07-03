@@ -6,6 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <title>LOGISTY 2026</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1005,6 +1006,74 @@
             animation: spin 0.6s linear infinite;
             vertical-align: middle;
         }
+
+        /* Map */
+        .map-fab {
+            position: fixed;
+            bottom: 70px;
+            left: 16px;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 101;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+        .map-fab:active { transform: scale(0.9); }
+        .map-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: white;
+            z-index: 10001;
+            display: none;
+            flex-direction: column;
+        }
+        .map-overlay.visible { display: flex; }
+        .map-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--primary);
+            color: white;
+            flex-shrink: 0;
+        }
+        .map-header h3 { margin: 0; font-size: 16px; }
+        .map-close-btn {
+            font-size: 22px;
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+        .map-status {
+            font-size: 12px;
+            opacity: 0.85;
+        }
+        #mapContainer {
+            flex: 1;
+            min-height: 0;
+        }
+        .map-btn {
+            background: var(--green);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 3px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .map-btn:active { opacity: 0.7; }
     </style>
 </head>
 <body>
@@ -1152,6 +1221,17 @@
             <div class="spinner"></div>
             <div>טוען נתונים מ-Google Sheets...</div>
         </div>
+    </div>
+
+    <button class="map-fab" onclick="openMapView()" title="מפת מוסדות">🗺️</button>
+
+    <div class="map-overlay" id="mapOverlay">
+        <div class="map-header">
+            <h3>🗺️ מפת מוסדות</h3>
+            <span class="map-status" id="mapStatus"></span>
+            <button class="map-close-btn" onclick="closeMapView()">✕</button>
+        </div>
+        <div id="mapContainer"></div>
     </div>
 
     <div class="summary-bar">
@@ -1510,6 +1590,7 @@
                             <div class="contact-row-label">📍 כתובת</div>
                             <div class="email-row">
                                 <input class="email-input rtl" type="text" data-field="address" data-key="${baseKey}" value="${esc(gV('address'))}" placeholder="כתובת בית הספר" oninput="saveFieldLocal(this)" onblur="saveFieldCloud(this)">
+                                <button class="map-btn" onclick="event.stopPropagation();openGoogleMaps('${esc(gV('address'))}','${esc(r.authority)}','${esc(r.name)}')">🗺️</button>
                                 <button class="phone-btn copy" onclick="copyEmail(this)">📋</button>
                             </div>
                         </div>
@@ -2659,6 +2740,108 @@
 
         // Load - check auth first
         checkAuth();
+
+        /* ── Google Maps link per institution ── */
+        function openGoogleMaps(address, authority, name) {
+            let q = '';
+            if (address) {
+                q = address + ', ' + authority + ', ישראל';
+            } else {
+                q = name + ', ' + authority + ', ישראל';
+            }
+            window.open('https://www.google.com/maps/search/' + encodeURIComponent(q), '_blank');
+        }
+
+        /* ── Full map view with Leaflet ── */
+        let _leafletLoaded = false;
+        let _map = null;
+        let _markersLayer = null;
+
+        function _loadLeaflet() {
+            return new Promise((resolve) => {
+                if (_leafletLoaded) return resolve();
+                const s = document.createElement('script');
+                s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                s.onload = () => { _leafletLoaded = true; resolve(); };
+                document.head.appendChild(s);
+            });
+        }
+
+        async function openMapView() {
+            const overlay = document.getElementById('mapOverlay');
+            overlay.classList.add('visible');
+            document.getElementById('mapStatus').textContent = 'טוען מפה...';
+
+            await _loadLeaflet();
+
+            if (!_map) {
+                _map = L.map('mapContainer').setView([31.5, 34.8], 8);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap'
+                }).addTo(_map);
+            }
+            setTimeout(() => _map.invalidateSize(), 200);
+
+            _plotInstitutions();
+        }
+
+        function closeMapView() {
+            document.getElementById('mapOverlay').classList.remove('visible');
+        }
+
+        async function _plotInstitutions() {
+            if (_markersLayer) _map.removeLayer(_markersLayer);
+            _markersLayer = L.layerGroup().addTo(_map);
+
+            const rows = filteredRows.length > 0 ? filteredRows : allRows;
+            const byAuth = {};
+            rows.forEach(r => {
+                const key = r.authority;
+                if (!key) return;
+                if (!byAuth[key]) byAuth[key] = [];
+                byAuth[key].push(r);
+            });
+
+            const authorities = Object.keys(byAuth);
+            document.getElementById('mapStatus').textContent = 'מסמן ' + authorities.length + ' ישובים...';
+
+            const bounds = [];
+            let done = 0;
+
+            for (const auth of authorities) {
+                try {
+                    const resp = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(auth + ', ישראל') + '&limit=1&accept-language=he');
+                    const data = await resp.json();
+                    if (data && data.length > 0) {
+                        const lat = parseFloat(data[0].lat);
+                        const lon = parseFloat(data[0].lon);
+                        bounds.push([lat, lon]);
+
+                        const insts = byAuth[auth];
+                        const popupLines = insts.slice(0, 15).map(r => {
+                            const addr = localStorage.getItem('address_' + r.code + '_' + r.level.replace(/"/g,'')) || r.address || '';
+                            const gLink = 'https://www.google.com/maps/search/' + encodeURIComponent((addr || r.name) + ', ' + auth + ', ישראל');
+                            return '<b>' + esc(r.name) + '</b> (' + esc(r.code) + ') <a href="' + gLink + '" target="_blank">🗺️</a>';
+                        });
+                        if (insts.length > 15) popupLines.push('<i>...ועוד ' + (insts.length - 15) + '</i>');
+                        const popupHtml = '<div style="direction:rtl;font-size:13px;max-height:200px;overflow-y:auto"><b style="color:#2563eb">' + esc(auth) + '</b> (' + insts.length + ')<hr style="margin:4px 0">' + popupLines.join('<br>') + '</div>';
+
+                        const marker = L.marker([lat, lon]).addTo(_markersLayer);
+                        marker.bindPopup(popupHtml, {maxWidth: 300});
+                    }
+                } catch(e) {}
+                done++;
+                if (done % 5 === 0) {
+                    document.getElementById('mapStatus').textContent = done + '/' + authorities.length + ' ישובים';
+                    await new Promise(r => setTimeout(r, 200));
+                }
+            }
+
+            if (bounds.length > 0) {
+                _map.fitBounds(bounds, {padding: [30, 30]});
+            }
+            document.getElementById('mapStatus').textContent = bounds.length + ' ישובים על המפה';
+        }
     </script>
 </body>
 </html>
