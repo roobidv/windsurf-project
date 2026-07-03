@@ -2343,10 +2343,10 @@ async function boardingPollNextStop() {
         curIdx = timeIdx;
         const advStop = trackStops[timeIdx];
         if (advStop.isAlert && !window._boardingAlerted) {
-            boardingTriggerAlert(dest);
+            boardingTriggerAlert(dest, false);
         }
         if (advStop.isDest) {
-            if (!window._boardingAlerted) boardingTriggerAlert(dest);
+            if (!window._boardingAlerted) boardingTriggerAlert(dest, true);
             if (statusEl) statusEl.textContent = `🏁 הגעת ליעד: ${advStop.name}!`;
             clearInterval(boardingTimer); boardingTimer = null;
             boardingRefreshUI();
@@ -2389,7 +2389,7 @@ async function boardingPollNextStop() {
             if (minEta != null && minEta <= 0) {
                 boardingAdvanceStop(nextIdx, nextStop);
             } else if (nextStop.isDest && minEta != null && minEta <= 2 && !window._boardingAlerted) {
-                boardingTriggerAlert(dest);
+                boardingTriggerAlert(dest, true);
             }
         } else {
             if (window._boardingSeenAtNext) {
@@ -2435,12 +2435,12 @@ function boardingAdvanceStop(nextIdx, nextStop) {
 
     // Check if this is an alert stop (one before dest)
     if (nextStop.isAlert && !window._boardingAlerted) {
-        boardingTriggerAlert(dest);
+        boardingTriggerAlert(dest, false);
     }
 
     // Check if this is the destination
     if (nextStop.isDest) {
-        if (!window._boardingAlerted) boardingTriggerAlert(dest);
+        if (!window._boardingAlerted) boardingTriggerAlert(dest, true);
         if (statusEl) statusEl.textContent = `🏁 הגעת ליעד: ${nextStop.name}!`;
         clearInterval(boardingTimer);
         boardingTimer = null;
@@ -2712,12 +2712,14 @@ function playVictorySound() {
     } catch(e) {}
 }
 
-function boardingTriggerAlert(dest) {
+function boardingTriggerAlert(dest, isDestination) {
     if (window._boardingAlerted) return;
     window._boardingAlerted = true;
 
-    // Victory sound + vibration
-    playVictorySound();
+    // Victory sound only at the stop BEFORE destination
+    if (!isDestination) playVictorySound();
+
+    // Vibration always
     if (navigator.vibrate) {
         navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
         setTimeout(() => {
@@ -2727,8 +2729,8 @@ function boardingTriggerAlert(dest) {
 
     // Notification
     if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('🚌 תתכונן לרדת!', {
-            body: dest.gtfs_stop__name + ' — עוד 2 דקות!',
+        new Notification(isDestination ? '🏁 הגעת ליעד!' : '🚌 תתכונן לרדת!', {
+            body: isDestination ? dest.gtfs_stop__name : dest.gtfs_stop__name + ' — עוד תחנה!',
             requireInteraction: true,
             tag: 'bus-alert'
         });
