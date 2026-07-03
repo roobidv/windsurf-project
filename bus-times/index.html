@@ -1222,16 +1222,6 @@ function renderArrivals(body, arrivals, source) {
 
         let dest = a.dest;
         if (dest) {
-            // Only strip prefix before dash if the part after it is meaningful and longer
-            const dashIdx = dest.indexOf('-');
-            if (dashIdx > 0) {
-                const afterDash = dest.substring(dashIdx + 1).trim();
-                const beforeDash = dest.substring(0, dashIdx).trim();
-                // Only cut if the before part is short (city code / operator prefix)
-                if (beforeDash.length <= 6 && afterDash.length > 2) {
-                    dest = afterDash;
-                }
-            }
             if (dest.length > 30) dest = dest.substring(0,30) + '...';
         }
 
