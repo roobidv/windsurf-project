@@ -2592,11 +2592,11 @@ function boardingRefreshUI() {
         distKmText = (distM / 1000).toFixed(1);
     }
 
-    // === זמן הגעה צפוי ליעד מ-GTFS ===
+    // === זמן הגעה צפוי ליעד מ-GTFS (אזור זמן ישראל) ===
     let destEtaText = '-';
     if (destStop?.arrivalTime) {
         const destTime = new Date(destStop.arrivalTime);
-        destEtaText = destTime.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+        destEtaText = destTime.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem' });
     }
 
     // Bar
