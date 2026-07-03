@@ -2716,8 +2716,8 @@ function boardingTriggerAlert(dest, isDestination) {
     if (window._boardingAlerted) return;
     window._boardingAlerted = true;
 
-    // Victory sound only at the stop BEFORE destination
-    if (!isDestination) playVictorySound();
+    // Victory sound always
+    playVictorySound();
 
     // Vibration always
     if (navigator.vibrate) {
