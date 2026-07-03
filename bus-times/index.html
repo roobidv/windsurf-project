@@ -2296,22 +2296,7 @@ async function boardingStartMonitor() {
     window._boardingPollBusy = false;
     window._boardingSeenAtNext = false;
     window._boardingMissedPolls = 0;
-    // DepartTime = now, but offset so minFromStart=0 matches boarding stop GTFS time
-    // This ensures time-based progression is relative to actual current time
-    const gtfsStartMs = startTime || Date.now();
-    const realNowMs = Date.now();
-    // If GTFS time is in the past (bus already departed) — use now as anchor
-    // If GTFS time is in the future (we boarded early) — still use now
-    window._boardingDepartTime = new Date(realNowMs - 0); // anchor = now
-    // Recalculate minFromStart relative to NOW vs GTFS arrival times
-    const nowMs = Date.now();
-    for (let i = 1; i < trackStops.length; i++) {
-        if (trackStops[i].arrivalTime) {
-            const stopMs = new Date(trackStops[i].arrivalTime).getTime();
-            trackStops[i].minFromStart = Math.max(0, (stopMs - nowMs) / 60000);
-        }
-    }
-    trackStops[0].minFromStart = 0;
+    window._boardingDepartTime = new Date();
 
     // Close wizard overlay
     closeBoarding();
@@ -2337,15 +2322,17 @@ async function boardingPollNextStop() {
     const statusEl = document.getElementById('monPollStatus');
     let curIdx = window._boardingCurrentIdx;
 
-    // === PHASE 1: Time-based advancement ===
-    // Use GTFS scheduled times to advance the slider
-    const elapsedMin = (Date.now() - window._boardingDepartTime.getTime()) / 60000;
+    // === PHASE 1: Time-based advancement using absolute GTFS arrival times ===
+    const nowMs = Date.now();
     let timeIdx = curIdx;
     for (let i = curIdx + 1; i < trackStops.length; i++) {
-        if (trackStops[i].minFromStart != null && elapsedMin >= trackStops[i].minFromStart) {
-            timeIdx = i;
-        } else {
-            break;
+        const s = trackStops[i];
+        if (s.arrivalTime) {
+            const stopMs = new Date(s.arrivalTime).getTime();
+            if (nowMs >= stopMs) { timeIdx = i; } else { break; }
+        } else if (s.minFromStart != null) {
+            const elapsedMin = (nowMs - window._boardingDepartTime.getTime()) / 60000;
+            if (elapsedMin >= s.minFromStart) { timeIdx = i; } else { break; }
         }
     }
     if (timeIdx > curIdx) {
@@ -2607,16 +2594,11 @@ function boardingRefreshUI() {
         distKmText = (distM / 1000).toFixed(1);
     }
 
-    // === זמן הגעה צפוי ליעד — לפי minFromStart שנשאר ===
+    // === זמן הגעה צפוי ליעד — ישירות מ-arrivalTime של GTFS ===
     let destEtaText = '-';
-    if (destStop?.minFromStart != null && destStop.minFromStart >= 0) {
-        const etaMs = Date.now() + destStop.minFromStart * 60000;
-        destEtaText = new Date(etaMs).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem' });
-    } else if (destStop?.arrivalTime) {
+    if (destStop?.arrivalTime) {
         const destMs = new Date(destStop.arrivalTime).getTime();
-        if (destMs > Date.now()) {
-            destEtaText = new Date(destMs).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem' });
-        }
+        destEtaText = new Date(destMs).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem' });
     }
 
     // Bar
@@ -2664,7 +2646,14 @@ function boardingRefreshUI() {
         if (dot) dot.textContent = s.isDest ? '🏁' : (passed ? '✓' : (isCurrent ? '🚌' : (i + 1)));
         // Show ETA only on the next stop
         if (timeEl) {
-            if (isNext && eta != null) {
+            // Show GTFS arrival time for each upcoming stop
+            if (!passed && s.arrivalTime) {
+                const t = new Date(s.arrivalTime);
+                const hhmm = t.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jerusalem' });
+                timeEl.textContent = hhmm;
+                timeEl.style.fontWeight = isCurrent ? '700' : '400';
+                timeEl.style.color = isCurrent ? '#1565c0' : '#aaa';
+            } else if (isNext && eta != null) {
                 timeEl.textContent = eta + " דק'";
                 timeEl.style.fontWeight = '700';
                 timeEl.style.color = eta <= 2 ? '#d32f2f' : '#1565c0';
