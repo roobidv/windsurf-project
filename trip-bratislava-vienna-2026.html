@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>טיול ברטיסלבה ווינה 2026</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --primary: #2563eb;
+            --primary-light: #dbeafe;
+            --bg: #f1f5f9;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --bratislava: #059669;
+            --bratislava-bg: #ecfdf5;
+            --vienna: #7c3aed;
+            --vienna-bg: #f5f3ff;
+            --food: #d97706;
+            --food-bg: #fffbeb;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+        .header {
+            background: linear-gradient(135deg, var(--primary), #1d4ed8);
+            color: white;
+            padding: 20px 16px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .header h1 { font-size: 22px; margin-bottom: 4px; }
+        .header .subtitle { font-size: 13px; opacity: 0.85; }
+
+        .tabs {
+            display: flex;
+            gap: 0;
+            padding: 12px 16px 0;
+            position: sticky;
+            top: 62px;
+            z-index: 99;
+            background: var(--bg);
+        }
+        .tab {
+            flex: 1;
+            padding: 10px 8px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            border: 1.5px solid var(--border);
+            background: var(--card);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab:first-child { border-radius: 0 10px 10px 0; }
+        .tab:last-child { border-radius: 10px 0 0 10px; }
+        .tab.active-brat { background: var(--bratislava); color: white; border-color: var(--bratislava); }
+        .tab.active-vienna { background: var(--vienna); color: white; border-color: var(--vienna); }
+        .tab.active-map { background: var(--primary); color: white; border-color: var(--primary); }
+
+        .section { padding: 12px 16px 80px; display: none; }
+        .section.visible { display: block; }
+
+        .day-header {
+            font-size: 17px;
+            font-weight: 700;
+            padding: 14px 0 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .day-badge {
+            background: var(--primary);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        .day-badge.brat { background: var(--bratislava); }
+        .day-badge.vienna { background: var(--vienna); }
+
+        .card {
+            background: var(--card);
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+            border-right: 4px solid var(--bratislava);
+        }
+        .card.vienna-card { border-right-color: var(--vienna); }
+        .card.food-card { border-right-color: var(--food); }
+
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 6px;
+        }
+        .place-name {
+            font-size: 15px;
+            font-weight: 700;
+            flex: 1;
+            line-height: 1.4;
+        }
+        .place-name-en {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+        .map-link {
+            background: var(--bratislava);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 13px;
+            cursor: pointer;
+            white-space: nowrap;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+            margin-right: 8px;
+        }
+        .map-link.vienna-link { background: var(--vienna); }
+        .map-link.food-link { background: var(--food); }
+        .map-link:active { opacity: 0.7; }
+
+        .card-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 6px;
+        }
+        .card-tags {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        .tag {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+        .tag-time { background: var(--primary-light); color: var(--primary); }
+        .tag-cost { background: var(--food-bg); color: var(--food); }
+        .tag-tip { background: #fce7f3; color: #be185d; }
+
+        .food-section-title {
+            font-size: 15px;
+            font-weight: 700;
+            padding: 12px 0 6px;
+            color: var(--food);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Map section */
+        .map-section { display: none; padding: 0; }
+        .map-section.visible { display: block; }
+        #tripMap {
+            width: 100%;
+            height: calc(100vh - 110px);
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            right: 16px;
+            background: white;
+            padding: 10px 14px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 1000;
+            font-size: 12px;
+            direction: rtl;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        @media print {
+            .tabs, .header { position: static; }
+            .section { display: block !important; padding-bottom: 20px; }
+            .map-section { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>&#x1F30D; ברטיסלבה &#x1F1F8;&#x1F1F0; &amp; וינה &#x1F1E6;&#x1F1F9; 2026</h1>
+        <div class="subtitle">3 ימים ברטיסלבה &bull; 2 ימים וינה &bull; לחץ על &#x1F5FA;&#xFE0F; לניווט</div>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active-brat" onclick="showTab('bratislava')">&#x1F1F8;&#x1F1F0; ברטיסלבה</div>
+        <div class="tab" onclick="showTab('vienna')">&#x1F1E6;&#x1F1F9; וינה</div>
+        <div class="tab" onclick="showTab('map')">&#x1F5FA;&#xFE0F; מפה</div>
+    </div>
+
+    <!-- BRATISLAVA -->
+    <div class="section visible" id="sec-bratislava">
+
+        <div class="day-header"><span class="day-badge brat">יום 1</span> העיר העתיקה והטירה</div>
+
+        <div class="card">
+            <div class="card-top">
+                <div><div class="place-name">טירת ברטיסלבה <span class="place-name-en">Bratislava Castle</span></div></div>
+                <a class="map-link" href="https://www.google.com/maps/search/Bratislava+Castle" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">טירה על גבעה עם נוף פנורמי לנהר הדנובה ולעיר. בפנים מוזיאון ההיסטוריה הסלובקית. הגנים סביב הטירה מהממים.</div>
+            <div class="card-tags">
+                <span class="tag tag-time">&#x1F552; 1.5-2 שעות</span>
+                <span class="tag tag-cost">&#x1F4B6; 10 EUR</span>
+                <span class="tag tag-tip">&#x1F4A1; עלו דרך הגנים מלמטה</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-top">
+                <div><div class="place-name">העיר העתיקה - כיכר ראשית <span class="place-name-en">Hlavne Namestie / Old Town</span></div></div>
+                <a class="map-link" href="https://www.google.com/maps/search/Hlavne+namestie+Bratislava" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">הכיכר המרכזית של העיר העתיקה עם בית העירייה הישן, מזרקת רולנד ובתי קפה. מכאן יוצאים הסמטאות הקסומות של העיר העתיקה.</div>
+            <div class="card-tags">
+                <span class="tag tag-time">&#x1F552; 2-3 שעות</span>
+                <span class="tag tag-cost">&#x1F4B6; חינם</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-top">
+                <div><div class="place-name">שער מיכאל <span class="place-name-en">Michael's Gate</span></div></div>
+                <a class="map-link" href="https://www.google.com/maps/search/Michael's+Gate+Bratislava" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">השער היחיד ששרד מהביצורים של ימי הביניים. בפנים מוזיאון נשק ותצפית מהגג. רחוב מיכאל שמוביל אליו מלא חנויות ובתי קפה.</div>
+            <div class="card-tags">
+                <span class="tag tag-time">&#x1F552; 30-45 דקות</span>
+                <span class="tag tag-cost">&#x1F4B6; 5 EUR</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-top">
+                <div><div class="place-name">קתדרלת סנט מרטין <span class="place-name-en">St. Martin's Cathedral</span></div></div>
+                <a class="map-link" href="https://www.google.com/maps/search/St+Martin's+Cathedral+Bratislava" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">קתדרלה גותית מהמאה ה-15 שבה הוכתרו 19 מלכי הונגריה. כתר הזהב על צריח הכנסייה שוקל 300 ק"ג.</div>
+            <div class="card-tags">
+                <span class="tag tag-time">&#x1F552; 30 דקות</span>
+                <span class="tag tag-cost">&#x1F4B6; חינם</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-top">
+                <div><div class="place-name">פסלי הברונזה המפורסמים <span class="place-name-en">Cumil, Schone Naci & more</span></div></div>
+                <a class="map-link" href="https://www.google.com/maps/search/Cumil+statue+Bratislava" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">צ'ומיל (האיש שמציץ מהביוב), שנה נאצי (הג'נטלמן עם הכובע), והחייל הנפוליאוני - פסלים מקסימים פזורים ברחבי העיר העתיקה.</div>
+            <div class="card-tags">
+                <span class="tag tag-time">&#x1F552; שפוזרים ברחבי העיר</span>
+                <span class="tag tag-cost">&#x1F4B6; חינם</span>
+            </div>
+        </div>
+
+        <div class="food-section-title">&#x1F37D;&#xFE0F; מסעדות מומלצות - יום 1</div>
+
+        <div class="card food-card">
+            <div class="card-top">
+                <div><div class="place-name">ROLAND Slovak Restaurant <span class="place-name-en">Hlavne namestie 5</span></div></div>
+                <a class="map-link food-link" href="https://www.google.com/maps/search/Roland+Restaurant+Bratislava+Hlavne+namestie" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">מסעדה סלובקית מודרנית ממש בכיכר הראשית. מטבח סלובקי מסורתי עם טוויסט עכשווי. נפתחה ע"י רשת APLEND.</div>
+            <div class="card-tags">
+                <span class="tag tag-cost">&#x1F4B6; $$</span>
+                <span class="tag tag-tip">&#x1F4A1; נסו את ה-Bryndzove halusky</span>
+            </div>
+        </div>
+
+        <div class="card food-card">
+            <div class="card-top">
+                <div><div class="place-name">Leberfinger <span class="place-name-en">Viedenska cesta 257</span></div></div>
+                <a class="map-link food-link" href="https://www.google.com/maps/search/Leberfinger+restaurant+Bratislava" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">המסעדה העתיקה ביותר בברטיסלבה, על גדת הדנובה. מתמחים בשניצל עגל ענק, אווז צלוי ומנות פרסבורג מסורתיות.</div>
+            <div class="card-tags">
+                <span class="tag tag-cost">&#x1F4B6; $$</span>
+                <span class="tag tag-tip">&#x1F4A1; שניצל עגל + סלט תפו"א</span>
+            </div>
+        </div>
+
+        <div class="day-header"><span class="day-badge brat">יום 2</span> גשר UFO, הדנובה ושכונות</div>
+
+        <div class="card">
+            <div class="card-top">
+                <div><div class="place-name">גשר UFO - תצפית <span class="place-name-en">UFO Bridge / SNP Bridge</span></div></div>
+                <a class="map-link" href="https://www.google.com/maps/search/UFO+Bridge+Bratislava+observation+deck" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">תצפית בצורת צלחת מעופפת, 85 מטר מעל הדנובה. מעלית מהירה בתוך העמוד. נוף 360 מעלות על העיר, ההרים הקטנים והגבול עם אוסטריה. מסעדה וקוקטייל בר בראש.</div>
+            <div class="card-tags">
+                <span class="tag tag-time">&#x1F552; 1-1.5 שעות</span>
+                <span class="tag tag-cost">&#x1F4B6; 8.50 EUR</span>
+                <span class="tag tag-tip">&#x1F4A1; שקיעה מושלמת!</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-top">
+                <div><div class="place-name">ארמון גרסלקוביץ' <span class="place-name-en">Grassalkovich Palace</span></div></div>
+                <a class="map-link" href="https://www.google.com/maps/search/Grassalkovich+Palace+Bratislava" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">מעון הנשיא הסלובקי. הארמון סגור לציבור אבל הגנים הצרפתיים הגדולים פתוחים ומהווים אואזיס ירוק בלב העיר.</div>
+            <div class="card-tags">
+                <span class="tag tag-time">&#x1F552; 30-45 דקות</span>
+                <span class="tag tag-cost">&#x1F4B6; חינם</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-top">
+                <div><div class="place-name">הכנסייה הכחולה <span class="place-name-en">Blue Church / St. Elizabeth's</span></div></div>
+                <a class="map-link" href="https://www.google.com/maps/search/Blue+Church+Bratislava+St+Elizabeth" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">כנסייה בסגנון ארט-נובו בצבע תכלת פסטלי - אחד המבנים הפוטוגניים ביותר בעיר. מזכירה עוגת חתונה.</div>
+            <div class="card-tags">
+                <span class="tag tag-time">&#x1F552; 20 דקות</span>
+                <span class="tag tag-cost">&#x1F4B6; חינם</span>
+                <span class="tag tag-tip">&#x1F4A1; מבפנים קטנטנה וקסומה</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-top">
+                <div><div class="place-name">אנדרטת סלאבין <span class="place-name-en">Slavin War Memorial</span></div></div>
+                <a class="map-link" href="https://www.google.com/maps/search/Slavin+War+Memorial+Bratislava" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">אנדרטה על גבעה לזכר חיילים סובייטים. אחד הנקודות הגבוהות ביותר בעיר עם תצפית מרהיבה לכל הכיוונים.</div>
+            <div class="card-tags">
+                <span class="tag tag-time">&#x1F552; 45 דקות</span>
+                <span class="tag tag-cost">&#x1F4B6; חינם</span>
+            </div>
+        </div>
+
+        <div class="food-section-title">&#x1F37D;&#xFE0F; מסעדות מומלצות - יום 2</div>
+
+        <div class="card food-card">
+            <div class="card-top">
+                <div><div class="place-name">Koliba Kamzik <span class="place-name-en">מסעדה סלובקית מסורתית</span></div></div>
+                <a class="map-link food-link" href="https://www.google.com/maps/search/Koliba+Kamzik+Bratislava" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">מסעדה כפרית סלובקית אותנטית. חובה לנסות: Bryndzove halusky (גנוקי תפו"א עם גבינת כבשים), פירוגי ממולאים ו-Koliba platter לשולחן.</div>
+            <div class="card-tags">
+                <span class="tag tag-cost">&#x1F4B6; $$</span>
+                <span class="tag tag-tip">&#x1F4A1; הזמינו מגש Kamzik לשניים</span>
+            </div>
+        </div>
+
+        <div class="day-header"><span class="day-badge brat">יום 3</span> טירת דווין ויום רגוע</div>
+
+        <div class="card">
+            <div class="card-top">
+                <div><div class="place-name">טירת דווין <span class="place-name-en">Devin Castle</span></div></div>
+                <a class="map-link" href="https://www.google.com/maps/search/Devin+Castle+Bratislava" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">חורבות טירה דרמטיות על צוק מעל מפגש נהרות הדנובה והמוראבה. 20 דקות נסיעה מהמרכז. נוף לגבול אוסטריה. אחד האתרים היפים ביותר באזור.</div>
+            <div class="card-tags">
+                <span class="tag tag-time">&#x1F552; 2-3 שעות (כולל נסיעה)</span>
+                <span class="tag tag-cost">&#x1F4B6; 8 EUR</span>
+                <span class="tag tag-tip">&#x1F4A1; אוטובוס 29 מגשר החדש</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-top">
+                <div><div class="place-name">ארמון הפרימס <span class="place-name-en">Primate's Palace</span></div></div>
+                <a class="map-link" href="https://www.google.com/maps/search/Primate's+Palace+Bratislava" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">ארמון ניאו-קלאסי מהמאה ה-18. אולם המראות ואוסף שטיחים אנגליים נדירים מהמאה ה-17.</div>
+            <div class="card-tags">
+                <span class="tag tag-time">&#x1F552; 45 דקות</span>
+                <span class="tag tag-cost">&#x1F4B6; 5 EUR</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-top">
+                <div><div class="place-name">מגדל קמזיק <span class="place-name-en">Kamzik TV Tower</span></div></div>
+                <a class="map-link" href="https://www.google.com/maps/search/Kamzik+TV+Tower+Bratislava" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">מגדל טלוויזיה עם תצפית על יערות הקרפטים הקטנים ועל העיר כולה. ליד שביל הליכה ביער.</div>
+            <div class="card-tags">
+                <span class="tag tag-time">&#x1F552; 1 שעה</span>
+                <span class="tag tag-cost">&#x1F4B6; 7 EUR</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- VIENNA -->
+    <div class="section" id="sec-vienna">
+
+        <div class="day-header"><span class="day-badge vienna">יום 4</span> מרכז וינה ההיסטורי</div>
+
+        <div class="card vienna-card">
+            <div class="card-top">
+                <div><div class="place-name">קתדרלת סנט סטפן <span class="place-name-en">Stephansdom</span></div></div>
+                <a class="map-link vienna-link" href="https://www.google.com/maps/search/Stephansdom+Vienna" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">הסמל של וינה. קתדרלה גותית מרהיבה. עלו למגדל הדרומי (343 מדרגות) לנוף פנורמי, או ירדו לקטקומבות מתחת.</div>
+            <div class="card-tags">
+                <span class="tag tag-time">&#x1F552; 1-1.5 שעות</span>
+                <span class="tag tag-cost">&#x1F4B6; 6 EUR (מגדל)</span>
+            </div>
+        </div>
+
+        <div class="card vienna-card">
+            <div class="card-top">
+                <div><div class="place-name">ארמון הופבורג <span class="place-name-en">Hofburg Palace</span></div></div>
+                <a class="map-link vienna-link" href="https://www.google.com/maps/search/Hofburg+Palace+Vienna" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">מעון ההבסבורגים. כולל מוזיאון סיסי, הדירות הקיסריות, ובית הספר הספרדי לרכיבה. מתחם ענק ומרשים.</div>
+            <div class="card-tags">
+                <span class="tag tag-time">&#x1F552; 2-3 שעות</span>
+                <span class="tag tag-cost">&#x1F4B6; 18 EUR</span>
+                <span class="tag tag-tip">&#x1F4A1; Sisi Ticket כולל גם Schonbrunn</span>
+            </div>
+        </div>
+
+        <div class="card vienna-card">
+            <div class="card-top">
+                <div><div class="place-name">הרינגשטראסה <span class="place-name-en">Ringstrasse</span></div></div>
+                <a class="map-link vienna-link" href="https://www.google.com/maps/search/Ringstrasse+Vienna" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">השדרה המעגלית המפורסמת שמקיפה את המרכז ההיסטורי. לאורכה: האופרה, הפרלמנט, בית העירייה, אוניברסיטת וינה, מוזיאונים ועוד.</div>
+            <div class="card-tags">
+                <span class="tag tag-time">&#x1F552; 1-2 שעות הליכה</span>
+                <span class="tag tag-cost">&#x1F4B6; חינם</span>
+            </div>
+        </div>
+
+        <div class="card vienna-card">
+            <div class="card-top">
+                <div><div class="place-name">אופרת וינה <span class="place-name-en">Wiener Staatsoper</span></div></div>
+                <a class="map-link vienna-link" href="https://www.google.com/maps/search/Wiener+Staatsoper+Vienna+State+Opera" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">אחד מבתי האופרה החשובים בעולם. גם אם לא רואים הצגה, יש סיורים מודרכים מרתקים בתוך המבנה.</div>
+            <div class="card-tags">
+                <span class="tag tag-time">&#x1F552; 1 שעה (סיור)</span>
+                <span class="tag tag-cost">&#x1F4B6; 13 EUR</span>
+            </div>
+        </div>
+
+        <div class="card vienna-card">
+            <div class="card-top">
+                <div><div class="place-name">ארמון בלוודר <span class="place-name-en">Belvedere Palace</span></div></div>
+                <a class="map-link vienna-link" href="https://www.google.com/maps/search/Belvedere+Palace+Vienna" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">שני ארמונות בארוקיים עם אוסף אמנות מרשים. כאן נמצאת "הנשיקה" של גוסטב קלימט - אחת היצירות המפורסמות בעולם.</div>
+            <div class="card-tags">
+                <span class="tag tag-time">&#x1F552; 1.5-2 שעות</span>
+                <span class="tag tag-cost">&#x1F4B6; 16 EUR</span>
+                <span class="tag tag-tip">&#x1F4A1; "הנשיקה" של קלימט חובה!</span>
+            </div>
+        </div>
+
+        <div class="food-section-title">&#x1F37D;&#xFE0F; אוכל מומלץ - יום 4</div>
+
+        <div class="card food-card">
+            <div class="card-top">
+                <div><div class="place-name">Figlmuller <span class="place-name-en">Wollzeile 5 / Backerstasse 6</span></div></div>
+                <a class="map-link food-link" href="https://www.google.com/maps/search/Figlmuller+Wollzeile+Vienna" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">השניצל הכי מפורסם בוינה מאז 1905. השניצל גדול מהצלחת! סניף Wollzeile הוא המקורי, Backerstasse יותר מרווח.</div>
+            <div class="card-tags">
+                <span class="tag tag-cost">&#x1F4B6; $$-$$$</span>
+                <span class="tag tag-tip">&#x1F4A1; הגיעו מוקדם - תורים!</span>
+            </div>
+        </div>
+
+        <div class="card food-card">
+            <div class="card-top">
+                <div><div class="place-name">Cafe Sacher <span class="place-name-en">Philharmonikerstrasse 4</span></div></div>
+                <a class="map-link food-link" href="https://www.google.com/maps/search/Cafe+Sacher+Wien+Vienna" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">עוגת הזאכר המקורית מ-1832! מוגשת עם קצפת ללא סוכר. חוויה וינאית קלאסית שאסור לפספס.</div>
+            <div class="card-tags">
+                <span class="tag tag-cost">&#x1F4B6; $$</span>
+                <span class="tag tag-tip">&#x1F4A1; Melange + Sachertorte</span>
+            </div>
+        </div>
+
+        <div class="card food-card">
+            <div class="card-top">
+                <div><div class="place-name">Cafe Central <span class="place-name-en">Herrengasse 14</span></div></div>
+                <a class="map-link food-link" href="https://www.google.com/maps/search/Cafe+Central+Vienna+Herrengasse" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">בית הקפה ההיסטורי של וינה. כאן ישבו פרויד, טרוצקי ואדלר. עמודי שיש, תקרות גבוהות ואפלשטרודל מושלם.</div>
+            <div class="card-tags">
+                <span class="tag tag-cost">&#x1F4B6; $$</span>
+                <span class="tag tag-tip">&#x1F4A1; Apfelstrudel חם!</span>
+            </div>
+        </div>
+
+        <div class="day-header"><span class="day-badge vienna">יום 5</span> שנברון, פראטר והנשמרקט</div>
+
+        <div class="card vienna-card">
+            <div class="card-top">
+                <div><div class="place-name">ארמון שנברון <span class="place-name-en">Schonbrunn Palace</span></div></div>
+                <a class="map-link vienna-link" href="https://www.google.com/maps/search/Schonbrunn+Palace+Vienna" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">מעון הקיץ של ההבסבורגים ואטרקציה מספר 1 בוינה. 1,441 חדרים! הגנים ענקיים, עם Gloriette בראש הגבעה לתצפית. גם גן חיות - העתיק בעולם.</div>
+            <div class="card-tags">
+                <span class="tag tag-time">&#x1F552; 3-4 שעות</span>
+                <span class="tag tag-cost">&#x1F4B6; 22 EUR (Grand Tour)</span>
+                <span class="tag tag-tip">&#x1F4A1; הזמינו כרטיס מראש!</span>
+            </div>
+        </div>
+
+        <div class="card vienna-card">
+            <div class="card-top">
+                <div><div class="place-name">נשמרקט <span class="place-name-en">Naschmarkt</span></div></div>
+                <a class="map-link vienna-link" href="https://www.google.com/maps/search/Naschmarkt+Vienna" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">השוק הפתוח הפופולרי ביותר בוינה. דוכני אוכל, פירות, גבינות, תבלינים ומסעדות קטנות. מקום מעולה לארוחת צהריים.</div>
+            <div class="card-tags">
+                <span class="tag tag-time">&#x1F552; 1-1.5 שעות</span>
+                <span class="tag tag-cost">&#x1F4B6; חינם (כניסה)</span>
+                <span class="tag tag-tip">&#x1F4A1; בשבת יש גם שוק פשפשים!</span>
+            </div>
+        </div>
+
+        <div class="card vienna-card">
+            <div class="card-top">
+                <div><div class="place-name">פראטר + גלגל ענק <span class="place-name-en">Prater & Riesenrad</span></div></div>
+                <a class="map-link vienna-link" href="https://www.google.com/maps/search/Prater+Riesenrad+Vienna" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">פארק שעשועים היסטורי עם הגלגל הענק האייקוני מ-1897. הרכבת על הגלגל נותנת נוף מדהים על כל וינה.</div>
+            <div class="card-tags">
+                <span class="tag tag-time">&#x1F552; 1.5-2 שעות</span>
+                <span class="tag tag-cost">&#x1F4B6; 15 EUR (גלגל)</span>
+            </div>
+        </div>
+
+        <div class="card vienna-card">
+            <div class="card-top">
+                <div><div class="place-name">מוזיאון היסטוריה של האמנות <span class="place-name-en">Kunsthistorisches Museum</span></div></div>
+                <a class="map-link vienna-link" href="https://www.google.com/maps/search/Kunsthistorisches+Museum+Vienna" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">אחד המוזיאונים החשובים בעולם. יצירות של רמברנדט, ורמיר, רפאל ועוד. המבנה עצמו יצירת אמנות.</div>
+            <div class="card-tags">
+                <span class="tag tag-time">&#x1F552; 2-3 שעות</span>
+                <span class="tag tag-cost">&#x1F4B6; 18 EUR</span>
+            </div>
+        </div>
+
+        <div class="card vienna-card">
+            <div class="card-top">
+                <div><div class="place-name">שטאטפארק ופסל שטראוס <span class="place-name-en">Stadtpark & Johann Strauss</span></div></div>
+                <a class="map-link vienna-link" href="https://www.google.com/maps/search/Johann+Strauss+monument+Stadtpark+Vienna" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">הפארק העירוני היפה של וינה עם פסל הזהב של יוהאן שטראוס - אחד הפסלים המצולמים ביותר בעיר.</div>
+            <div class="card-tags">
+                <span class="tag tag-time">&#x1F552; 30 דקות</span>
+                <span class="tag tag-cost">&#x1F4B6; חינם</span>
+            </div>
+        </div>
+
+        <div class="food-section-title">&#x1F37D;&#xFE0F; אוכל מומלץ - יום 5</div>
+
+        <div class="card food-card">
+            <div class="card-top">
+                <div><div class="place-name">Meissl & Schadn <span class="place-name-en">Schubertring 10-12</span></div></div>
+                <a class="map-link food-link" href="https://www.google.com/maps/search/Meissl+Schadn+Vienna" target="_blank">&#x1F5FA;&#xFE0F;</a>
+            </div>
+            <div class="card-desc">מסעדה אלגנטית שמתמחה בשניצל וינאי מושלם. ה-Schnitzelkeller בקומת המרתף מציע חוויה מיוחדת.</div>
+            <div class="card-tags">
+                <span class="tag tag-cost">&#x1F4B6; $$$</span>
+                <span class="tag tag-tip">&#x1F4A1; Schnitzel + Tafelspitz</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MAP -->
+    <div class="map-section" id="sec-map">
+        <div id="tripMap"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // ===== Tab navigation =====
+        function showTab(tab) {
+            document.querySelectorAll('.section, .map-section').forEach(s => s.classList.remove('visible'));
+            document.querySelectorAll('.tab').forEach(t => {
+                t.classList.remove('active-brat', 'active-vienna', 'active-map');
+            });
+            if (tab === 'bratislava') {
+                document.getElementById('sec-bratislava').classList.add('visible');
+                document.querySelectorAll('.tab')[0].classList.add('active-brat');
+            } else if (tab === 'vienna') {
+                document.getElementById('sec-vienna').classList.add('visible');
+                document.querySelectorAll('.tab')[1].classList.add('active-vienna');
+            } else {
+                document.getElementById('sec-map').classList.add('visible');
+                document.querySelectorAll('.tab')[2].classList.add('active-map');
+                setTimeout(() => {
+                    if (!window._tripMap) initMap();
+                    else window._tripMap.invalidateSize();
+                }, 200);
+            }
+        }
+
+        // ===== All places data =====
+        const places = [
+            // Bratislava
+            {name: "Bratislava Castle", nameHe: "טירת ברטיסלבה", lat: 48.1421, lng: 17.1001, city: "bratislava", day: 1},
+            {name: "Hlavne Namestie (Old Town)", nameHe: "העיר העתיקה", lat: 48.1438, lng: 17.1088, city: "bratislava", day: 1},
+            {name: "Michael's Gate", nameHe: "שער מיכאל", lat: 48.1448, lng: 17.1069, city: "bratislava", day: 1},
+            {name: "St. Martin's Cathedral", nameHe: "קתדרלת סנט מרטין", lat: 48.1420, lng: 17.1050, city: "bratislava", day: 1},
+            {name: "Cumil Statue", nameHe: "פסלי ברונזה", lat: 48.1434, lng: 17.1094, city: "bratislava", day: 1},
+            {name: "ROLAND Restaurant", nameHe: "מסעדת רולנד", lat: 48.1438, lng: 17.1090, city: "bratislava", day: 1, food: true},
+            {name: "Leberfinger", nameHe: "לברפינגר", lat: 48.1310, lng: 17.1095, city: "bratislava", day: 1, food: true},
+            {name: "UFO Bridge", nameHe: "גשר UFO", lat: 48.1352, lng: 17.1046, city: "bratislava", day: 2},
+            {name: "Grassalkovich Palace", nameHe: "ארמון גרסלקוביץ'", lat: 48.1497, lng: 17.1075, city: "bratislava", day: 2},
+            {name: "Blue Church", nameHe: "הכנסייה הכחולה", lat: 48.1437, lng: 17.1174, city: "bratislava", day: 2},
+            {name: "Slavin Memorial", nameHe: "אנדרטת סלאבין", lat: 48.1547, lng: 17.0984, city: "bratislava", day: 2},
+            {name: "Koliba Kamzik", nameHe: "קוליבה קמזיק", lat: 48.1740, lng: 17.0760, city: "bratislava", day: 2, food: true},
+            {name: "Devin Castle", nameHe: "טירת דווין", lat: 48.1737, lng: 16.9789, city: "bratislava", day: 3},
+            {name: "Primate's Palace", nameHe: "ארמון הפרימס", lat: 48.1440, lng: 17.1082, city: "bratislava", day: 3},
+            {name: "Kamzik TV Tower", nameHe: "מגדל קמזיק", lat: 48.1746, lng: 17.0729, city: "bratislava", day: 3},
+            // Vienna
+            {name: "Stephansdom", nameHe: "קתדרלת סנט סטפן", lat: 48.2085, lng: 16.3731, city: "vienna", day: 4},
+            {name: "Hofburg Palace", nameHe: "ארמון הופבורג", lat: 48.2063, lng: 16.3637, city: "vienna", day: 4},
+            {name: "Ringstrasse", nameHe: "הרינגשטראסה", lat: 48.2050, lng: 16.3600, city: "vienna", day: 4},
+            {name: "Vienna State Opera", nameHe: "אופרת וינה", lat: 48.2035, lng: 16.3690, city: "vienna", day: 4},
+            {name: "Belvedere Palace", nameHe: "ארמון בלוודר", lat: 48.1914, lng: 16.3808, city: "vienna", day: 4},
+            {name: "Figlmuller", nameHe: "פיגלמולר", lat: 48.2079, lng: 16.3750, city: "vienna", day: 4, food: true},
+            {name: "Cafe Sacher", nameHe: "קפה זאכר", lat: 48.2038, lng: 16.3695, city: "vienna", day: 4, food: true},
+            {name: "Cafe Central", nameHe: "קפה סנטרל", lat: 48.2105, lng: 16.3655, city: "vienna", day: 4, food: true},
+            {name: "Schonbrunn Palace", nameHe: "ארמון שנברון", lat: 48.1845, lng: 16.3122, city: "vienna", day: 5},
+            {name: "Naschmarkt", nameHe: "נשמרקט", lat: 48.1988, lng: 16.3632, city: "vienna", day: 5},
+            {name: "Prater & Riesenrad", nameHe: "פראטר + גלגל ענק", lat: 48.2166, lng: 16.3966, city: "vienna", day: 5},
+            {name: "Kunsthistorisches Museum", nameHe: "מוזיאון האמנות", lat: 48.2038, lng: 16.3616, city: "vienna", day: 5},
+            {name: "Stadtpark & Strauss", nameHe: "שטאטפארק", lat: 48.2040, lng: 16.3795, city: "vienna", day: 5},
+            {name: "Meissl & Schadn", nameHe: "מייסל ושאדן", lat: 48.2030, lng: 16.3730, city: "vienna", day: 5, food: true},
+        ];
+
+        function initMap() {
+            const map = L.map('tripMap').setView([48.18, 16.8], 9);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(map);
+            window._tripMap = map;
+
+            const bratIcon = L.divIcon({className: '', html: '<div style="background:#059669;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3)">B</div>', iconSize: [28, 28], iconAnchor: [14, 14]});
+            const viennaIcon = L.divIcon({className: '', html: '<div style="background:#7c3aed;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3)">V</div>', iconSize: [28, 28], iconAnchor: [14, 14]});
+            const foodIcon = L.divIcon({className: '', html: '<div style="background:#d97706;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:16px;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3)">&#x1F37D;</div>', iconSize: [28, 28], iconAnchor: [14, 14]});
+
+            const bounds = [];
+            places.forEach(p => {
+                const icon = p.food ? foodIcon : (p.city === 'bratislava' ? bratIcon : viennaIcon);
+                const gLink = 'https://www.google.com/maps/search/' + encodeURIComponent(p.name + (p.city === 'bratislava' ? ', Bratislava' : ', Vienna'));
+                const popup = `<div style="direction:rtl;font-size:13px;text-align:right">
+                    <b>${p.nameHe}</b><br>
+                    <span style="color:#888;font-size:11px">${p.name}</span><br>
+                    <span style="font-size:11px">&#x1F4C5; יום ${p.day} ${p.food ? '&#x1F37D;&#xFE0F; מסעדה' : ''}</span><br>
+                    <a href="${gLink}" target="_blank" style="color:#2563eb;font-size:12px">&#x1F5FA;&#xFE0F; פתח בגוגל מפות</a>
+                </div>`;
+                L.marker([p.lat, p.lng], {icon}).addTo(map).bindPopup(popup, {maxWidth: 250});
+                bounds.push([p.lat, p.lng]);
+            });
+
+            if (bounds.length > 0) map.fitBounds(bounds, {padding: [30, 30]});
+
+            // Legend
+            const legend = L.control({position: 'bottomright'});
+            legend.onAdd = function() {
+                const div = L.DomUtil.create('div', 'legend');
+                div.innerHTML = `
+                    <div class="legend-item"><div class="legend-dot" style="background:#059669"></div> ברטיסלבה</div>
+                    <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div> וינה</div>
+                    <div class="legend-item"><div class="legend-dot" style="background:#d97706"></div> מסעדות</div>
+                `;
+                return div;
+            };
+            legend.addTo(map);
+        }
+    </script>
+</body>
+</html>
