@@ -811,6 +811,10 @@ async function pollNextStop() {
         if (_activeLeg === 1 && _leg2Key) {
             setTimeout(() => switchToLeg2(), 5000);
         }
+        // Final destination reached — clear active journey
+        if (_activeLeg === 2 || !_leg2Key) {
+            localStorage.removeItem('activeJourney');
+        }
     }
 
     updateTrack(trackId, stops, _activeLeg === 1 ? _leg1Idx : _leg2Idx);
@@ -952,11 +956,6 @@ function init() {
     document.getElementById('loadingScreen').style.display = 'none';
     document.getElementById('pageContent').style.display   = 'block';
 }
-
-// Clear journey when user closes/leaves the page
-window.addEventListener('beforeunload', () => {
-    localStorage.removeItem('activeJourney');
-});
 
 window.addEventListener('DOMContentLoaded', init);
 </script>
