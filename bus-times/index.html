@@ -638,6 +638,22 @@
             cursor: pointer; text-align: center;
         }
         .boarding-boarded-btn:hover { background: #bf360c; }
+        .resume-journey-btn {
+            background: linear-gradient(135deg, #e65100, #ff8f00);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(230,81,0,0.4);
+            animation: resumePulse 2s infinite;
+        }
+        @keyframes resumePulse {
+            0%,100% { box-shadow: 0 2px 6px rgba(230,81,0,0.4); }
+            50% { box-shadow: 0 2px 14px rgba(230,81,0,0.8); }
+        }
         .action-refresh-btn {
             padding: 7px 12px; background: var(--primary); color: #fff; border: none;
             border-radius: 10px; font-size: 13px; font-weight: 700;
@@ -678,6 +694,7 @@
     <div class="nearby-results" id="nearbyResults"></div>
     <div class="action-row">
         <button class="boarding-boarded-btn" onclick="startBoarding()">🚌 עליתי</button>
+        <button class="resume-journey-btn" id="resumeJourneyBtn" onclick="resumeJourney()" style="display:none">🗺️ חזור לנסיעה</button>
         <button class="action-refresh-btn" onclick="refreshCurrent()">🔄 רענן</button>
     </div>
     <div style="text-align:center;padding:2px 0"><span class="timer" id="timerText" style="font-size:11px;color:var(--text-muted)"></span></div>
@@ -1916,6 +1933,9 @@ document.getElementById('customInput').addEventListener('keydown', e => {
     if (e.key === 'Enter') searchCustom();
 });
 
+// Check for active journey on load
+checkResumeJourney();
+
 // ===== Boarding Wizard (v2 — data-driven, no GPS required) =====
 let boardingWatchId = null;
 let boardingWakeLock = null;
@@ -1996,6 +2016,30 @@ function startBoarding() {
         <div class="boarding-label" style="margin-top:8px">על איזה קו עלית?</div>
         ${btns}
     `);
+}
+
+// ── Resume active journey ──
+function checkResumeJourney() {
+    try {
+        const raw = localStorage.getItem('activeJourney');
+        if (!raw) return;
+        const j = JSON.parse(raw);
+        const ageMin = (Date.now() - j.startedAt) / 60000;
+        if (ageMin > 180) { localStorage.removeItem('activeJourney'); return; } // expired after 3h
+        const btn = document.getElementById('resumeJourneyBtn');
+        if (btn) {
+            btn.style.display = 'inline-block';
+            btn.title = j.label + ' · התחיל לפני ' + Math.round(ageMin) + ' דק\'';
+            btn.innerHTML = '🗺️ ' + j.label;
+        }
+    } catch(e) { localStorage.removeItem('activeJourney'); }
+}
+
+function resumeJourney() {
+    try {
+        const j = JSON.parse(localStorage.getItem('activeJourney'));
+        if (j) window.open(`journey.html?stop=${encodeURIComponent(j.stop)}&line=${encodeURIComponent(j.line)}&dir=${j.dir}`, '_blank');
+    } catch(e) {}
 }
 
 // ── Journey route map (matches ROUTES in journey.html) ──

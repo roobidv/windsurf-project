@@ -937,6 +937,13 @@ function init() {
         Notification.requestPermission();
     }
 
+    // Save active journey to localStorage (for "resume" button in index.html)
+    localStorage.setItem('activeJourney', JSON.stringify({
+        stop: stop, line: line, dir: dir,
+        startedAt: Date.now(),
+        label: (dir === 'home' ? '🏠 לכפר סבא' : '🪖 לבסיס') + ' · קו ' + line
+    }));
+
     // Start polling
     _pollTimer = setInterval(pollNextStop, POLL_MS);
     setTimeout(pollNextStop, 500);
@@ -945,6 +952,11 @@ function init() {
     document.getElementById('loadingScreen').style.display = 'none';
     document.getElementById('pageContent').style.display   = 'block';
 }
+
+// Clear journey when user closes/leaves the page
+window.addEventListener('beforeunload', () => {
+    localStorage.removeItem('activeJourney');
+});
 
 window.addEventListener('DOMContentLoaded', init);
 </script>
