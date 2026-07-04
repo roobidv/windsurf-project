@@ -1998,8 +1998,57 @@ function startBoarding() {
     `);
 }
 
+// ── Journey route map (matches ROUTES in journey.html) ──
+const JOURNEY_ROUTE_MAP = {
+    '33440_164': { dir: 'home', label: 'בדרך הביתה לכפר סבא' },
+    '32264_164': { dir: 'home', label: 'בדרך הביתה לכפר סבא' },
+    '38174_164': { dir: 'home', label: 'בדרך הביתה לכפר סבא' },
+    '37018_640': { dir: 'base', label: 'בדרך לבסיס' },
+    '37018_468': { dir: 'base', label: 'בדרך לבסיס' },
+    '22942_164': { dir: 'base', label: 'בדרך לבסיס (שלב ב\')' },
+    '27063_567': { dir: 'home', label: 'בדרך הביתה (שלב ב\')' },
+};
+
+function boardingCheckJourney(lineNum) {
+    if (!currentStop) return false;
+    const key = `${currentStop.code}_${lineNum}`;
+    const match = JOURNEY_ROUTE_MAP[key];
+    if (!match) return false;
+
+    const isHome = match.dir === 'home';
+    const question = isHome
+        ? `שלום אורעד 👋\nנראה שאתה בדרך הביתה לכפר סבא.\nתרצה שאלווה אותך עם סיפור דרך?`
+        : `שלום אורעד 👋\nנראה שאתה בדרך לבסיס.\nתרצה שאלווה אותך עם סיפור דרך?`;
+
+    showBoardingOverlay('🗺️ ' + (isHome ? 'לכיוון הבית' : 'לכיוון הבסיס'), `
+        <div style="text-align:center;padding:10px 0">
+            <div style="font-size:38px;margin-bottom:10px">${isHome ? '🏠' : '🪖'}</div>
+            <div style="font-size:16px;font-weight:700;color:#1a237e;white-space:pre-line;margin-bottom:16px">${esc(question)}</div>
+            <div style="font-size:13px;color:#555;margin-bottom:16px">
+                📍 תחנה: ${esc(currentStop.name)}<br>
+                🚌 קו: ${esc(lineNum)}
+            </div>
+        </div>
+        <button class="boarding-btn boarding-btn-primary" style="font-size:16px"
+            onclick="window.open('journey.html?stop=${encodeURIComponent(currentStop.code)}&line=${encodeURIComponent(lineNum)}&dir=${match.dir}','_blank');closeBoarding();">
+            ✅ כן, תלווה אותי
+        </button>
+        <button class="boarding-btn" style="background:#eee;color:#555;margin-top:8px"
+            onclick="boardingPickLineRegular('${esc(lineNum)}')">
+            לא, המשך רגיל ←
+        </button>
+    `);
+    return true;
+}
+
 // Step 2: Pick direction for the selected line (uses MOT data only — fast, no GTFS needed)
 function boardingPickLine(lineNum) {
+    // Check if this stop+line matches a known journey route
+    if (boardingCheckJourney(lineNum)) return;
+    boardingPickLineRegular(lineNum);
+}
+
+function boardingPickLineRegular(lineNum) {
     // Find all MOT entries for this line
     const motEntries = lastMotLines.filter(ln => String(ln.Shilut) === lineNum);
 

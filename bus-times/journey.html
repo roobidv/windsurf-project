@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>סיפור דרך — אורעד</title>
+    <meta name="theme-color" content="#1a73e8">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚌</text></svg>">
+    <style>
+        :root {
+            --primary: #1a73e8;
+            --primary-dark: #1557b0;
+            --bg: #f0f2f5;
+            --card-bg: #ffffff;
+            --text: #1a1a2e;
+            --text-muted: #6b7280;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --green-header: #2e7d32;
+            --red-header: #c62828;
+            --radius: 14px;
+            --shadow: 0 2px 8px rgba(0,0,0,0.10);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #1a73e8, #1557b0);
+            color: white;
+            padding: 14px 16px 12px;
+            text-align: center;
+            position: sticky; top: 0; z-index: 100;
+            box-shadow: 0 2px 12px rgba(26,115,232,0.3);
+        }
+        .header h1 { font-size: 19px; font-weight: 800; margin-bottom: 2px; }
+        .header-sub { font-size: 12px; opacity: 0.88; }
+
+        .section {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            margin: 12px;
+            padding: 16px;
+            box-shadow: var(--shadow);
+        }
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        /* Welcome banner */
+        .welcome-card {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            border-radius: var(--radius);
+            margin: 12px;
+            padding: 18px;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+        .welcome-card .greeting { font-size: 20px; font-weight: 800; color: #1a237e; margin-bottom: 6px; }
+        .welcome-card .subtext { font-size: 14px; color: #37474f; }
+
+        /* Leg card */
+        .leg-card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            margin: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        .leg-header {
+            padding: 12px 16px;
+            color: white;
+            font-weight: 800;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .leg-header.base { background: linear-gradient(90deg, #2e7d32, #43a047); }
+        .leg-header.home { background: linear-gradient(90deg, #c62828, #e53935); }
+        .leg-body { padding: 14px 16px; }
+        .leg-info-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .leg-info-row .icon { font-size: 18px; flex-shrink: 0; }
+        .leg-transfer {
+            background: #fff3e0;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-top: 10px;
+            font-size: 13px;
+            color: #e65100;
+            font-weight: 600;
+        }
+
+        /* Stop image */
+        .stop-img-wrap {
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+            background: #eee;
+            text-align: center;
+        }
+        .stop-img-wrap img {
+            width: 100%;
+            max-height: 180px;
+            object-fit: cover;
+            display: block;
+        }
+        .stop-img-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            padding: 4px 0 2px;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+        }
+        .sv-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            padding: 10px;
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 0 0 10px 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .sv-btn:hover { background: #1557b0; }
+        .osm-frame {
+            width: 100%;
+            height: 160px;
+            border: none;
+            display: block;
+        }
+
+        /* Slider / Track */
+        .track-wrap {
+            padding: 8px 0 4px;
+        }
+        .track-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+        .track {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            position: relative;
+        }
+        .track-stop {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            position: relative;
+            padding-bottom: 4px;
+        }
+        .track-left {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 28px;
+            flex-shrink: 0;
+        }
+        .track-icon {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px;
+            font-weight: 800;
+            flex-shrink: 0;
+            border: 2px solid #ddd;
+            background: #fff;
+            color: #888;
+            transition: all 0.4s;
+            z-index: 1;
+        }
+        .track-icon.current { background: #1a73e8; border-color: #1a73e8; color: #fff; font-size: 16px; }
+        .track-icon.passed  { background: #22c55e; border-color: #22c55e; color: #fff; font-size: 12px; }
+        .track-icon.dest    { background: #e53935; border-color: #e53935; color: #fff; font-size: 16px; }
+        .track-icon.alert   { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+        .track-line {
+            width: 3px;
+            flex: 1;
+            min-height: 24px;
+            background: #ddd;
+            margin: 0 auto;
+            transition: background 0.4s;
+        }
+        .track-line.passed { background: #22c55e; }
+        .track-right {
+            flex: 1;
+            padding: 2px 0 18px;
+        }
+        .track-stop-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.3;
+        }
+        .track-stop-name.current { color: #1a73e8; }
+        .track-stop-name.passed  { color: #22c55e; }
+        .track-stop-name.dest    { color: #e53935; }
+        .track-stop-city {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 1px;
+        }
+        .track-stop-eta {
+            font-size: 11px;
+            color: var(--primary);
+            margin-top: 2px;
+            font-weight: 600;
+        }
+
+        /* Progress bar */
+        .progress-bar-wrap {
+            background: #e9ecef;
+            border-radius: 6px;
+            height: 8px;
+            margin: 8px 0;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #22c55e, #1a73e8);
+            border-radius: 6px;
+            transition: width 0.6s ease;
+        }
+
+        /* Floating status bar */
+        .float-bar {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: #1a1a2e;
+            color: white;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            z-index: 200;
+            box-shadow: 0 -2px 12px rgba(0,0,0,0.3);
+        }
+        .float-bar .line-badge {
+            background: #1a73e8;
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 15px;
+            font-weight: 800;
+        }
+        .float-bar .stops-left {
+            font-size: 13px;
+            font-weight: 700;
+            flex: 1;
+            text-align: center;
+        }
+        .float-bar .eta-pill {
+            background: #22c55e;
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .float-bar .eta-pill.urgent { background: #ef4444; animation: pulse 1s infinite; }
+
+        /* Alert banner */
+        .alert-banner {
+            background: #d32f2f;
+            color: white;
+            text-align: center;
+            padding: 14px;
+            font-size: 17px;
+            font-weight: 800;
+            border-radius: 12px;
+            margin: 12px;
+            animation: pulse 1s infinite;
+            display: none;
+        }
+        .alert-banner.show { display: block; }
+
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+        /* Transfer note card */
+        .transfer-card {
+            background: #fff8e1;
+            border-radius: var(--radius);
+            margin: 12px;
+            padding: 14px 16px;
+            border-right: 4px solid #f59e0b;
+            box-shadow: var(--shadow);
+        }
+        .transfer-card .title { font-size: 14px; font-weight: 800; color: #e65100; margin-bottom: 8px; }
+        .transfer-card .body { font-size: 13px; color: #37474f; line-height: 1.6; white-space: pre-line; }
+        .walk-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 12px;
+            padding: 10px 14px;
+            background: #43a047;
+            color: white;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            text-decoration: none;
+            width: 100%;
+        }
+        .walk-btn:hover { background: #2e7d32; }
+        .walk-warning {
+            margin-top: 8px;
+            background: #fbe9e7;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #c62828;
+            text-align: center;
+        }
+
+        .back-btn {
+            display: block;
+            margin: 12px;
+            padding: 12px;
+            background: #37474f;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            text-align: center;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .pb { padding-bottom: 80px; }
+
+        .stop-count-badge {
+            display: inline-block;
+            background: #e3f2fd;
+            color: #1565c0;
+            border-radius: 20px;
+            padding: 3px 12px;
+            font-size: 13px;
+            font-weight: 700;
+            margin: 6px 0;
+        }
+
+        #loadingScreen {
+            position: fixed; inset: 0;
+            background: white;
+            display: flex; align-items: center; justify-content: center;
+            flex-direction: column; gap: 16px;
+            z-index: 999;
+        }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 4px solid #e3e8f0;
+            border-top-color: #1a73e8;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div id="loadingScreen">
+    <div class="spinner"></div>
+    <div style="font-size:15px;color:#555">טוען סיפור דרך...</div>
+</div>
+
+<div class="header">
+    <h1 id="pageTitle">🚌 סיפור דרך</h1>
+    <div class="header-sub" id="pageSubtitle">מתחיל...</div>
+</div>
+
+<div id="pageContent" class="pb" style="display:none">
+
+    <div class="welcome-card" id="welcomeCard">
+        <div class="greeting" id="greetingText"></div>
+        <div class="subtext" id="greetingSub"></div>
+    </div>
+
+    <!-- Leg 1 -->
+    <div class="leg-card" id="leg1Card">
+        <div class="leg-header" id="leg1Header"></div>
+        <div class="leg-body">
+            <div class="leg-info-row">
+                <span class="icon">📍</span>
+                <span id="leg1From"></span>
+            </div>
+            <div class="leg-info-row">
+                <span class="icon">🏁</span>
+                <span id="leg1To"></span>
+            </div>
+            <div class="stop-count-badge" id="leg1Count"></div>
+            <div class="stop-img-wrap" id="leg1ImgWrap"></div>
+            <div class="track-wrap">
+                <div class="track-label">מסלול שלב א'</div>
+                <div class="track" id="leg1Track"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transfer note -->
+    <div class="transfer-card" id="transferCard" style="display:none">
+        <div class="title" id="transferTitle"></div>
+        <div class="body" id="transferBody"></div>
+    </div>
+
+    <!-- Leg 2 -->
+    <div class="leg-card" id="leg2Card" style="display:none">
+        <div class="leg-header" id="leg2Header"></div>
+        <div class="leg-body">
+            <div class="leg-info-row">
+                <span class="icon">📍</span>
+                <span id="leg2From"></span>
+            </div>
+            <div class="leg-info-row">
+                <span class="icon">🏁</span>
+                <span id="leg2To"></span>
+            </div>
+            <div class="stop-count-badge" id="leg2Count"></div>
+            <div class="stop-img-wrap" id="leg2ImgWrap"></div>
+            <div class="track-wrap">
+                <div class="track-label">מסלול שלב ב'</div>
+                <div class="track" id="leg2Track"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="alert-banner" id="alertBanner">⚠️ התכונן לרדת! תחנת היעד מתקרבת!</div>
+
+    <a href="index.html" class="back-btn">← חזרה לאפליקציה</a>
+</div>
+
+<!-- Floating status bar -->
+<div class="float-bar" id="floatBar" style="display:none">
+    <span class="line-badge" id="floatLine"></span>
+    <span class="stops-left" id="floatStatus"></span>
+    <span class="eta-pill" id="floatEta"></span>
+</div>
+
+<script>
+// ============================================================
+// ROUTE DATA — hardcoded from GTFS tables
+// ============================================================
+
+const ROUTES = {
+
+    // ── לכפר סבא ── (TO HOME)
+    // Leg 1: Line 164 northbound  33440 → 36553
+    home_164: {
+        line: '164',
+        dir: 'home',
+        boardStop: '33440',
+        destStop:  '36553',
+        stops: [
+            {code:'33440', name:'צומת בית דגן',           city:'ראשון לציון', lat:32.002455, lon:34.820515},
+            {code:'33286', name:'דרך השבעה/צבי זעירא',     city:'ראשון לציון', lat:32.005820, lon:34.817845},
+            {code:'33431', name:'מחלף גנות/כביש 4',         city:'גנות',         lat:32.022045, lon:34.824120},
+            {code:'33432', name:'מחלף מסובים',              city:'אור יהודה',   lat:32.038296, lon:34.831105},
+            {code:'21109', name:'מסוף אלוף שדה',            city:'רמת גן',      lat:32.054798, lon:34.833799},
+            {code:'37136', name:'כביש 4/מחלף בר אילן',      city:'רמת גן',      lat:32.065048, lon:34.838934},
+            {code:'21257', name:'מחלף גבעת שמואל/כביש 4',   city:'גבעת שמואל',  lat:32.076767, lon:34.844303},
+            {code:'21280', name:'גבעת שמואל/גשר הולכי רגל', city:'גבעת שמואל',  lat:32.082795, lon:34.845457},
+            {code:'36553', name:'מחלף גהה/ז\'בוטינסקי',     city:'פתח תקווה',   lat:32.092391, lon:34.848903}
+        ],
+        nextLeg: 'home_567',
+        transferNote: {
+            title: '🚶 החלפה: מחלף גהה — ~200 מטר',
+            body:  'יורדים בתחנה 36553 (מחלף גהה/ז\'בוטינסקי).\nהולכים ~200 מטר מתחת לגשר גהה לכיוון רמת גן.\nמגיעים לתחנה 27063 ועולים לקו 567 לכפר סבא.\n\n⚠️ חובה להשתמש במעברי חציה! אין לחצות את הכביש שלא בצומת.',
+            walk: { fromLat:32.092391, fromLon:34.848903, toLat:32.092314, toLon:34.844941 },
+            nextBoardImg: { code:'27063', name:'מחלף גהה/דרך ז\'בוטינסקי (תחנת עלייה לקו 567)', lat:32.092314, lon:34.844941 }
+        }
+    },
+
+    // Leg 2: Line 567  27063 → 37017
+    home_567: {
+        line: '567',
+        dir: 'home',
+        boardStop: '27063',
+        destStop:  '37017',
+        stops: [
+            {code:'27063', name:'מחלף גהה/דרך ז\'בוטינסקי', city:'בני ברק',     lat:32.092314, lon:34.844941},
+            {code:'26834', name:'כביש 4/מחלף מורשה',         city:'רמת השרון',  lat:32.124662, lon:34.856328},
+            {code:'36393', name:'תע"ש',                       city:'הוד השרון',  lat:32.131528, lon:34.871168},
+            {code:'37135', name:'בית משפט/טשרניחובסקי',       city:'כפר סבא',    lat:32.175709, lon:34.891979},
+            {code:'37017', name:'טשרניחובסקי/ויצמן',          city:'כפר סבא',    lat:32.177761, lon:34.894199}
+        ],
+        nextLeg: null
+    },
+
+    // ── לבסיס ── (TO BASE)
+    // Leg 1: Line 640 or 468  37018 → 22942
+    base_640: {
+        line: '640',
+        dir: 'base',
+        boardStop: '37018',
+        destStop:  '22942',
+        stops: [
+            {code:'37018', name:'טשרניחובסקי/ויצמן',          city:'כפר סבא',    lat:32.177906, lon:34.894049},
+            {code:'37119', name:'מסוף רעננה',                  city:'רעננה',       lat:32.174883, lon:34.890700},
+            {code:'35923', name:'תע"ש',                        city:'הוד השרון',  lat:32.130712, lon:34.870615},
+            {code:'27084', name:'מחלף מורשה',                  city:'רמת השרון',  lat:32.123726, lon:34.854708},
+            {code:'21711', name:'ג. שמואל/גשר הולכי רגל',     city:'בני ברק',    lat:32.082661, lon:34.845048},
+            {code:'22942', name:'מחלף גבעת שמואל/כביש 4',     city:'בני ברק',    lat:32.074823, lon:34.843553}
+        ],
+        nextLeg: 'base_164',
+        transferNote: {
+            title: '🚶 המשך — קו 164',
+            body:  'יורדים בתחנה 22942 (מחלף גבעת שמואל/כביש 4).\nממשיכים לקו 164 לכיוון צומת בית דגן.'
+        }
+    },
+
+    base_468: {
+        line: '468',
+        dir: 'base',
+        boardStop: '37018',
+        destStop:  '22942',
+        stops: [
+            {code:'37018', name:'טשרניחובסקי/ויצמן',          city:'כפר סבא',    lat:32.177906, lon:34.894049},
+            {code:'37119', name:'מסוף רעננה',                  city:'רעננה',       lat:32.174883, lon:34.890700},
+            {code:'27084', name:'מחלף מורשה',                  city:'רמת השרון',  lat:32.123726, lon:34.854708},
+            {code:'22942', name:'מחלף גבעת שמואל/כביש 4',     city:'בני ברק',    lat:32.074823, lon:34.843553}
+        ],
+        nextLeg: 'base_164',
+        transferNote: {
+            title: '🚶 המשך — קו 164',
+            body:  'יורדים בתחנה 22942 (מחלף גבעת שמואל/כביש 4).\nממשיכים לקו 164 לכיוון צומת בית דגן.'
+        }
+    },
+
+    // Leg 2: Line 164 southbound  22942 → 30001
+    base_164: {
+        line: '164',
+        dir: 'base',
+        boardStop: '22942',
+        destStop:  '30001',
+        imgStop: 'board',  // show boarding stop photo (22942.jpg exists)
+        stops: [
+            {code:'22942', name:'מחלף גבעת שמואל/כביש 4',    city:'בני ברק',     lat:32.074823, lon:34.843553},
+            {code:'21258', name:'גשר בר אילן/כביש 4',          city:'רמת גן',      lat:32.067809, lon:34.839840},
+            {code:'21109', name:'מסוף אלוף שדה',               city:'רמת גן',      lat:32.054798, lon:34.833799},
+            {code:'20068', name:'מחלף מסובים',                 city:'אור יהודה',   lat:32.036975, lon:34.829135},
+            {code:'36430', name:'מחלף גנות/כביש 4',            city:'גנות',         lat:32.022506, lon:34.823832},
+            {code:'33115', name:'כביש 44/תחנה מטאורולוגית',    city:'ראשון לציון', lat:32.006425, lon:34.817010},
+            {code:'30001', name:'צומת בית דגן',                city:'ראשון לציון', lat:32.001227, lon:34.820309}
+        ],
+        nextLeg: null,
+        transferNote: {
+            title: '🚶 החלפה: צומת בית דגן — ~135 מטר',
+            body:  'יורדים בתחנה 30001 (צומת בית דגן, צד דרום).\nהולכים ~135 מטר לתחנה 33737 (צד המנגד של הכביש, כיוון דרום).\nמחכים לאחד מהקווים הבאים לכיוון הבסיס:\n🚌 קו 411 (בית שמש אקספרס)\n🚌 קו 433 (אגד)\n🚌 קו 458 (קווים)\n\n⚠️ חובה להשתמש במעברי חציה! אין לחצות את הכביש שלא בצומת.',
+            walk: { fromLat:32.001227, fromLon:34.820309, toLat:32.000365, toLon:34.821606 },
+            nextBoardImg: { code:'33737', name:'צומת בית דגן (תחנת עלייה לבסיס)', lat:32.000365, lon:34.821606 }
+        }
+    }
+};
+
+// ── מיפוי: תחנה + קו → מפתח מסלול ראשון ──
+const ROUTE_MAP = {
+    // לבית
+    '33440_164':  'home_164',
+    '32264_164':  'home_164',  // alternate stop same area
+    '38174_164':  'home_164',
+    '33440_433':  null,   // not tracked
+    // לבסיס
+    '37018_640':  'base_640',
+    '37018_468':  'base_468',
+    '22942_164':  'base_164',
+};
+
+const IMG_BASE = 'https://roobidv.github.io/windsurf-project/bus-times/images/';
+
+// ── Poll interval for slider (ms) ──
+const POLL_MS = 15000;
+
+// ── State ──
+let _leg1Key   = null;
+let _leg2Key   = null;
+let _leg1Idx   = 0;  // current stop index in leg1
+let _leg2Idx   = 0;  // current stop index in leg2
+let _activeLeg = 1;  // 1 or 2
+let _pollTimer = null;
+let _alerted   = false;
+let _boardTime = null;
+
+// ── Parse URL params ──
+function getParams() {
+    const p = new URLSearchParams(location.search);
+    return {
+        stop: p.get('stop') || '',
+        line: p.get('line') || '',
+        dir:  p.get('dir')  || ''   // 'base' or 'home'
+    };
+}
+
+function esc(s) {
+    const d = document.createElement('div'); d.textContent = String(s||''); return d.innerHTML;
+}
+
+function buildTrack(containerId, stops, currentIdx) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = '';
+    stops.forEach((s, i) => {
+        const passed  = i < currentIdx;
+        const current = i === currentIdx;
+        const isDest  = i === stops.length - 1;
+        const isAlert = i === stops.length - 2;
+
+        let iconClass = '';
+        let iconChar  = String(i + 1);
+        if (passed)  { iconClass = 'passed';  iconChar = '✓'; }
+        if (current) { iconClass = 'current'; iconChar = '🚌'; }
+        if (isDest)  { iconClass = 'dest';    iconChar = '🏁'; }
+
+        let nameClass = '';
+        if (passed)  nameClass = 'passed';
+        if (current) nameClass = 'current';
+        if (isDest)  nameClass = 'dest';
+
+        const lineClass = passed ? 'passed' : '';
+        const isLast = i === stops.length - 1;
+
+        el.innerHTML += `
+        <div class="track-stop" id="ts_${containerId}_${i}">
+            <div class="track-left">
+                <div class="track-icon ${iconClass}">${iconChar}</div>
+                ${!isLast ? `<div class="track-line ${lineClass}"></div>` : ''}
+            </div>
+            <div class="track-right">
+                <div class="track-stop-name ${nameClass}">${esc(s.name)}</div>
+                <div class="track-stop-city">${esc(s.city)}${s.code ? ' · ' + s.code : ''}</div>
+                ${current ? '<div class="track-stop-eta" id="etaLabel">📡 בודק...</div>' : ''}
+            </div>
+        </div>`;
+    });
+}
+
+function updateTrack(containerId, stops, currentIdx) {
+    stops.forEach((s, i) => {
+        const el = document.getElementById(`ts_${containerId}_${i}`);
+        if (!el) return;
+        const iconEl = el.querySelector('.track-icon');
+        const nameEl = el.querySelector('.track-stop-name');
+        const lineEl = el.querySelector('.track-line');
+        if (!iconEl) return;
+
+        const passed  = i < currentIdx;
+        const current = i === currentIdx;
+        const isDest  = i === stops.length - 1;
+
+        iconEl.className = 'track-icon' + (passed ? ' passed' : current ? ' current' : isDest ? ' dest' : '');
+        iconEl.textContent = passed ? '✓' : current ? '🚌' : isDest ? '🏁' : String(i + 1);
+        if (nameEl) nameEl.className = 'track-stop-name' + (passed ? ' passed' : current ? ' current' : isDest ? ' dest' : '');
+        if (lineEl) lineEl.className = 'track-line' + (passed ? ' passed' : '');
+    });
+}
+
+function setFloatBar(lineNum, stopsLeft, etaText, urgent) {
+    document.getElementById('floatBar').style.display = 'flex';
+    document.getElementById('floatLine').textContent = 'קו ' + lineNum;
+    document.getElementById('floatStatus').textContent = stopsLeft + ' תחנות לייעד';
+    const ep = document.getElementById('floatEta');
+    ep.textContent = etaText;
+    ep.className = 'eta-pill' + (urgent ? ' urgent' : '');
+}
+
+function showImg(wrapId, code, label, lat, lon, wrapEl) {
+    const wrap = wrapEl || document.getElementById(wrapId);
+    if (!wrap) return;
+
+    const img = document.createElement('img');
+    img.src = IMG_BASE + code + '.jpg';
+    img.alt = label;
+    img.style.cssText = 'width:100%;max-height:180px;object-fit:cover;display:block';
+
+    img.onload = () => {
+        wrap.innerHTML = '';
+        wrap.appendChild(img);
+        const lbl = document.createElement('div');
+        lbl.className = 'stop-img-label';
+        lbl.textContent = '📷 ' + label;
+        wrap.appendChild(lbl);
+        if (lat && lon) wrap.appendChild(makeSvBtn(lat, lon, label));
+    };
+
+    img.onerror = () => {
+        // Fallback: OSM embed + Street View button
+        if (lat && lon) {
+            showMapFallback(wrap, lat, lon, label);
+        } else {
+            wrap.style.display = 'none';
+        }
+    };
+
+    // Trigger load attempt
+    document.body.appendChild(img);
+    img.style.display = 'none';
+    // Force browser to try
+    setTimeout(() => { if (!img.complete || img.naturalWidth === 0) img.onerror(); }, 3000);
+}
+
+function makeSvBtn(lat, lon, label) {
+    const svUrl = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lon}`;
+    const a = document.createElement('a');
+    a.href = svUrl;
+    a.target = '_blank';
+    a.className = 'sv-btn';
+    a.innerHTML = '📷 Street View — ' + esc(label);
+    return a;
+}
+
+function showMapFallback(wrap, lat, lon, label) {
+    wrap.style.display = 'block';
+    const z = 17;
+    const osmSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${lon-0.003},${lat-0.002},${lon+0.003},${lat+0.002}&layer=mapnik&marker=${lat},${lon}`;
+    wrap.innerHTML = `
+        <iframe class="osm-frame" src="${osmSrc}" loading="lazy"></iframe>
+        <div class="stop-img-label">🗺️ ${esc(label)} · ${lat.toFixed(5)}, ${lon.toFixed(5)}</div>
+    `;
+    wrap.appendChild(makeSvBtn(lat, lon, label));
+}
+
+// ── Poll MOT API for ETA at next stop ──
+async function pollNextStop() {
+    const route = _activeLeg === 1 ? ROUTES[_leg1Key] : ROUTES[_leg2Key];
+    if (!route) return;
+    const stops = route.stops;
+    let curIdx  = _activeLeg === 1 ? _leg1Idx : _leg2Idx;
+
+    // Time-based advancement
+    const now = Date.now();
+    const elapsedMin = (now - _boardTime) / 60000;
+    // Rough estimate: ~3 min per stop average
+    const expectedIdx = Math.min(Math.floor(elapsedMin / 3), stops.length - 1);
+    if (expectedIdx > curIdx) {
+        curIdx = expectedIdx;
+        if (_activeLeg === 1) _leg1Idx = curIdx;
+        else _leg2Idx = curIdx;
+    }
+
+    const nextIdx = curIdx + 1;
+    const trackId = _activeLeg === 1 ? 'leg1Track' : 'leg2Track';
+    updateTrack(trackId, stops, curIdx);
+
+    const stopsLeft = stops.length - 1 - curIdx;
+    const isUrgent  = stopsLeft <= 2;
+
+    // Try MOT API at next stop
+    if (nextIdx < stops.length) {
+        const nextCode = stops[nextIdx].code;
+        try {
+            const url = `https://corsproxy.io/?https://bus.gov.il/WebApi/api/passengerinfo/GetRealtimeBusLineListByBustop/${nextCode}/he/false`;
+            const resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
+            const data = await resp.json();
+            const arr  = data.value || data;
+            const match = arr.find(e => String(e.Shilut) === route.line);
+            if (match) {
+                const eta = match.MinutesToArrival;
+                const etaLabel = document.getElementById('etaLabel');
+                if (etaLabel) etaLabel.textContent = `🛰️ ${eta <= 0 ? 'מגיע!' : eta + " דק'"}`;
+                setFloatBar(route.line, stopsLeft, eta <= 0 ? 'מגיע!' : eta + " דק'", isUrgent);
+                if (eta <= 0 && curIdx < stops.length - 1) {
+                    if (_activeLeg === 1) _leg1Idx = Math.min(curIdx + 1, stops.length - 1);
+                    else _leg2Idx = Math.min(curIdx + 1, stops.length - 1);
+                }
+            } else {
+                setFloatBar(route.line, stopsLeft, stopsLeft + ' תחנות', isUrgent);
+            }
+        } catch(e) {
+            setFloatBar(route.line, stopsLeft, stopsLeft + ' תחנות', isUrgent);
+        }
+    } else {
+        setFloatBar(route.line, 0, 'יורדים!', true);
+    }
+
+    // Alert when 1 stop before dest
+    if (stopsLeft <= 1 && !_alerted) {
+        _alerted = true;
+        document.getElementById('alertBanner').classList.add('show');
+        if ('vibrate' in navigator) {
+            navigator.vibrate([400, 200, 400, 200, 800]);
+            setTimeout(() => navigator.vibrate([400, 200, 400, 200, 800]), 3000);
+        }
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('🚌 התכונן לרדת!', { body: 'תחנת היעד: ' + stops[stops.length-1].name });
+        }
+        // Switch to leg 2 if exists
+        if (_activeLeg === 1 && _leg2Key) {
+            setTimeout(() => switchToLeg2(), 5000);
+        }
+    }
+
+    updateTrack(trackId, stops, _activeLeg === 1 ? _leg1Idx : _leg2Idx);
+}
+
+function switchToLeg2() {
+    _activeLeg = 2;
+    _leg2Idx   = 0;
+    _alerted   = false;
+    _boardTime = Date.now();
+    const route2 = ROUTES[_leg2Key];
+    if (!route2) return;
+    document.getElementById('leg2Card').style.display = 'block';
+    document.getElementById('transferCard').style.display = 'block';
+    buildTrack('leg2Track', route2.stops, 0);
+    document.getElementById('alertBanner').classList.remove('show');
+    // scroll to leg2
+    document.getElementById('leg2Card').scrollIntoView({ behavior: 'smooth' });
+    setFloatBar(route2.line, route2.stops.length - 1, 'התחלנו', false);
+}
+
+// ── Main init ──
+function init() {
+    const { stop, line, dir } = getParams();
+
+    // Find route key
+    const mapKey = `${stop}_${line}`;
+    const routeKey = ROUTE_MAP[mapKey] || null;
+
+    if (!routeKey) {
+        document.getElementById('loadingScreen').innerHTML =
+            '<div style="text-align:center;padding:30px;color:#c00"><b>לא נמצא מסלול מוכר</b><br><small>תחנה: ' + esc(stop) + ' קו: ' + esc(line) + '</small><br><br><a href="index.html">← חזרה</a></div>';
+        return;
+    }
+
+    _leg1Key  = routeKey;
+    const r1  = ROUTES[_leg1Key];
+    _leg2Key  = r1.nextLeg || null;
+    _leg1Idx  = 0;
+    _boardTime = Date.now();
+
+    const isHome = r1.dir === 'home';
+    const colorClass = isHome ? 'home' : 'base';
+    const dirLabel   = isHome ? '🏠 לכיוון הבית' : '🪖 לכיוון הבסיס';
+
+    document.getElementById('pageTitle').textContent = '🚌 סיפור דרך';
+    document.getElementById('pageSubtitle').textContent = dirLabel + ' · קו ' + r1.line;
+
+    // Welcome
+    document.getElementById('greetingText').textContent = 'שלום אורעד! 👋';
+    document.getElementById('greetingSub').textContent  =
+        isHome
+        ? 'בוא נלווה אותך הביתה לכפר סבא'
+        : 'בוא נלווה אותך לבסיס';
+
+    // Leg 1
+    document.getElementById('leg1Header').className = 'leg-header ' + colorClass;
+    document.getElementById('leg1Header').textContent = `שלב א' — קו ${r1.line} · ${r1.stops.length - 1} תחנות`;
+    document.getElementById('leg1From').textContent  = r1.stops[0].name + ' (' + r1.stops[0].code + ')';
+    document.getElementById('leg1To').textContent    = r1.stops[r1.stops.length-1].name + ' (' + r1.stops[r1.stops.length-1].code + ')';
+    document.getElementById('leg1Count').textContent = `${r1.stops.length - 1} תחנות בדרך`;
+
+    // Image: board stop if it has a photo, otherwise dest stop
+    const boardStop1 = r1.stops[0];
+    const destStop1  = r1.stops[r1.stops.length - 1];
+    const imgS1 = (r1.imgStop === 'board') ? boardStop1 : destStop1;
+    const imgLabel1 = (r1.imgStop === 'board')
+        ? '📍 תחנת עלייה: ' + imgS1.name
+        : '🏁 תחנת ירידה: ' + imgS1.name;
+    showImg('leg1ImgWrap', imgS1.code, imgLabel1, imgS1.lat, imgS1.lon);
+
+    buildTrack('leg1Track', r1.stops, 0);
+
+    // Transfer
+    if (r1.transferNote) {
+        const tn = r1.transferNote;
+        document.getElementById('transferCard').style.display = 'block';
+        document.getElementById('transferTitle').textContent = tn.title;
+        document.getElementById('transferBody').textContent  = tn.body;
+        if (tn.walk) {
+            const walkUrl = `https://www.google.com/maps/dir/?api=1&origin=${tn.walk.fromLat},${tn.walk.fromLon}&destination=${tn.walk.toLat},${tn.walk.toLon}&travelmode=walking`;
+            const card = document.getElementById('transferCard');
+            const btn = document.createElement('a');
+            btn.href = walkUrl;
+            btn.target = '_blank';
+            btn.className = 'walk-btn';
+            btn.innerHTML = '🗺️ מסלול הליכה ברגל — פתח ב-Google Maps';
+            card.appendChild(btn);
+            const warn = document.createElement('div');
+            warn.className = 'walk-warning';
+            warn.textContent = '⚠️ יש להשתמש במעברי חציה בלבד! אין לחצות את הכביש שלא בצומת!';
+            card.appendChild(warn);
+        }
+        if (tn.nextBoardImg) {
+            const ni = tn.nextBoardImg;
+            const card = document.getElementById('transferCard');
+            const wrap = document.createElement('div');
+            wrap.className = 'stop-img-wrap';
+            wrap.style.marginTop = '12px';
+            card.appendChild(wrap);
+            showImg(null, ni.code, '🚌 תחנת עלייה: ' + ni.name, ni.lat, ni.lon, wrap);
+        }
+    }
+
+    // Leg 2
+    if (_leg2Key) {
+        const r2 = ROUTES[_leg2Key];
+        document.getElementById('leg2Card').style.display = 'none'; // shows after switch
+        document.getElementById('leg2Header').className   = 'leg-header ' + colorClass;
+        document.getElementById('leg2Header').textContent = `שלב ב' — קו ${r2.line} · ${r2.stops.length - 1} תחנות`;
+        document.getElementById('leg2From').textContent   = r2.stops[0].name + ' (' + r2.stops[0].code + ')';
+        document.getElementById('leg2To').textContent     = r2.stops[r2.stops.length-1].name + ' (' + r2.stops[r2.stops.length-1].code + ')';
+        document.getElementById('leg2Count').textContent  = `${r2.stops.length - 1} תחנות בדרך`;
+        const destStop2 = r2.stops[r2.stops.length - 1];
+        showImg('leg2ImgWrap', destStop2.code, '🏁 תחנת ירידה: ' + destStop2.name, destStop2.lat, destStop2.lon);
+        buildTrack('leg2Track', r2.stops, 0);
+    }
+
+    // Float bar initial
+    setFloatBar(r1.line, r1.stops.length - 1, r1.stops.length - 1 + " תח'", false);
+
+    // Request notification
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+
+    // Start polling
+    _pollTimer = setInterval(pollNextStop, POLL_MS);
+    setTimeout(pollNextStop, 500);
+
+    // Show page
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('pageContent').style.display   = 'block';
+}
+
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
