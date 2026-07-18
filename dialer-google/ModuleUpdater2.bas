@@ -35,13 +35,12 @@ Public Sub RunUpdate()
 
     DoUpdate "InsertDataModule", basePath
     DoUpdate "CompleteSetup", basePath
-    SafeRemove "PhoneDialerModule"
+    DoUpdate "PhoneDialerModule", basePath
     SafeRemove "FrontEndLinker"
     DoUpdate "SchemaRepair", basePath
     DoUpdate "ContactsBuilder", basePath
     SafeRemove "DialerFormBuilder"
-    SafeRemove "DialerUiHandlers"
-    SafeRemove "DialerSetup"
+    DoUpdate "DialerUiHandlers", basePath
     DoUpdate "ContactsDialerCode", basePath
     DoUpdate "ContactEditCode", basePath
     DoUpdate "CallHistoryEditCode", basePath

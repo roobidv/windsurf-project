@@ -194,8 +194,6 @@ End Function
 ' EnsureNotifyForm - יצירת טופס עם 3 שורות
 ' =====================================================================
 Public Sub EnsureNotifyForm()
-    ' In ACCDE - form already exists, skip design-time checks
-    If LCase(Right$(CurrentDb.Name, 6)) = ".accde" Then Exit Sub
     On Error Resume Next
 
     Dim exists As Boolean

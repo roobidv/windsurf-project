@@ -389,6 +389,31 @@
         }
         .report-send { background: var(--primary); color: white; }
         .report-cancel { background: #e5e7eb; color: #333; }
+        .messages-dialog {
+            background: white; border-radius: 16px; padding: 20px; width: 92%; max-width: 520px;
+            max-height: 85vh; display: flex; flex-direction: column; direction: rtl;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+        .messages-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .messages-dialog h3 { margin: 0; color: var(--primary); font-size: 18px; }
+        .messages-actions { display: flex; gap: 6px; }
+        .messages-action-btn { border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 18px; line-height: 1; padding: 4px 7px; border-radius: 6px; }
+        .messages-action-btn:hover { background: var(--primary-light); color: var(--primary); }
+        .messages-input {
+            width: 100%; min-height: 68px; padding: 10px; border: 1.5px solid var(--border);
+            border-radius: 10px; resize: vertical; font-family: inherit; font-size: 14px; direction: rtl;
+        }
+        .messages-input:focus { outline: none; border-color: var(--primary); }
+        .messages-hint { margin: 6px 0 10px; font-size: 12px; color: var(--text-muted); }
+        .messages-esc-hint { margin: -5px 0 10px; font-size: 11px; color: var(--text-muted); }
+        .messages-list { overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-left: 3px; }
+        .message-item { border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: #f8fafc; }
+        .message-content { display: flex; align-items: flex-start; gap: 8px; }
+        .message-text { flex: 1; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.5; }
+        .message-delete-btn { flex: 0 0 auto; border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 2px 4px; border-radius: 5px; }
+        .message-delete-btn:hover { color: var(--red); background: var(--red-bg); }
+        .message-meta { margin-top: 6px; color: var(--text-muted); font-size: 11px; }
+        .messages-empty { color: var(--text-muted); text-align: center; padding: 20px; font-size: 14px; line-height: 1.6; }
 
         /* Authority Filter Dropdown */
         .authority-filter {
@@ -1062,6 +1087,7 @@
         <div class="filter-chip active" data-level="" data-ptype="">הכל</div>
         <div class="filter-chip chip-green" data-level="" data-ptype="משרדי">משרדי</div>
         <div class="filter-chip chip-red" data-level="" data-ptype="לא-משרדי">לא משרדי</div>
+        <div class="filter-chip" id="messagesBtn" onclick="openMessagesDialog()" style="background:#2563eb;color:white;padding:5px 16px;font-size:100%;margin-right:auto;margin-left:0">הודעות</div>
         <div class="filter-chip" id="refreshBtn" onclick="refreshData()" style="background:#4CAF50;color:white;padding:5px 16px;font-size:100%;margin-right:auto;margin-left:0">רענן</div>
     </div>
 
@@ -1096,6 +1122,22 @@
                 <button class="report-cancel" onclick="closeReportDialog()">ביטול</button>
             </div>
             <p id="reportStatus" style="font-size:12px;color:#666;margin-top:8px;"></p>
+        </div>
+    </div>
+
+    <div class="report-overlay" id="messagesOverlay">
+        <div class="messages-dialog" role="dialog" aria-modal="true" aria-labelledby="messagesTitle">
+            <div class="messages-header">
+                <h3 id="messagesTitle">💬 הודעות</h3>
+                <div class="messages-actions">
+                    <button type="button" class="messages-action-btn" onclick="loadMessages()" title="רענן הודעות" aria-label="רענן הודעות">↻</button>
+                    <button type="button" class="messages-action-btn" onclick="closeMessagesDialog()" title="סגור" aria-label="סגור">✕</button>
+                </div>
+            </div>
+            <textarea id="messageInput" class="messages-input" placeholder="כתוב הודעה ולחץ Enter..." onkeydown="handleMessageKeydown(event)"></textarea>
+            <div class="messages-hint" id="messageStatus">Enter לשליחה · Shift+Enter לשורה חדשה</div>
+            <div class="messages-esc-hint">ESC יחזיר למסך ראשי</div>
+            <div class="messages-list" id="messagesList"><div class="messages-empty">טוען הודעות...</div></div>
         </div>
     </div>
 
@@ -1170,7 +1212,7 @@
     </div>
 
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzXl1sYJ9T2aUQZ65rCRsC3XaboP7wMDe09tgJPWxwC_yGe0KhSJpW9Lt_vkokmPqz5/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2WIxWzD4ipnmV0exC_IhRmkgrab8Ndv8pg76S8GEt6q6AQ6ZwT-n0t9nt9kRQpmIF/exec';
         let cloudNotes = {};
 
         let allRows = [];
@@ -2124,6 +2166,87 @@
             document.getElementById('reportOverlay').classList.remove('visible');
         }
 
+        function openMessagesDialog() {
+            document.getElementById('messagesOverlay').classList.add('visible');
+            loadMessages();
+            setTimeout(() => document.getElementById('messageInput').focus(), 0);
+        }
+
+        function closeMessagesDialog() {
+            document.getElementById('messagesOverlay').classList.remove('visible');
+        }
+
+        function handleMessageKeydown(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                addMessage();
+            }
+        }
+
+        function loadMessages() {
+            const list = document.getElementById('messagesList');
+            list.innerHTML = '<div class="messages-empty">טוען הודעות...</div>';
+            fetch(SCRIPT_URL + '?action=getMessages&_=' + Date.now(), {mode: 'cors', cache: 'no-store'})
+                .then(r => {
+                    if (!r.ok) throw new Error('טעינת הודעות נכשלה');
+                    return r.json();
+                })
+                .then(data => renderMessages(data.messages || []))
+                .catch(() => { list.innerHTML = '<div class="messages-empty">לא ניתן לטעון את ההודעות. נסה לרענן.</div>'; });
+        }
+
+        function renderMessages(messages) {
+            const list = document.getElementById('messagesList');
+            if (!messages.length) {
+                list.innerHTML = '<div class="messages-empty">כתוב הודעה ולחץ ENTER,<br>ההודעה תהיה גלויה לכולם.</div>';
+                return;
+            }
+            list.innerHTML = messages.map(message =>
+                '<div class="message-item"><div class="message-content"><div class="message-text">' + esc(message.text) + '</div><button type="button" class="message-delete-btn" onclick="deleteMessage(' + message.row + ', \'' + message.id + '\')" title="מחק הודעה" aria-label="מחק הודעה">🗑️</button></div><div class="message-meta">' + esc(message.user) + ' • ' + esc(message.date) + '</div></div>'
+            ).join('');
+        }
+
+        function deleteMessage(row, id) {
+            if (!confirm('למחוק את ההודעה?')) return;
+            fetch(SCRIPT_URL, {
+                method: 'POST', mode: 'cors', headers: {'Content-Type': 'text/plain'},
+                body: JSON.stringify({action: 'deleteMessage', row: row, id: id})
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status !== 'ok') throw new Error('מחיקת הודעה נכשלה');
+                    loadMessages();
+                })
+                .catch(() => { alert('לא ניתן למחוק את ההודעה. נסה שוב.'); });
+        }
+
+        function addMessage() {
+            const input = document.getElementById('messageInput');
+            const status = document.getElementById('messageStatus');
+            const text = input.value.trim();
+            if (!text) return;
+            input.disabled = true;
+            status.textContent = 'שולח...';
+            fetch(SCRIPT_URL, {
+                method: 'POST', mode: 'cors', headers: {'Content-Type': 'text/plain'},
+                body: JSON.stringify({action: 'addMessage', user: _getUserId(), text: text})
+            })
+                .then(r => r.json())
+                .then(() => {
+                    input.value = '';
+                    input.disabled = false;
+                    status.textContent = 'נשלח ✓';
+                    loadMessages();
+                    input.focus();
+                    setTimeout(() => { status.textContent = 'Enter לשליחה · Shift+Enter לשורה חדשה'; }, 2000);
+                })
+                .catch(() => {
+                    input.disabled = false;
+                    status.textContent = 'שגיאה בשליחה. נסה שוב.';
+                    input.focus();
+                });
+        }
+
         function sendReport() {
             if (!_userEmail) { alert('לא נמצא מייל'); return; }
             const days = parseInt(document.getElementById('reportDays').value) || 7;
@@ -2189,6 +2312,14 @@
         // Close report on overlay click
         document.getElementById('reportOverlay').addEventListener('click', e => {
             if (e.target === e.currentTarget) closeReportDialog();
+        });
+        document.getElementById('messagesOverlay').addEventListener('click', e => {
+            if (e.target === e.currentTarget) closeMessagesDialog();
+        });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && document.getElementById('messagesOverlay').classList.contains('visible')) {
+                closeMessagesDialog();
+            }
         });
 
         // ===== Attach Files Dialog =====

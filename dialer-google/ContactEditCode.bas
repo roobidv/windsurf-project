@@ -118,8 +118,7 @@ VCFImport:
     frm.btnCancel.ControlTipText = "ESC"
 
     frm.txtContactName.SetFocus
-    frm.txtContactName.BackColor = CLR_FOCUS
-    ' צביעת רקע צהוב לתא ראשון
+    frm.txtContactName.BackColor = CLR_FOCUS   ' צביעת רקע צהוב לתא ראשון
     ContactEdit_Form_Load = True
     Exit Function
 
@@ -127,7 +126,6 @@ ErrorHandler:
     MsgBox "ContactEdit_Form_Load: " & Err.Description, vbExclamation, "frmContactEdit"
     ContactEdit_Form_Load = True
 End Function
-
 
 ' ---------------------------------------------------------------------------
 ' BtnSave Click: ולידציה + INSERT או UPDATE + סגירת הטופס

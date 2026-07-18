@@ -23,22 +23,39 @@ function doPost(e) {
     return ContentService.createTextOutput(JSON.stringify({status:'ok'})).setMimeType(ContentService.MimeType.JSON);
   }
 
+  if (action === 'addMessage') {
+    var msgSheet = getOrCreateSheet(ss, '\u05d0\u05e8\u05d5\u05e2\u05d9\u05dd', ['\u05ea\u05d0\u05e8\u05d9\u05da','\u05de\u05e9\u05ea\u05de\u05e9','\u05e4\u05e2\u05d5\u05dc\u05d4','\u05e9\u05d3\u05d4','\u05e2\u05e8\u05da \u05e7\u05d5\u05d3\u05dd','\u05e2\u05e8\u05da \u05d7\u05d3\u05e9','\u05e1\u05de\u05dc \u05de\u05d5\u05e1\u05d3']);
+    msgSheet.appendRow([new Date(), data.user, '\u05d4\u05d5\u05d3\u05e2\u05d4', Utilities.getUuid(), '', data.text, '']);
+    return ContentService.createTextOutput(JSON.stringify({status:'ok'})).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (action === 'deleteMessage') {
+    var deleteSheet = ss.getSheetByName('\u05d0\u05e8\u05d5\u05e2\u05d9\u05dd');
+    var messageRow = parseInt(data.row, 10);
+    if (!deleteSheet || !messageRow || messageRow < 2 || String(deleteSheet.getRange(messageRow, 3).getValue()).trim() !== '\u05d4\u05d5\u05d3\u05e2\u05d4') {
+      return ContentService.createTextOutput(JSON.stringify({status:'error'})).setMimeType(ContentService.MimeType.JSON);
+    }
+    if (!data.id || String(deleteSheet.getRange(messageRow, 4).getValue()).trim() !== String(data.id).trim()) {
+      return ContentService.createTextOutput(JSON.stringify({status:'error'})).setMimeType(ContentService.MimeType.JSON);
+    }
+    deleteSheet.deleteRow(messageRow);
+    return ContentService.createTextOutput(JSON.stringify({status:'ok'})).setMimeType(ContentService.MimeType.JSON);
+  }
+
   if (action === 'registerDevice') {
-    var dSheet = getOrCreateSheet(ss, '\u05de\u05db\u05e9\u05d9\u05e8\u05d9\u05dd', ['deviceId','\u05e9\u05dd','\u05d8\u05d5\u05e7\u05df','UA','\u05ea\u05d0\u05e8\u05d9\u05da \u05e8\u05d9\u05e9\u05d5\u05dd','\u05e4\u05e2\u05d9\u05dc','\u05d4\u05e8\u05e9\u05d0\u05d4']);
+    var dSheet = getOrCreateSheet(ss, '\u05de\u05db\u05e9\u05d9\u05e8\u05d9\u05dd', ['deviceId','\u05e9\u05dd','\u05d8\u05d5\u05e7\u05df','UA','\u05ea\u05d0\u05e8\u05d9\u05da \u05e8\u05d9\u05e9\u05d5\u05dd','\u05e4\u05e2\u05d9\u05dc']);
     var dRows = dSheet.getDataRange().getValues();
     var found = false;
     for (var i = 1; i < dRows.length; i++) {
       if (String(dRows[i][0]) === data.deviceId) {
         dSheet.getRange(i+1, 2).setValue(data.name);
         dSheet.getRange(i+1, 4).setValue(data.ua);
-        dSheet.getRange(i+1, 6).setValue('\u05db\u05df');
-        if (data.permType) dSheet.getRange(i+1, 7).setValue(data.permType);
         found = true;
         break;
       }
     }
     if (!found) {
-      dSheet.appendRow([data.deviceId, data.name, data.token, data.ua, new Date(), '\u05db\u05df', data.permType || '']);
+      dSheet.appendRow([data.deviceId, data.name, data.token, data.ua, new Date(), '\u05db\u05df']);
     }
     return ContentService.createTextOutput(JSON.stringify({status:'ok'})).setMimeType(ContentService.MimeType.JSON);
   }
@@ -131,6 +148,31 @@ function doGet(e) {
       return ContentService.createTextOutput(JSON.stringify({email: email})).setMimeType(ContentService.MimeType.JSON);
     }
 
+    if (e.parameter.action === 'getMessages') {
+      var messagesSheet = ss.getSheetByName('\u05d0\u05e8\u05d5\u05e2\u05d9\u05dd');
+      var messages = [];
+      if (messagesSheet) {
+        var messageRows = messagesSheet.getDataRange().getValues();
+        for (var i = messageRows.length - 1; i >= 1; i--) {
+          if (String(messageRows[i][2]).trim() !== '\u05d4\u05d5\u05d3\u05e2\u05d4') continue;
+          var messageDate = new Date(messageRows[i][0]);
+          var messageId = String(messageRows[i][3] || '');
+          if (!messageId) {
+            messageId = Utilities.getUuid();
+            messagesSheet.getRange(i + 1, 4).setValue(messageId);
+          }
+          messages.push({
+            id: messageId,
+            row: i + 1,
+            date: isNaN(messageDate.getTime()) ? String(messageRows[i][0] || '') : Utilities.formatDate(messageDate, 'Asia/Jerusalem', 'dd.MM.yy HH:mm'),
+            user: String(messageRows[i][1] || ''),
+            text: String(messageRows[i][5] || '')
+          });
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({messages: messages})).setMimeType(ContentService.MimeType.JSON);
+    }
+
     if (e.parameter.action === 'getReport') {
       var reportUser = decodeURIComponent(e.parameter.user || '');
       var reportDays = parseInt(e.parameter.days) || 7;
@@ -213,10 +255,9 @@ function doGet(e) {
         var dRows = dSheet.getDataRange().getValues();
         for (var i = 1; i < dRows.length; i++) {
           if (String(dRows[i][0]) === did && String(dRows[i][5]).trim() === '\u05db\u05df') {
-            // Read permType from device record first, fallback to auth lookup
-            var storedPerm = String(dRows[i][6]||'').trim();
+            // Look up permType from auth sheet using token
             var devToken = String(dRows[i][2]||'').replace(/[\s\-()]/g,'').toLowerCase();
-            var permType = storedPerm || '';
+            var permType = 'phone';
             var aSheet = ss.getSheetByName('\u05d4\u05e8\u05e9\u05d0\u05d5\u05ea');
             if (aSheet) {
               var aRows = aSheet.getDataRange().getValues();
