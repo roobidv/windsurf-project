@@ -399,6 +399,9 @@
         .messages-actions { display: flex; gap: 6px; }
         .messages-action-btn { border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 18px; line-height: 1; padding: 4px 7px; border-radius: 6px; }
         .messages-action-btn:hover { background: var(--primary-light); color: var(--primary); }
+        #messagesBtn { position: relative; }
+        .messages-badge { position: absolute; top: -7px; left: -7px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--red); color: #fff; border: 2px solid var(--bg); font-size: 10px; font-weight: 700; line-height: 14px; text-align: center; }
+        .messages-badge[hidden] { display: none; }
         .messages-input {
             width: 100%; min-height: 68px; padding: 10px; border: 1.5px solid var(--border);
             border-radius: 10px; resize: vertical; font-family: inherit; font-size: 14px; direction: rtl;
@@ -413,6 +416,7 @@
         .message-delete-btn { flex: 0 0 auto; border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 2px 4px; border-radius: 5px; }
         .message-delete-btn:hover { color: var(--red); background: var(--red-bg); }
         .message-meta { margin-top: 6px; color: var(--text-muted); font-size: 11px; }
+        .message-read-status { margin-top: 4px; color: var(--primary); font-size: 11px; line-height: 1.45; }
         .messages-empty { color: var(--text-muted); text-align: center; padding: 20px; font-size: 14px; line-height: 1.6; }
 
         /* Authority Filter Dropdown */
@@ -1087,7 +1091,7 @@
         <div class="filter-chip active" data-level="" data-ptype="">הכל</div>
         <div class="filter-chip chip-green" data-level="" data-ptype="משרדי">משרדי</div>
         <div class="filter-chip chip-red" data-level="" data-ptype="לא-משרדי">לא משרדי</div>
-        <div class="filter-chip" id="messagesBtn" onclick="openMessagesDialog()" style="background:#2563eb;color:white;padding:5px 16px;font-size:100%;margin-right:auto;margin-left:0">הודעות</div>
+        <div class="filter-chip" id="messagesBtn" onclick="openMessagesDialog()" style="background:#2563eb;color:white;padding:5px 16px;font-size:100%;margin-right:auto;margin-left:0">הודעות<span class="messages-badge" id="messagesBadge" hidden></span></div>
         <div class="filter-chip" id="refreshBtn" onclick="refreshData()" style="background:#4CAF50;color:white;padding:5px 16px;font-size:100%;margin-right:auto;margin-left:0">רענן</div>
     </div>
 
@@ -1212,8 +1216,11 @@
     </div>
 
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw2WIxWzD4ipnmV0exC_IhRmkgrab8Ndv8pg76S8GEt6q6AQ6ZwT-n0t9nt9kRQpmIF/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwCXjFnQUWzwobxNPiittlSsCP-D7wUiG4FYh8NtE1O17V_QeFVIhJTWutK1_XuZG2H/exec';
         let cloudNotes = {};
+        let messagesPollingTimer = null;
+        const MESSAGES_LAST_SEEN_KEY = 'messages_last_seen';
+        const MESSAGE_READERS = ['רובי דביר', 'לימור חבס', 'חיה שוורץ'];
 
         let allRows = [];
         let filteredRows = [];
@@ -2168,7 +2175,7 @@
 
         function openMessagesDialog() {
             document.getElementById('messagesOverlay').classList.add('visible');
-            loadMessages();
+            loadMessages(true);
             setTimeout(() => document.getElementById('messageInput').focus(), 0);
         }
 
@@ -2183,16 +2190,91 @@
             }
         }
 
-        function loadMessages() {
+        function loadMessages(markAsRead) {
             const list = document.getElementById('messagesList');
-            list.innerHTML = '<div class="messages-empty">טוען הודעות...</div>';
+            if (document.getElementById('messagesOverlay').classList.contains('visible')) {
+                list.innerHTML = '<div class="messages-empty">טוען הודעות...</div>';
+            }
             fetch(SCRIPT_URL + '?action=getMessages&_=' + Date.now(), {mode: 'cors', cache: 'no-store'})
                 .then(r => {
                     if (!r.ok) throw new Error('טעינת הודעות נכשלה');
                     return r.json();
                 })
-                .then(data => renderMessages(data.messages || []))
-                .catch(() => { list.innerHTML = '<div class="messages-empty">לא ניתן לטעון את ההודעות. נסה לרענן.</div>'; });
+                .then(data => {
+                    const messages = data.messages || [];
+                    const isDialogOpen = document.getElementById('messagesOverlay').classList.contains('visible');
+                    const shouldMarkRead = markAsRead || isDialogOpen;
+                    renderMessages(messages);
+                    updateMessageNotifications(messages, shouldMarkRead);
+                    if (shouldMarkRead) markMessagesRead(messages);
+                })
+                .catch(() => {
+                    if (document.getElementById('messagesOverlay').classList.contains('visible')) {
+                        list.innerHTML = '<div class="messages-empty">לא ניתן לטעון את ההודעות. נסה לרענן.</div>';
+                    }
+                });
+        }
+
+        function isMessageReader() {
+            return MESSAGE_READERS.includes(_getUserId());
+        }
+
+        function updateMessageNotifications(messages, markAsRead) {
+            const badge = document.getElementById('messagesBadge');
+            if (!isMessageReader()) {
+                badge.hidden = true;
+                return;
+            }
+            const timestamps = messages.map(message => Number(message.timestamp) || 0).filter(Boolean);
+            const latestTimestamp = timestamps.length ? Math.max.apply(null, timestamps) : 0;
+            let lastSeen = Number(localStorage.getItem(MESSAGES_LAST_SEEN_KEY)) || 0;
+            if (!lastSeen && latestTimestamp) {
+                lastSeen = latestTimestamp;
+                localStorage.setItem(MESSAGES_LAST_SEEN_KEY, String(lastSeen));
+            }
+            if (markAsRead && latestTimestamp) {
+                lastSeen = latestTimestamp;
+                localStorage.setItem(MESSAGES_LAST_SEEN_KEY, String(lastSeen));
+            }
+            const unreadCount = messages.filter(message => (Number(message.timestamp) || 0) > lastSeen).length;
+            badge.hidden = unreadCount === 0;
+            badge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+        }
+
+        function markMessagesRead(messages) {
+            if (!isMessageReader()) return;
+            const user = _getUserId();
+            const messageIds = messages.map(message => message.id).filter(Boolean);
+            if (!messageIds.length) return;
+            fetch(SCRIPT_URL, {
+                method: 'POST', mode: 'cors', headers: {'Content-Type': 'text/plain'},
+                body: JSON.stringify({action: 'markMessagesRead', user: user, messageIds: messageIds})
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status !== 'ok') return;
+                    messages.forEach(message => {
+                        if (!message.readBy) message.readBy = [];
+                        if (!message.readBy.includes(user)) message.readBy.push(user);
+                    });
+                    renderMessages(messages);
+                })
+                .catch(() => {});
+        }
+
+        function startMessageNotifications() {
+            if (!isMessageReader()) return;
+            loadMessages(false);
+            if (!messagesPollingTimer) {
+                messagesPollingTimer = setInterval(() => loadMessages(false), 60000);
+            }
+        }
+
+        function messageReadStatus(message) {
+            const readBy = Array.isArray(message.readBy) ? message.readBy : [];
+            const pending = MESSAGE_READERS.filter(name => !readBy.includes(name));
+            const readText = readBy.length ? 'נקרא: ' + readBy.join(', ') : 'טרם נקרא';
+            return readText + (pending.length ? ' · ממתינים ל: ' + pending.join(', ') : ' · נקרא על ידי כולם ✓');
         }
 
         function renderMessages(messages) {
@@ -2202,7 +2284,7 @@
                 return;
             }
             list.innerHTML = messages.map(message =>
-                '<div class="message-item"><div class="message-content"><div class="message-text">' + esc(message.text) + '</div><button type="button" class="message-delete-btn" onclick="deleteMessage(' + message.row + ', \'' + message.id + '\')" title="מחק הודעה" aria-label="מחק הודעה">🗑️</button></div><div class="message-meta">' + esc(message.user) + ' • ' + esc(message.date) + '</div></div>'
+                '<div class="message-item"><div class="message-content"><div class="message-text">' + esc(message.text) + '</div><button type="button" class="message-delete-btn" onclick="deleteMessage(' + message.row + ', \'' + message.id + '\')" title="מחק הודעה" aria-label="מחק הודעה">🗑️</button></div><div class="message-meta">' + esc(message.user) + ' • ' + esc(message.date) + '</div><div class="message-read-status">' + esc(messageReadStatus(message)) + '</div></div>'
             ).join('');
         }
 
@@ -2236,7 +2318,7 @@
                     input.value = '';
                     input.disabled = false;
                     status.textContent = 'נשלח ✓';
-                    loadMessages();
+                    loadMessages(true);
                     input.focus();
                     setTimeout(() => { status.textContent = 'Enter לשליחה · Shift+Enter לשורה חדשה'; }, 2000);
                 })
@@ -2704,6 +2786,7 @@
             loadData();
             loadCloudNotes();
             loadContacts();
+            startMessageNotifications();
         }
 
         function checkAuth() {

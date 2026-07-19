@@ -1,4 +1,5 @@
 var GEMINI_KEY = 'AIzaSyCF24GDp93Kn8f0--hmKB-Qvj5h9gHqeRY';
+var MESSAGE_READERS = ['\u05e8\u05d5\u05d1\u05d9 \u05d3\u05d1\u05d9\u05e8', '\u05dc\u05d9\u05de\u05d5\u05e8 \u05d7\u05d1\u05e1', '\u05d7\u05d9\u05d4 \u05e9\u05d5\u05d5\u05e8\u05e5'];
 
 function doPost(e) {
   var data = JSON.parse(e.postData.contents);
@@ -39,6 +40,33 @@ function doPost(e) {
       return ContentService.createTextOutput(JSON.stringify({status:'error'})).setMimeType(ContentService.MimeType.JSON);
     }
     deleteSheet.deleteRow(messageRow);
+    return ContentService.createTextOutput(JSON.stringify({status:'ok'})).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  if (action === 'markMessagesRead') {
+    var reader = String(data.user || '').trim();
+    var messageIds = Array.isArray(data.messageIds) ? data.messageIds : [];
+    if (!isMessageReader(reader) || messageIds.length === 0) {
+      return ContentService.createTextOutput(JSON.stringify({status:'error'})).setMimeType(ContentService.MimeType.JSON);
+    }
+    var readsSheet = getOrCreateSheet(ss, '\u05e7\u05e8\u05d9\u05d0\u05d5\u05ea \u05d4\u05d5\u05d3\u05e2\u05d5\u05ea', ['\u05de\u05d6\u05d4\u05d4 \u05d4\u05d5\u05d3\u05e2\u05d4','\u05de\u05e9\u05ea\u05de\u05e9','\u05ea\u05d0\u05e8\u05d9\u05da']);
+    var existingReads = readsSheet.getDataRange().getValues();
+    var readKeys = {};
+    for (var i = 1; i < existingReads.length; i++) {
+      readKeys[String(existingReads[i][0] || '') + '|' + String(existingReads[i][1] || '')] = true;
+    }
+    var newReads = [];
+    for (var j = 0; j < messageIds.length; j++) {
+      var messageId = String(messageIds[j] || '').trim();
+      var readKey = messageId + '|' + reader;
+      if (messageId && !readKeys[readKey]) {
+        newReads.push([messageId, reader, new Date()]);
+        readKeys[readKey] = true;
+      }
+    }
+    if (newReads.length) {
+      readsSheet.getRange(readsSheet.getLastRow() + 1, 1, newReads.length, 3).setValues(newReads);
+    }
     return ContentService.createTextOutput(JSON.stringify({status:'ok'})).setMimeType(ContentService.MimeType.JSON);
   }
 
@@ -151,6 +179,19 @@ function doGet(e) {
     if (e.parameter.action === 'getMessages') {
       var messagesSheet = ss.getSheetByName('\u05d0\u05e8\u05d5\u05e2\u05d9\u05dd');
       var messages = [];
+      var messageReads = {};
+      var readsSheet = ss.getSheetByName('\u05e7\u05e8\u05d9\u05d0\u05d5\u05ea \u05d4\u05d5\u05d3\u05e2\u05d5\u05ea');
+      if (readsSheet) {
+        var readRows = readsSheet.getDataRange().getValues();
+        for (var r = 1; r < readRows.length; r++) {
+          var readMessageId = String(readRows[r][0] || '').trim();
+          var readUser = String(readRows[r][1] || '').trim();
+          if (readMessageId && isMessageReader(readUser)) {
+            if (!messageReads[readMessageId]) messageReads[readMessageId] = [];
+            if (messageReads[readMessageId].indexOf(readUser) === -1) messageReads[readMessageId].push(readUser);
+          }
+        }
+      }
       if (messagesSheet) {
         var messageRows = messagesSheet.getDataRange().getValues();
         for (var i = messageRows.length - 1; i >= 1; i--) {
@@ -164,6 +205,8 @@ function doGet(e) {
           messages.push({
             id: messageId,
             row: i + 1,
+            timestamp: isNaN(messageDate.getTime()) ? 0 : messageDate.getTime(),
+            readBy: messageReads[messageId] || [],
             date: isNaN(messageDate.getTime()) ? String(messageRows[i][0] || '') : Utilities.formatDate(messageDate, 'Asia/Jerusalem', 'dd.MM.yy HH:mm'),
             user: String(messageRows[i][1] || ''),
             text: String(messageRows[i][5] || '')
@@ -318,6 +361,10 @@ function doAuth(type, value) {
     }
   }
   return ContentService.createTextOutput(JSON.stringify({authorized:false})).setMimeType(ContentService.MimeType.JSON);
+}
+
+function isMessageReader(user) {
+  return MESSAGE_READERS.indexOf(String(user || '').trim()) !== -1;
 }
 
 function getOrCreateSheet(ss, name, headers) {
