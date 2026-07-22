@@ -1323,6 +1323,7 @@
                     localStorage.setItem('pb_auth_type', 'code');
                     localStorage.setItem('pb_auth_name', displayName);
                     localStorage.setItem('pb_auth_perm', data.permType || 'מנהל');
+                    _requestPersistentStorage();
                     _registerDevice(displayName, value);
                     showApp(displayName);
                 } else {
@@ -1344,7 +1345,11 @@
             });
     }
 
+    let _appShown = false;
+
     function showApp(name) {
+        if (_appShown) return;
+        _appShown = true;
         document.getElementById('loginOverlay').classList.add('hidden');
         if (name) document.getElementById('lastUpdate').textContent = 'שלום, ' + name;
         // Log login
@@ -1358,14 +1363,18 @@
         const deviceId = localStorage.getItem('pb_device_id');
         const savedName = localStorage.getItem('pb_auth_name');
         const savedToken = localStorage.getItem('pb_auth_token');
-
-        // Instant login: only for phone1 (ROOBI)
+        const savedType = localStorage.getItem('pb_auth_type');
         const savedPerm = localStorage.getItem('pb_auth_perm');
-        if (deviceId && savedName && savedToken && savedPerm === 'phone1') {
+
+        // Fast local login: if credentials are saved, enter immediately and revalidate in background
+        if (savedToken && savedType && savedName) {
+            _requestPersistentStorage();
             showApp(savedName);
+            _revalidateAuth(savedToken, savedType);
             return;
         }
 
+        // Fallback: device-based auth (no saved token but device was registered)
         if (deviceId) {
             fetch(SCRIPT_URL + '?action=deviceAuth&deviceId=' + encodeURIComponent(deviceId), {mode: 'cors'})
                 .then(r => r.json())
@@ -1374,39 +1383,43 @@
                         if (data.name) localStorage.setItem('pb_auth_name', data.name);
                         showApp(data.name || savedName);
                     } else {
-                        _checkTokenAuth();
-                    }
-                })
-                .catch(() => {
-                    if (savedName) showApp(savedName);
-                    else _checkTokenAuth();
-                });
-        } else {
-            _checkTokenAuth();
-        }
-    }
-
-    function _checkTokenAuth() {
-        const savedToken = localStorage.getItem('pb_auth_token');
-        const savedType = localStorage.getItem('pb_auth_type');
-        if (savedToken && savedType) {
-            fetch(SCRIPT_URL + '?action=auth&type=' + savedType + '&value=' + encodeURIComponent(savedToken), {mode: 'cors'})
-                .then(r => r.json())
-                .then(data => {
-                    if (data.authorized) {
-                        if (data.permType) localStorage.setItem('pb_auth_perm', data.permType);
-                        _registerDevice(data.name || savedToken, savedToken);
-                        showApp(data.name || localStorage.getItem('pb_auth_name'));
-                    } else {
                         document.getElementById('loginOverlay').classList.remove('hidden');
                     }
                 })
                 .catch(() => {
-                    const n = localStorage.getItem('pb_auth_name');
-                    if (n) showApp(n); else document.getElementById('loginOverlay').classList.remove('hidden');
+                    document.getElementById('loginOverlay').classList.remove('hidden');
                 });
         } else {
             document.getElementById('loginOverlay').classList.remove('hidden');
+        }
+    }
+
+    function _revalidateAuth(token, type) {
+        fetch(SCRIPT_URL + '?action=auth&type=' + type + '&value=' + encodeURIComponent(token), {mode: 'cors'})
+            .then(r => r.json())
+            .then(data => {
+                if (!data.authorized) {
+                    // Auth revoked: clear session and force login
+                    localStorage.removeItem('pb_auth_token');
+                    localStorage.removeItem('pb_auth_type');
+                    localStorage.removeItem('pb_auth_name');
+                    localStorage.removeItem('pb_auth_perm');
+                    localStorage.removeItem('pb_device_id');
+                    location.reload();
+                } else {
+                    if (data.name) localStorage.setItem('pb_auth_name', data.name);
+                    if (data.permType) localStorage.setItem('pb_auth_perm', data.permType);
+                    _registerDevice(data.name || localStorage.getItem('pb_auth_name'), token);
+                }
+            })
+            .catch(() => {
+                // Offline/network error: keep local session so work can continue
+            });
+    }
+
+    function _requestPersistentStorage() {
+        if (navigator.storage && navigator.storage.persist) {
+            navigator.storage.persist().catch(() => {});
         }
     }
 

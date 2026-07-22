@@ -2879,6 +2879,7 @@ authority (רשות/עיר), code (סמל מוסד), name (שם מוסד), purch
                         localStorage.setItem('auth_type', _loginTab);
                         localStorage.setItem('auth_name', data.name || '');
                         localStorage.setItem('auth_perm', data.permType || '');
+                        _requestPersistentStorage();
                         _registerDevice(data.name || value, value);
                         showApp(data.name, data.permType);
                     } else {
@@ -2931,6 +2932,7 @@ authority (רשות/עיר), code (סמל מוסד), name (שם מוסד), purch
 
             // Fast local login: if credentials are saved, enter immediately and revalidate in background
             if (savedToken && savedType && savedName) {
+                _requestPersistentStorage();
                 showApp(savedName, savedPerm);
                 _revalidateAuth(savedToken, savedType);
                 return;
@@ -2978,6 +2980,12 @@ authority (רשות/עיר), code (סמל מוסד), name (שם מוסד), purch
                 .catch(() => {
                     // Offline/network error: keep local session so work can continue
                 });
+        }
+
+        function _requestPersistentStorage() {
+            if (navigator.storage && navigator.storage.persist) {
+                navigator.storage.persist().catch(() => {});
+            }
         }
 
         // Restrict phone fields to digits 0-9 and dash only
