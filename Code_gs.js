@@ -141,6 +141,10 @@ function doGet(e) {
     }
 
     if (e.parameter.action === 'geminiSearch') {
+      var user = decodeURIComponent(e.parameter.user || '').toLowerCase().trim();
+      if (user.indexOf('roobid') === -1) {
+        return ContentService.createTextOutput(JSON.stringify({result: 'ERROR: Gemini access restricted'})).setMimeType(ContentService.MimeType.JSON);
+      }
       var prompt = decodeURIComponent(e.parameter.prompt || '');
       var apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GEMINI_KEY;
       var payload = JSON.stringify({contents:[{parts:[{text: prompt}]}]});

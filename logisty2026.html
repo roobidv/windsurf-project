@@ -504,7 +504,7 @@
         .salesperson-inline {
             font-size: 10px;
             color: var(--text-muted);
-            margin-right: 6px;
+            margin-left: 6px;
         }
         .authority-name {
             font-size: 12px;
@@ -1073,7 +1073,7 @@
 
     <div class="gemini-bar" id="geminiBar">
         <input class="gemini-input" id="geminiInput" placeholder="חיפוש חכם: חוב, תקציב גבוה, ללא טלפון...">
-        <button class="gemini-btn" id="geminiBtn" onclick="geminiSearch()">🔍 חפש</button>
+        <button class="gemini-btn" id="geminiBtn" onclick="geminiSearch()">✨ Gemini</button>
     </div>
 
     <div class="search-bar">
@@ -1089,7 +1089,7 @@
 
     <div class="filters" id="levelFilters">
         <div class="filter-chip active" data-level="" data-ptype="">הכל</div>
-        <div class="filter-chip chip-green" data-level="" data-ptype="משרדי">משרדי</div>
+        <div class="filter-chip chip-green" data-level="" data-ptype="משרדי">מענה משרדי</div>
         <div class="filter-chip chip-red" data-level="" data-ptype="לא-משרדי">לא משרדי</div>
         <div class="filter-chip" id="messagesBtn" onclick="openMessagesDialog()" style="background:#2563eb;color:white;padding:5px 16px;font-size:100%;margin-right:auto;margin-left:0">הודעות<span class="messages-badge" id="messagesBadge" hidden></span></div>
         <div class="filter-chip" id="refreshBtn" onclick="refreshData()" style="background:#4CAF50;color:white;padding:5px 16px;font-size:100%;margin-right:auto;margin-left:0">רענן</div>
@@ -1134,7 +1134,7 @@
             <div class="messages-header">
                 <h3 id="messagesTitle">💬 הודעות</h3>
                 <div class="messages-actions">
-                    <button type="button" class="messages-action-btn" onclick="loadMessages()" title="רענן הודעות" aria-label="רענן הודעות">↻</button>
+                    <button type="button" class="messages-action-btn" onclick="loadMessages(true)" title="רענן הודעות" aria-label="רענן הודעות">↻</button>
                     <button type="button" class="messages-action-btn" onclick="closeMessagesDialog()" title="סגור" aria-label="סגור">✕</button>
                 </div>
             </div>
@@ -1216,7 +1216,7 @@
     </div>
 
     <script>
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwCXjFnQUWzwobxNPiittlSsCP-D7wUiG4FYh8NtE1O17V_QeFVIhJTWutK1_XuZG2H/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxyLcshFVL86oSQi-80fjUY9C-dQ_qGpOIBUjJc_4SWJn4d5ln35cXD3feTrhyQm-V7/exec';
         let cloudNotes = {};
         let messagesPollingTimer = null;
         const MESSAGES_LAST_SEEN_KEY = 'messages_last_seen';
@@ -1480,15 +1480,13 @@
                     const d = ph.replace(/[\s\-()]/g,'');
                     return (d.length >= 10 && d.startsWith('05')) ? `<button class="phone-btn whatsapp" onclick="sendWhatsApp('${d}')"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></button>` : '';
                 };
-                const notesListHtml = notes.length > 0 ? `<div class="notes-list">${notes.map(n =>
-                    `<div class="note-item"><div class="note-text">${esc(n.text)}</div><div class="note-meta">${esc(n.meta)}</div><button class="note-delete" onclick="deleteNote('${baseKey}',${n.idx})">🗑</button></div>`
-                ).join('')}</div>` : '';
+                const notesListHtml = notes.length > 0 ? `<div class="notes-list">${notes.map(n => renderNoteItem(n, baseKey)).join('')}</div>` : '';
                 return `
                 <div class="card${hasNotes}${typeClass}" onclick="toggleCard(event, this)">
                     <div class="authority-name">${esc(r.authority)}</div>
                     <div class="card-header">
                         <div class="institution-name">${esc(r.name)}</div>
-                        <div class="institution-code">${esc(r.code)}<button class="copy-code-btn" onclick="event.stopPropagation();_copyText('${esc(r.code)}')" title="העתק סמל">📋</button>${r.salesperson ? `<span class="salesperson-inline">${esc(r.salesperson)}</span>` : ''}</div>
+                        <div class="institution-code">${esc(r.code)}${r.salesperson ? `<span class="salesperson-inline">${esc(r.salesperson)}</span>` : ''}<button class="copy-code-btn" onclick="event.stopPropagation();_copyText('${esc(r.code)}')" title="העתק סמל">📋</button></div>
                     </div>
                     <div class="card-tags">
                         <span class="tag tag-level">${esc(r.level)}</span>
@@ -1572,7 +1570,7 @@
                             <div class="contacts-action-row" id="contact_action_${esc(r.code)}"></div>
                         </div>` : ''}
                         <div class="notes-section">
-                            <div class="notes-label">📝 הערות</div>
+                            <div class="notes-label">📝 הערות ${notes.length > 0 ? '(' + notes.length + ')' : ''}</div>
                             <textarea class="notes-textarea" data-key="${baseKey}"
                                 placeholder="כתוב הערה חדשה ולחץ Enter..."
                                 onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addNote(this)}"></textarea>
@@ -1645,6 +1643,12 @@
             return localStorage.getItem('auth_name') || localStorage.getItem('auth_token') || 'unknown';
         }
 
+        function isGeminiUser() {
+            const name = (localStorage.getItem('auth_name') || '').toLowerCase();
+            const token = (localStorage.getItem('auth_token') || '').toLowerCase();
+            return name.includes('roobid') || token.includes('roobid');
+        }
+
         function _getNow() {
             const d = new Date();
             const yr = String(d.getFullYear()).slice(-2);
@@ -1656,8 +1660,13 @@
             if (!raw) return [];
             try {
                 const arr = JSON.parse(raw);
-                return arr.slice(0, 7).map((n,i) => ({text: n.text, meta: (n.user ? n.user + ' • ' : '') + (n.date||''), idx: i}));
+                return arr.slice(0, 5).map((n,i) => ({text: n.text, meta: (n.user ? n.user + ' • ' : '') + (n.date||''), idx: i}));
             } catch(e) { return []; }
+        }
+
+        function renderNoteItem(n, baseKey) {
+            const del = n.idx > 0 ? `<button class="note-delete" onclick="deleteNote('${baseKey}',${n.idx})">🗑</button>` : '';
+            return `<div class="note-item"><div class="note-text">${esc(n.text)}</div><div class="note-meta">${esc(n.meta)}</div>${del}</div>`;
         }
 
         function addNote(textarea) {
@@ -1669,7 +1678,7 @@
             try { arr = JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch(e) {}
             const entry = {text: text, user: _getUserId(), date: _getNow()};
             arr.unshift(entry);
-            if (arr.length > 7) arr = arr.slice(0, 7);
+            if (arr.length > 5) arr = arr.slice(0, 5);
             localStorage.setItem(storageKey, JSON.stringify(arr));
             textarea.value = '';
             // Sync to cloud
@@ -1707,9 +1716,7 @@
             if (oldList) oldList.remove();
             // Build new list
             if (notes.length > 0) {
-                const listHtml = `<div class="notes-list">${notes.map(n =>
-                    `<div class="note-item"><div class="note-text">${esc(n.text)}</div><div class="note-meta">${esc(n.meta)}</div><button class="note-delete" onclick="deleteNote('${baseKey}',${n.idx})">🗑</button></div>`
-                ).join('')}</div>`;
+                const listHtml = `<div class="notes-list">${notes.map(n => renderNoteItem(n, baseKey)).join('')}</div>`;
                 section.insertAdjacentHTML('beforeend', listHtml);
             }
             _showSaved('saved_note_' + baseKey, 'נשמר ✓');
@@ -2073,17 +2080,140 @@
         const _stopWords = new Set(['בתי','ספר','בית','של','עם','את','על','לא','גם','כל','זה','היא','הוא','או','אם','כי','רק','עוד','יש','אין','מה','מי','איך','למה']);
 
         function geminiSearch() {
-            const q = document.getElementById('geminiInput').value.trim().toLowerCase();
+            const qRaw = document.getElementById('geminiInput').value.trim();
+            const q = qRaw.toLowerCase();
             if (!q) return;
             if (allRows.length === 0) { alert('הנתונים עדיין נטענים, נסה שוב'); return; }
 
+            // For non-roobid users, treat as a normal free-text search
+            if (!isGeminiUser()) {
+                document.getElementById('searchInput').value = qRaw;
+                applyFilters();
+                return;
+            }
+
+            const btn = document.getElementById('geminiBtn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '...';
+
+            // Try Gemini AI first, fallback to keyword matching on any failure
+            const prompt = buildGeminiPrompt(qRaw);
+            fetch(SCRIPT_URL + '?action=geminiSearch&user=' + encodeURIComponent(_getUserId()) + '&prompt=' + encodeURIComponent(prompt), {mode: 'cors'})
+                .then(r => r.json())
+                .then(d => {
+                    const ok = applyGeminiResult(d.result, qRaw);
+                    if (!ok) fallbackGeminiSearch(q);
+                })
+                .catch(() => fallbackGeminiSearch(q))
+                .finally(() => {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                });
+        }
+
+        function buildGeminiPrompt(q) {
+            const escaped = q.replace(/"/g, '\\"');
+            return `אתה עוזר חיפוש חכם למערכת "LOGISTY 2026" המכילה נתוני מוסדות חינוך.
+השדות הזמינים הם:
+authority (רשות/עיר), code (סמל מוסד), name (שם מוסד), purchaseType (סוג רכש), level (שכבה), budgetType (סוג תקציב), salesperson (איש מכירות), name_sec (שם מזכירות), phone_sec (טלפון מזכירות), name_mgr (שם מנהל/ת), phone_mgr (טלפון מנהל/ת), it_name (שם ממונה מחשוב), it_phone (טלפון ממונה מחשוב), email, address, status (סטטוס מכירה).
+הערות נשמרות מקומית ולא בשדה בגיליון.
+
+הפוך את השאילתה הבאה ל-JSON בלבד, ללא הסברים. הפורמט:
+{
+  "mode": "filter_field" | "filter_notes" | "sort_budget_desc" | "sort_budget_asc" | "filter_debt" | "filter_no_payment" | "filter_full_payment" | "filter_paid85" | "filter_paid86" | "filter_misradi" | "filter_not_misradi",
+  "params": { "field": "...", "value": "..." }
+}
+
+שדות filter_field יכולים להיות: authority, code, name, purchaseType, level, budgetType, salesperson, name_sec, phone_sec, name_mgr, phone_mgr, it_name, it_phone, email, address, status.
+
+לדוגמה:
+שאילתה: "מצא את כל הרשומות ששם מנהלת הוא אילנה"
+תשובה: {"mode":"filter_field","params":{"field":"name_mgr","value":"אילנה"}}
+
+שאילתה: "מצא בשדה הערות את כל הרשומות שבהן כתוב להתקשר בחודש יולי"
+תשובה: {"mode":"filter_notes","params":{"value":"להתקשר בחודש יולי"}}
+
+שאילתה: "${escaped}"
+תשובה:`;
+        }
+
+        function applyGeminiResult(resultText, originalQ) {
+            if (!resultText) return false;
+            const match = resultText.match(/\{[\s\S]*\}/);
+            if (!match) return false;
+            let json = null;
+            try { json = JSON.parse(match[0]); } catch(e) { return false; }
+            if (!json || !json.mode) return false;
+
+            const _b = r => parseAmount(r.budget);
+            const _p = r => parseAmount(r.paid85) + parseAmount(r.paid86);
+            let ok = true;
+            switch (json.mode) {
+                case 'filter_field': {
+                    const field = json.params && json.params.field;
+                    const val = String(json.params && json.params.value || '').toLowerCase();
+                    if (!field || !val) { ok = false; break; }
+                    filteredRows = allRows.filter(r => String(r[field] || '').toLowerCase().includes(val));
+                    break;
+                }
+                case 'filter_notes': {
+                    const val = String(json.params && json.params.value || '').toLowerCase();
+                    if (!val) { ok = false; break; }
+                    filteredRows = allRows.filter(r => {
+                        const notes = getNotesForKey(r.code + '_' + r.level.replace(/"/g,''));
+                        return notes.some(n => (n.text || '').toLowerCase().includes(val));
+                    });
+                    break;
+                }
+                case 'sort_budget_desc':
+                    filteredRows = [...allRows].sort((a,b) => _b(b) - _b(a)).slice(0, (json.params && json.params.limit) || 30);
+                    break;
+                case 'sort_budget_asc':
+                    filteredRows = [...allRows].filter(r => _b(r) > 0).sort((a,b) => _b(a) - _b(b)).slice(0, (json.params && json.params.limit) || 30);
+                    break;
+                case 'filter_debt':
+                    filteredRows = allRows.filter(r => _b(r) > 0 && _p(r) < _b(r) * 0.5);
+                    break;
+                case 'filter_no_payment':
+                    filteredRows = allRows.filter(r => _b(r) > 0 && _p(r) === 0);
+                    break;
+                case 'filter_full_payment':
+                    filteredRows = allRows.filter(r => _b(r) > 0 && _p(r) >= _b(r));
+                    break;
+                case 'filter_paid85':
+                    filteredRows = allRows.filter(r => parseAmount(r.paid85) > 0);
+                    break;
+                case 'filter_paid86':
+                    filteredRows = allRows.filter(r => parseAmount(r.paid86) > 0);
+                    break;
+                case 'filter_misradi':
+                    filteredRows = allRows.filter(r => r.purchaseType.includes('משרדי'));
+                    break;
+                case 'filter_not_misradi':
+                    filteredRows = allRows.filter(r => r.purchaseType && !r.purchaseType.includes('משרדי'));
+                    break;
+                default:
+                    ok = false;
+            }
+            if (!ok) return false;
+            renderCards();
+            updateSummary();
+            if (filteredRows.length === 0) {
+                alert('לא נמצאו תוצאות');
+            } else {
+                document.getElementById('visibleCount').textContent = filteredRows.length + ' (AI)';
+            }
+            return true;
+        }
+
+        function fallbackGeminiSearch(q) {
             let mode = '', results = [];
             const _b = r => parseAmount(r.budget);
             const _p = r => parseAmount(r.paid85) + parseAmount(r.paid86);
             const _p85 = r => parseAmount(r.paid85);
             const _p86 = r => parseAmount(r.paid86);
 
-            // Smart queries table
             const smartQ = [
                 {keys:['תקציב גבוה','גדולים','תקציב גדול'], mode:'תקציב גבוה', fn: () => [...allRows].sort((a,b) => _b(b) - _b(a)).slice(0,30)},
                 {keys:['תקציב נמוך','קטנים','תקציב קטן'], mode:'תקציב נמוך', fn: () => [...allRows].filter(r=>_b(r)>0).sort((a,b) => _b(a) - _b(b)).slice(0,30)},
@@ -2112,13 +2242,9 @@
             }
 
             if (!mode) {
-                // Smart fuzzy search with prefix stripping and scoring
                 const rawWords = q.split(/\s+/).filter(Boolean);
                 const searchWords = rawWords.filter(w => !_stopWords.has(w));
-                if (searchWords.length === 0 && rawWords.length > 0) {
-                    // All words were stop words, use original
-                    searchWords.push(...rawWords);
-                }
+                if (searchWords.length === 0 && rawWords.length > 0) searchWords.push(...rawWords);
 
                 results = allRows.map(r => {
                     const haystack = [r.name, r.authority, r.code, r.purchaseType, r.level,
@@ -2192,7 +2318,9 @@
 
         function loadMessages(markAsRead) {
             const list = document.getElementById('messagesList');
-            if (document.getElementById('messagesOverlay').classList.contains('visible')) {
+            const isDialogOpen = document.getElementById('messagesOverlay').classList.contains('visible');
+            // Only show loading state on explicit open/refresh, not on background polling
+            if (markAsRead && isDialogOpen) {
                 list.innerHTML = '<div class="messages-empty">טוען הודעות...</div>';
             }
             fetch(SCRIPT_URL + '?action=getMessages&_=' + Date.now(), {mode: 'cors', cache: 'no-store'})
@@ -2202,14 +2330,13 @@
                 })
                 .then(data => {
                     const messages = data.messages || [];
-                    const isDialogOpen = document.getElementById('messagesOverlay').classList.contains('visible');
                     const shouldMarkRead = markAsRead || isDialogOpen;
                     renderMessages(messages);
                     updateMessageNotifications(messages, shouldMarkRead);
                     if (shouldMarkRead) markMessagesRead(messages);
                 })
                 .catch(() => {
-                    if (document.getElementById('messagesOverlay').classList.contains('visible')) {
+                    if (markAsRead && isDialogOpen) {
                         list.innerHTML = '<div class="messages-empty">לא ניתן לטעון את ההודעות. נסה לרענן.</div>';
                     }
                 });
@@ -2767,11 +2894,17 @@
                 });
         }
 
+        let _appShown = false;
+
         function showApp(name, permOverride) {
+            if (_appShown) return;
+            _appShown = true;
             document.getElementById('loginOverlay').classList.add('hidden');
             if (name) document.getElementById('lastUpdate').textContent = 'שלום, ' + name;
-            // Show smart search bar for all users
-            document.getElementById('geminiBar').classList.add('visible');
+            // Show smart search bar only for roobid
+            if (isGeminiUser()) {
+                document.getElementById('geminiBar').classList.add('visible');
+            }
             // Show manager report button for phone1 users
             var perm = permOverride || localStorage.getItem('auth_perm') || '';
             console.log('showApp: name=' + name + ' perm=' + perm + ' stored=' + localStorage.getItem('auth_perm'));
@@ -2793,15 +2926,17 @@
             const deviceId = localStorage.getItem('device_id');
             const savedName = localStorage.getItem('auth_name');
             const savedToken = localStorage.getItem('auth_token');
+            const savedType = localStorage.getItem('auth_type');
             const savedPerm = localStorage.getItem('auth_perm');
 
-            // Instant login: only for phone1 (ROOBI)
-            if (deviceId && savedName && savedToken && savedPerm === 'phone1') {
+            // Fast local login: if credentials are saved, enter immediately and revalidate in background
+            if (savedToken && savedType && savedName) {
                 showApp(savedName, savedPerm);
+                _revalidateAuth(savedToken, savedType);
                 return;
             }
 
-            // Try device-based auth
+            // Fallback: device-based auth (no saved token but device was registered)
             if (deviceId) {
                 fetch(SCRIPT_URL + '?action=deviceAuth&deviceId=' + encodeURIComponent(deviceId), {mode: 'cors'})
                     .then(r => r.json())
@@ -2811,40 +2946,38 @@
                             if (data.permType) localStorage.setItem('auth_perm', data.permType);
                             showApp(data.name || savedName, data.permType || savedPerm);
                         } else {
-                            _checkTokenAuth();
-                        }
-                    })
-                    .catch(() => {
-                        if (savedName) showApp(savedName, savedPerm);
-                        else _checkTokenAuth();
-                    });
-            } else {
-                _checkTokenAuth();
-            }
-        }
-
-        function _checkTokenAuth() {
-            const savedToken = localStorage.getItem('auth_token');
-            const savedType = localStorage.getItem('auth_type');
-            if (savedToken && savedType) {
-                fetch(SCRIPT_URL + '?action=auth&type=' + savedType + '&value=' + encodeURIComponent(savedToken), {mode: 'cors'})
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.authorized) {
-                            if (data.permType) localStorage.setItem('auth_perm', data.permType);
-                            _registerDevice(data.name || savedToken, savedToken);
-                            showApp(data.name || localStorage.getItem('auth_name'), data.permType);
-                        } else {
-                            localStorage.removeItem('auth_token');
-                            localStorage.removeItem('auth_type');
-                            localStorage.removeItem('device_id');
                             document.getElementById('loginOverlay').classList.remove('hidden');
                         }
                     })
                     .catch(() => {
-                        if (localStorage.getItem('auth_name')) showApp(localStorage.getItem('auth_name'));
+                        document.getElementById('loginOverlay').classList.remove('hidden');
                     });
+            } else {
+                document.getElementById('loginOverlay').classList.remove('hidden');
             }
+        }
+
+        function _revalidateAuth(token, type) {
+            fetch(SCRIPT_URL + '?action=auth&type=' + type + '&value=' + encodeURIComponent(token), {mode: 'cors'})
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.authorized) {
+                        // Auth revoked: clear session and force login
+                        localStorage.removeItem('auth_token');
+                        localStorage.removeItem('auth_type');
+                        localStorage.removeItem('auth_name');
+                        localStorage.removeItem('auth_perm');
+                        localStorage.removeItem('device_id');
+                        location.reload();
+                    } else {
+                        if (data.name) localStorage.setItem('auth_name', data.name);
+                        if (data.permType) localStorage.setItem('auth_perm', data.permType);
+                        _registerDevice(data.name || localStorage.getItem('auth_name'), token);
+                    }
+                })
+                .catch(() => {
+                    // Offline/network error: keep local session so work can continue
+                });
         }
 
         // Restrict phone fields to digits 0-9 and dash only
