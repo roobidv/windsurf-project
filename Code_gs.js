@@ -142,7 +142,7 @@ function doGet(e) {
 
     if (e.parameter.action === 'geminiSearch') {
       var user = decodeURIComponent(e.parameter.user || '').toLowerCase().trim();
-      if (user.indexOf('roobid') === -1) {
+      if (user.indexOf('roobid') === -1 && user.indexOf('roobi') === -1 && user.indexOf('רובי') === -1) {
         return ContentService.createTextOutput(JSON.stringify({result: 'ERROR: Gemini access restricted'})).setMimeType(ContentService.MimeType.JSON);
       }
       var prompt = decodeURIComponent(e.parameter.prompt || '');

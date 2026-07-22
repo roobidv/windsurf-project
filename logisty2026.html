@@ -1646,7 +1646,10 @@
         function isGeminiUser() {
             const name = (localStorage.getItem('auth_name') || '').toLowerCase();
             const token = (localStorage.getItem('auth_token') || '').toLowerCase();
-            return name.includes('roobid') || token.includes('roobid');
+            const perm = (localStorage.getItem('auth_perm') || '').toLowerCase();
+            return name.includes('roobid') || name.includes('roobi') || name.includes('רובי') ||
+                   token.includes('roobid') || token.includes('roobi') ||
+                   perm === 'phone1';
         }
 
         function _getNow() {
