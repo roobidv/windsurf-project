@@ -440,6 +440,19 @@
         .authority-select:focus {
             border-color: var(--primary);
         }
+        .authority-clear {
+            background: var(--card);
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 14px;
+            padding: 7px 10px;
+            line-height: 1;
+            display: none;
+        }
+        .authority-clear:hover { color: var(--red); border-color: var(--red); }
+        .authority-clear.visible { display: inline-block; }
 
         /* Cards */
         .cards {
@@ -1084,6 +1097,7 @@
         <select class="authority-select" id="authoritySelect">
             <option value="">כל הרשויות</option>
         </select>
+        <button class="authority-clear" id="authorityClear" onclick="clearAuthorityFilter()" title="נקה בחירת עיר">✕</button>
         <button class="mgr-report-btn" id="mgrReportBtn" style="display:none" onclick="openMgrReport()">📊 דו"ח מנהל</button>
     </div>
 
@@ -1390,6 +1404,17 @@
             applyFilters();
         }
 
+        function clearAuthorityFilter() {
+            document.getElementById('authoritySelect').value = '';
+            updateAuthorityClearButton();
+            applyFilters();
+        }
+
+        function updateAuthorityClearButton() {
+            const btn = document.getElementById('authorityClear');
+            if (btn) btn.classList.toggle('visible', !!document.getElementById('authoritySelect').value);
+        }
+
         // Build set of valid authority names for smart search
         let _authoritySet = new Set();
         let activeSalesperson = '';
@@ -1452,6 +1477,7 @@
 
             renderCards();
             updateSummary();
+            updateAuthorityClearButton();
         }
 
         function renderCards() {
