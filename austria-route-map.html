@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מסלול טיול באוסטריה - Austria Route Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #1a5276, #2e86c1);
+            color: white;
+            padding: 16px 24px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+        .header p {
+            font-size: 14px;
+            opacity: 0.85;
+        }
+        #map {
+            width: 100%;
+            height: calc(100vh - 80px);
+        }
+        .route-label {
+            background: white;
+            border: 2px solid #e74c3c;
+            border-radius: 8px;
+            padding: 4px 8px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #2c3e50;
+            white-space: nowrap;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            text-align: center;
+            line-height: 1.4;
+        }
+        .city-label {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 13px;
+            font-weight: bold;
+            white-space: nowrap;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        .legend {
+            background: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            font-size: 13px;
+            line-height: 1.8;
+            direction: rtl;
+        }
+        .legend h3 {
+            margin-bottom: 6px;
+            color: #1a5276;
+            font-size: 15px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            direction: ltr;
+        }
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .total-info {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #ddd;
+            font-weight: bold;
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>מסלול טיול באוסטריה</h1>
+        <p>Austria Circular Route: Salzburg Region</p>
+    </div>
+    <div id="map"></div>
+
+    <script>
+        const locations = [
+            { name: "Salzburg", nameHe: "זלצבורג", lat: 47.8095, lng: 13.0550, color: "#e74c3c" },
+            { name: "Hohenwerfen", nameHe: "הוהנוורפן", lat: 47.4833, lng: 13.1900, color: "#e67e22" },
+            { name: "Dachstein", nameHe: "דכשטיין", lat: 47.5350, lng: 13.7100, color: "#9b59b6" },
+            { name: "Hallstatt", nameHe: "הלשטט", lat: 47.5622, lng: 13.6493, color: "#2ecc71" },
+            { name: "St. Wolfgang", nameHe: "סנט וולפגנג", lat: 47.7394, lng: 13.4461, color: "#3498db" },
+            { name: "St. Gilgen", nameHe: "סנט גילגן", lat: 47.7667, lng: 13.3650, color: "#1abc9c" }
+        ];
+
+        const routes = [
+            { from: 0, to: 1, distance: "40 km", time: "35 min" },
+            { from: 1, to: 2, distance: "55 km", time: "50 min" },
+            { from: 2, to: 3, distance: "8 km", time: "15 min" },
+            { from: 3, to: 4, distance: "40 km", time: "45 min" },
+            { from: 4, to: 5, distance: "12 km", time: "20 min" },
+            { from: 5, to: 0, distance: "30 km", time: "35 min" }
+        ];
+
+        const map = L.map('map').setView([47.62, 13.42], 10);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 18
+        }).addTo(map);
+
+        const routeColors = ['#e74c3c', '#e67e22', '#9b59b6', '#2ecc71', '#3498db', '#1abc9c'];
+
+        routes.forEach((route, index) => {
+            const from = locations[route.from];
+            const to = locations[route.to];
+
+            const polyline = L.polyline(
+                [[from.lat, from.lng], [to.lat, to.lng]],
+                {
+                    color: routeColors[index],
+                    weight: 4,
+                    opacity: 0.8,
+                    dashArray: '10, 6'
+                }
+            ).addTo(map);
+
+            const midLat = (from.lat + to.lat) / 2;
+            const midLng = (from.lng + to.lng) / 2;
+
+            const labelIcon = L.divIcon({
+                className: 'route-label-container',
+                html: `<div class="route-label" style="border-color: ${routeColors[index]}">${route.distance}<br>${route.time}</div>`,
+                iconSize: [80, 36],
+                iconAnchor: [40, 18]
+            });
+
+            L.marker([midLat, midLng], { icon: labelIcon }).addTo(map);
+        });
+
+        locations.forEach((loc, index) => {
+            const marker = L.circleMarker([loc.lat, loc.lng], {
+                radius: 10,
+                fillColor: loc.color,
+                color: '#fff',
+                weight: 3,
+                opacity: 1,
+                fillOpacity: 0.9
+            }).addTo(map);
+
+            marker.bindPopup(
+                `<div style="text-align:center; direction:rtl; font-size:14px;">
+                    <b>${loc.name}</b><br>
+                    <span style="color:#666">${loc.nameHe}</span><br>
+                    <small>תחנה ${index + 1} מתוך 6</small>
+                </div>`
+            );
+
+            const stepLabel = index + 1;
+            const nameIcon = L.divIcon({
+                className: 'city-label-container',
+                html: `<div class="city-label" style="background:${loc.color}">${stepLabel}. ${loc.name}</div>`,
+                iconSize: [120, 24],
+                iconAnchor: [60, -10]
+            });
+
+            L.marker([loc.lat, loc.lng], { icon: nameIcon }).addTo(map);
+        });
+
+        const legend = L.control({ position: 'bottomright' });
+        legend.onAdd = function () {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = `
+                <h3>מסלול הטיול</h3>
+                ${routes.map((r, i) => {
+                    const from = locations[r.from];
+                    const to = locations[r.to];
+                    return `<div class="legend-item">
+                        <span class="legend-dot" style="background:${routeColors[i]}"></span>
+                        ${from.name} → ${to.name}: ${r.distance}, ${r.time}
+                    </div>`;
+                }).join('')}
+                <div class="total-info">
+                    סה"כ: 185 ק"מ | 200 דקות (3:20 שעות)
+                </div>
+            `;
+            return div;
+        };
+        legend.addTo(map);
+
+        const bounds = L.latLngBounds(locations.map(l => [l.lat, l.lng]));
+        map.fitBounds(bounds, { padding: [50, 50] });
+    </script>
+</body>
+</html>
