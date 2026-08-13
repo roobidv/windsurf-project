@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>רשימת פרוייקטים</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;700&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Heebo', Arial, sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      padding: 40px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+      padding: 40px 48px 48px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 32px;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 24px;
+    }
+
+    .header-icon {
+      font-size: 40px;
+    }
+
+    .header-text h1 {
+      font-size: 26px;
+      font-weight: 700;
+      color: #2d3748;
+    }
+
+    .header-text p {
+      font-size: 13px;
+      color: #718096;
+      margin-top: 4px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    thead tr {
+      background: #2b6cb0;
+      color: #ffffff;
+    }
+
+    thead th {
+      padding: 12px 16px;
+      text-align: right;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid #e2e8f0;
+      transition: background 0.2s;
+    }
+
+    tbody tr:hover {
+      background: #ebf8ff;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #f7fafc;
+    }
+
+    tbody tr:nth-child(even):hover {
+      background: #ebf8ff;
+    }
+
+    td {
+      padding: 12px 16px;
+      vertical-align: top;
+    }
+
+    .num {
+      color: #a0aec0;
+      font-weight: 600;
+      text-align: center;
+      width: 40px;
+    }
+
+    .project-name {
+      font-weight: 700;
+      color: #2b6cb0;
+    }
+
+    .path {
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      color: #4a5568;
+      direction: ltr;
+      text-align: left;
+      word-break: break-all;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #e2e8f0;
+      color: #4a5568;
+      border-radius: 20px;
+      padding: 2px 10px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge.html    { background: #fefcbf; color: #744210; }
+    .badge.vba     { background: #c6f6d5; color: #22543d; }
+    .badge.gas     { background: #fed7e2; color: #702459; }
+    .badge.multi   { background: #e9d8fd; color: #44337a; }
+
+    .desc {
+      font-size: 12px;
+      color: #4a5568;
+      line-height: 1.6;
+    }
+
+    .footer {
+      margin-top: 32px;
+      text-align: center;
+      font-size: 12px;
+      color: #a0aec0;
+    }
+
+    @media print {
+      body { background: white; padding: 0; }
+      .container { box-shadow: none; border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-icon">📁</div>
+      <div class="header-text">
+        <h1>מפת פרוייקטים — Cascade</h1>
+        <p>נסרק ב-03/07/2026 | סה"כ 9 פרוייקטים</p>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th class="num">#</th>
+          <th>שם פרוייקט</th>
+          <th>תיאור</th>
+          <th>נתיב</th>
+          <th>סוג</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="num">1</td>
+          <td class="project-name">bus-times</td>
+          <td class="desc">אפליקציית לוח זמנים לאוטובוסים. מציגה זמני הגעה לפי קווים ותחנות, עם ממשק נייד-ידידותי בעברית ועדכון בזמן אמת.</td>
+          <td class="path">C:\Users\USER\Dropbox\VB6\VBA\CascadeProjects\windsurf-project\bus-times\</td>
+          <td><span class="badge html">HTML</span></td>
+        </tr>
+        <tr>
+          <td class="num">2</td>
+          <td class="project-name">dialer-phonebook</td>
+          <td class="desc">פנקס טלפונים דיגיטלי עם חיוג מהיר. מאפשר ניהול אנשי קשר, חיפוש וחיוג ישיר מהדפדפן.</td>
+          <td class="path">C:\Users\USER\Dropbox\VB6\VBA\CascadeProjects\windsurf-project\dialer-phonebook\</td>
+          <td><span class="badge html">HTML</span></td>
+        </tr>
+        <tr>
+          <td class="num">3</td>
+          <td class="project-name">dialer-google</td>
+          <td class="desc">ממשק חיוג המשולב עם שירותי Google. מאפשר חיפוש איש קשר ב-Google Contacts וחיוג מהיר.</td>
+          <td class="path">C:\Users\USER\Dropbox\VB6\VBA\CascadeProjects\windsurf-project\dialer-google\</td>
+          <td><span class="badge html">HTML</span></td>
+        </tr>
+        <tr>
+          <td class="num">4</td>
+          <td class="project-name">institution-lookup</td>
+          <td class="desc">כלי לחיפוש מוסדות לפי שם או קוד. ממשק HTML המחובר ל-Google Apps Script לשליפת נתונים מ-Google Sheets.</td>
+          <td class="path">C:\Users\USER\Dropbox\VB6\VBA\CascadeProjects\windsurf-project\</td>
+          <td><span class="badge multi">HTML + GAS</span></td>
+        </tr>
+        <tr>
+          <td class="num">5</td>
+          <td class="project-name">logisty2026</td>
+          <td class="desc">מערכת ניהול לוגיסטית לשנת 2026. קיימת בגרסה מקוונת (online) וגרסה לא-מקוונת (offline) לשימוש ללא אינטרנט.</td>
+          <td class="path">C:\Users\USER\Dropbox\VB6\VBA\CascadeProjects\windsurf-project\</td>
+          <td><span class="badge html">HTML (online + offline)</span></td>
+        </tr>
+        <tr>
+          <td class="num">6</td>
+          <td class="project-name">logisty-viewer</td>
+          <td class="desc">מציג נתונים לוגיסטיים — גרסת קריאה בלבד של מערכת logisty2026, מותאמת לתצוגה מהירה ונוחה.</td>
+          <td class="path">C:\Users\USER\Documents\unbound\logisty-viewer\</td>
+          <td><span class="badge html">HTML</span></td>
+        </tr>
+        <tr>
+          <td class="num">7</td>
+          <td class="project-name">Access-Projects</td>
+          <td class="desc">אוסף פרוייקטים ב-Microsoft Access. כולל טפסים, שאילתות ומודולי VBA לניהול נתונים ארגוניים.</td>
+          <td class="path">C:\Users\USER\Dropbox\VB6\VBA\CascadeProjects\windsurf-project\Access-Projects\</td>
+          <td><span class="badge vba">Access / VBA</span></td>
+        </tr>
+        <tr>
+          <td class="num">8</td>
+          <td class="project-name">Excel-Projects</td>
+          <td class="desc">פרוייקטים ב-Microsoft Excel עם מאקרו VBA. כולל דוחות, אוטומציה ועיבוד נתונים מתקדם.</td>
+          <td class="path">C:\Users\USER\Dropbox\VB6\VBA\CascadeProjects\windsurf-project\Excel-Projects\</td>
+          <td><span class="badge vba">Excel / VBA</span></td>
+        </tr>
+        <tr>
+          <td class="num">9</td>
+          <td class="project-name">VBA-Library</td>
+          <td class="desc">ספריית קוד VBA משותפת. פונקציות ומודולים כלליים לשימוש חוזר בכל פרוייקטי Access ו-Excel.</td>
+          <td class="path">C:\Users\USER\Dropbox\VB6\VBA\CascadeProjects\windsurf-project\VBA-Library\</td>
+          <td><span class="badge vba">VBA</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="footer">
+      נוצר על ידי Cascade AI &nbsp;|&nbsp; windsurf-project
+    </div>
+  </div>
+</body>
+</html>

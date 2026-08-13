@@ -1,0 +1,3 @@
+מה תוקן:
+tblSettings — הוכנס ComputerName = "DESKTOP-BQVQAPS" לרשומה שלך, עכשיו ה-lookup של EmployeeName ימצא התאמה
+AppVersion — קבוע APP_VERSION = "1.0.0" נוסף ל-ContactsDialerCode. כשתשדרג גרסה בעתיד, פשוט תעדכן את המספר ותוכל לעקוב מי רץ על איזו גרסה
