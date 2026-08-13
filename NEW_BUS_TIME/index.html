@@ -116,8 +116,12 @@
         }
         .stop-header.bg-green { background: var(--green-bg); }
         .stop-header.bg-red { background: var(--red-bg); }
-        .stop-name { font-size: 18px; font-weight: 700; }
+        .stop-name { font-size: 16px; font-weight: 700; }
         .stop-desc { font-size: 12px; color: var(--text-muted); }
+        .stop-card.dir-extra { border-right: 5px solid var(--primary); }
+        .stop-header.bg-blue { background: #e3f2fd; }
+        .btn-section-label.lbl-extra { color: #0081cb; }
+        .stop-btn.btn-extra { background: #00b0ff; flex: 0 0 48%; }
         .site-link {
             font-size: 12px;
             color: var(--primary);
@@ -171,6 +175,8 @@
         <div class="btn-grid" id="baseGrid"></div>
         <div class="btn-section-label lbl-home">לכיוון הבית</div>
         <div class="btn-grid" id="homeGrid"></div>
+        <div class="btn-section-label lbl-extra">תחנות נוספות</div>
+        <div class="btn-grid" id="extraGrid"></div>
     </div>
 
     <div class="stop-card" id="stopCard">
@@ -199,7 +205,10 @@
             { code: '27063', name: 'צומת גהה הביתה', desc: 'מחלף גהה/דרך ז\'בוטינסקי — בני ברק', dir: 'home', img: '27063.jpg', url: 'https://busnearby.co.il/stop/1:14348' }
         ];
 
-        let selectedIdx = -1;
+        const EXTRAS = [
+            { code: '20349', name: '20349 סבידור/נמיר', desc: '', dir: 'extra', img: '', url: 'https://busnearby.co.il/stop/1:29480' },
+            { code: '21644', name: '21644 אבא  הלל/זבוט', desc: '', dir: 'extra', img: '', url: 'https://busnearby.co.il/stop/1:13198' }
+        ];
 
         function esc(t) {
             const div = document.createElement('div');
@@ -210,36 +219,56 @@
         function renderButtons() {
             const baseGrid = document.getElementById('baseGrid');
             const homeGrid = document.getElementById('homeGrid');
-            STOPS.forEach((s, i) => {
+            let counter = 1;
+            STOPS.forEach((s) => {
                 const btn = document.createElement('button');
                 btn.className = 'stop-btn ' + (s.dir === 'base' ? 'btn-base' : 'btn-home');
-                btn.innerHTML = '<span class="stop-btn-num">' + (i + 1) + '</span>' + esc(s.name);
-                btn.onclick = () => selectStop(i);
+                btn.innerHTML = '<span class="stop-btn-num">' + counter + '</span>' + esc(s.name);
+                counter++;
+                btn.onclick = () => selectStop(s, btn);
                 (s.dir === 'base' ? baseGrid : homeGrid).appendChild(btn);
             });
         }
 
-        function selectStop(idx) {
-            selectedIdx = idx;
-            const s = STOPS[idx];
+        function renderExtras() {
+            const extraGrid = document.getElementById('extraGrid');
+            EXTRAS.forEach((s) => {
+                const btn = document.createElement('button');
+                btn.className = 'stop-btn btn-extra';
+                btn.textContent = s.name;
+                btn.onclick = () => selectStop(s, btn);
+                extraGrid.appendChild(btn);
+            });
+        }
 
+        function selectStop(s, btn) {
             document.querySelectorAll('.stop-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.stop-btn')[idx].classList.add('active');
+            if (btn) btn.classList.add('active');
 
             const card = document.getElementById('stopCard');
             const header = document.getElementById('stopHeader');
 
-            card.className = 'stop-card ' + (s.dir === 'base' ? 'dir-base' : 'dir-home');
-            header.className = 'stop-header ' + (s.dir === 'base' ? 'bg-green' : 'bg-red');
+            let cardClass, headerClass;
+            if (s.dir === 'base') { cardClass = 'dir-base'; headerClass = 'bg-green'; }
+            else if (s.dir === 'home') { cardClass = 'dir-home'; headerClass = 'bg-red'; }
+            else { cardClass = 'dir-extra'; headerClass = 'bg-blue'; }
+
+            card.className = 'stop-card ' + cardClass;
+            header.className = 'stop-header ' + headerClass;
 
             document.getElementById('stopName').textContent = s.name;
             document.getElementById('stopDesc').textContent = s.desc;
             document.getElementById('stopLink').href = s.url;
 
             const img = document.getElementById('stopImg');
-            img.style.display = '';
-            img.src = 'images/' + s.img;
-            img.alt = s.name;
+            if (s.img) {
+                img.style.display = '';
+                img.src = 'images/' + s.img;
+                img.alt = s.name;
+            } else {
+                img.style.display = 'none';
+                img.src = '';
+            }
 
             document.getElementById('siteFrame').src = s.url;
 
@@ -249,6 +278,7 @@
         }
 
         renderButtons();
+        renderExtras();
     </script>
 </body>
 </html>
