@@ -139,6 +139,15 @@
             border: none;
             display: block;
         }
+        .scroll-hint {
+            text-align: center;
+            padding: 6px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary);
+            background: #e3f2fd;
+            border-bottom: 1px solid #e5e7eb;
+        }
 
         .empty-state {
             text-align: center;
@@ -171,6 +180,7 @@
             <a id="stopLink" href="#" target="_blank" class="site-link">פתח בכרטיסייה חדשה</a>
         </div>
         <img id="stopImg" class="stop-img" src="" alt="" onerror="this.style.display='none'">
+        <div class="scroll-hint">גלול עם האצבע רשימת אוטובוסים</div>
         <iframe id="siteFrame" class="site-frame" src="about:blank"></iframe>
     </div>
 
