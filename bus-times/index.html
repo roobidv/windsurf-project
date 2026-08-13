@@ -917,6 +917,82 @@ function copyCode(code, btn) {
     });
 }
 
+// ===== SIRI real-time (Hasadna) — bus.gov.il WebApi was retired, replaced with new Angular SPA =====
+const _siriRouteCache = {}; // siri_route_id -> {line_ref, operator_ref}
+const _gtfsRouteByLineRefCache = {}; // line_ref -> gtfs route info
+
+async function resolveSiriRoute(siriRouteId, signal) {
+    if (_siriRouteCache[siriRouteId]) return _siriRouteCache[siriRouteId];
+    const resp = await fetch(`${GTFS_API}/siri_routes/get?id=${siriRouteId}`, { signal });
+    if (!resp.ok) throw new Error('siri_routes/get failed');
+    const data = await resp.json();
+    _siriRouteCache[siriRouteId] = data;
+    return data;
+}
+
+async function resolveGtfsRouteByLineRef(lineRef, signal) {
+    if (_gtfsRouteByLineRefCache[lineRef]) return _gtfsRouteByLineRefCache[lineRef];
+    const today = new Date().toISOString().split('T')[0];
+    let data = await (await fetch(`${GTFS_API}/gtfs_routes/list?line_refs=${lineRef}&date_from=${today}&date_to=${today}&limit=1`, { signal })).json();
+    if (!data || data.length === 0) {
+        data = await (await fetch(`${GTFS_API}/gtfs_routes/list?line_refs=${lineRef}&limit=1&order_by=date%20desc`, { signal })).json();
+    }
+    const route = (data && data[0]) || null;
+    _gtfsRouteByLineRefCache[lineRef] = route;
+    return route;
+}
+
+// Best-effort check: which line numbers have a real dispatched vehicle (vehicle_ref present)
+// scheduled to pass this stop soon. Hasadna's public SIRI layer does not expose a reliable
+// per-stop distance/ETA for upcoming rides (that field is only ever populated post-hoc), so
+// this is used purely as a confirmation badge, not for computing arrival minutes.
+async function fetchSiriLiveLineSet(stop) {
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 6000);
+    try {
+        const stopData = await (await fetch(`${GTFS_API}/siri_stops/list?codes=${stop.code}`, { signal: ctrl.signal })).json();
+        if (!stopData || stopData.length === 0) return new Set();
+        const siriStopId = stopData[0].id;
+
+        // Note: server-side time-range filtering on this endpoint is slow/unreliable, so we
+        // fetch the most recent entries (fast) and filter by scheduled time on the client.
+        const rsResp = await fetch(`${GTFS_API}/siri_ride_stops/list?siri_stop_ids=${siriStopId}` +
+            `&limit=40&order_by=id%20desc`, { signal: ctrl.signal });
+        if (!rsResp.ok) return new Set();
+        const rideStops = await rsResp.json();
+        if (!rideStops || rideStops.length === 0) return new Set();
+
+        // SIRI ingestion can lag real-time by up to ~30-40 min, so we look backward broadly
+        // rather than requiring an exact future window — this just confirms the line has
+        // active service today, not a precise upcoming arrival.
+        const now = new Date();
+        const from = now.getTime() - 90 * 60000;
+
+        // A vehicle_ref means a real bus was dispatched for this ride
+        const dispatched = rideStops.filter(r => {
+            if (!r.siri_ride__vehicle_ref || !r.siri_ride__scheduled_start_time) return false;
+            const t = new Date(r.siri_ride__scheduled_start_time).getTime();
+            return t >= from;
+        });
+        if (dispatched.length === 0) return new Set();
+
+        const uniqueRouteIds = [...new Set(dispatched.map(r => r.siri_ride__siri_route_id))];
+        const lineNums = new Set();
+        await Promise.all(uniqueRouteIds.map(async id => {
+            try {
+                const sr = await resolveSiriRoute(id, ctrl.signal);
+                const gr = await resolveGtfsRouteByLineRef(sr.line_ref, ctrl.signal);
+                if (gr && gr.route_short_name) lineNums.add(String(gr.route_short_name));
+            } catch(e) {}
+        }));
+        return lineNums;
+    } catch(e) {
+        return new Set();
+    } finally {
+        clearTimeout(tid);
+    }
+}
+
 async function fetchAndOpenMap(code) {
     try {
         const resp = await fetch(`${GTFS_API}/gtfs_stops/list?code=${code}&limit=1`);
@@ -1023,7 +1099,7 @@ function renderCard(stop) {
     </div>`;
 }
 
-// ===== Fetch: bus.gov.il (real-time MOT), fallback to GTFS =====
+// ===== Fetch: GTFS planned schedule (primary, reliable) + SIRI live-line badge (best effort) =====
 async function loadStop(stop) {
     const body = document.getElementById('stopBody');
     if (!body) return;
@@ -1049,95 +1125,80 @@ async function loadStop(stop) {
     const now = new Date();
     let source = '';
 
+    let arrivals = [];
     try {
-        // Primary: bus.gov.il real-time SIRI (MOT official)
-        const motUrl = `${MOT_API}/GetRealtimeBusLineListByBustop/${stop.code}/he/false?_t=${Date.now()}`;
-        const proxies = [
-            PROXY,
-            'https://api.allorigins.win/raw?url=',
-            'https://api.codetabs.com/v1/proxy?quest='
-        ];
-        let raw = null;
-        for (const px of proxies) {
-            try {
-                const ctrl = new AbortController();
-                const tid = setTimeout(() => ctrl.abort(), 8000);
-                const resp = await fetch(px + encodeURIComponent(motUrl), { signal: ctrl.signal, cache: 'no-store', headers: {'Cache-Control':'no-cache','Pragma':'no-cache'} });
-                clearTimeout(tid);
-                if (!resp.ok) continue;
-                raw = await resp.json();
-                if (raw && (Array.isArray(raw) || raw.value)) break;
-                raw = null;
-            } catch(_) { continue; }
-        }
-        if (!raw) throw new Error('MOT: all proxies failed');
-        // API returns {value:[...], Count:N} or plain array
-        const lines = Array.isArray(raw) ? raw : (raw.value || []);
+        const later = new Date(now.getTime() + 90 * 60000);
+        const from = toISOLocal(now);
+        const to = toISOLocal(later);
+        const today = now.toISOString().split('T')[0];
 
-        // Update stop name for custom stops
-        if (lines.length > 0 && lines[0].BusstopHebrewName) {
+        const url = `${GTFS_API}/gtfs_ride_stops/list?` +
+            `gtfs_stop__code=${stop.code}` +
+            `&gtfs_stop__date_from=${today}&gtfs_stop__date_to=${today}` +
+            `&arrival_time_from=${encodeURIComponent(from)}` +
+            `&arrival_time_to=${encodeURIComponent(to)}` +
+            `&limit=25` +
+            `&order_by=arrival_time asc`;
+
+        const resp = await fetch(url + '&_t=' + Date.now(), { cache: 'no-store' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+
+        if (data.length > 0 && data[0].gtfs_stop__name) {
             const officialEl = document.getElementById('stopOfficialName');
-            if (officialEl) officialEl.textContent = '🚏 ' + lines[0].BusstopHebrewName;
+            if (officialEl) officialEl.textContent = '🚏 ' + data[0].gtfs_stop__name;
             if (isCustom) {
-                currentStop.name = lines[0].BusstopHebrewName;
+                currentStop.name = data[0].gtfs_stop__name;
                 const nameEl = document.querySelector('.stop-name');
-                if (nameEl) nameEl.textContent = lines[0].BusstopHebrewName;
+                if (nameEl) nameEl.textContent = data[0].gtfs_stop__name;
             }
         }
 
-        lastMotLines = lines;
-        const arrivals = parseMotData(lines, stop.lines || []);
-        renderArrivals(body, arrivals, 'realtime');
-        source = 'realtime';
+        arrivals = parseGtfsData(data, now, stop.lines || []);
+        source = 'planned';
 
-    } catch(e1) {
-        // Fallback to GTFS planned schedule
-        try {
-            const later = new Date(now.getTime() + 90 * 60000);
-            const from = toISOLocal(now);
-            const to = toISOLocal(later);
-            const today = now.toISOString().split('T')[0];
-
-            const url = `${GTFS_API}/gtfs_ride_stops/list?` +
-                `gtfs_stop__code=${stop.code}` +
-                `&gtfs_stop__date_from=${today}&gtfs_stop__date_to=${today}` +
-                `&arrival_time_from=${encodeURIComponent(from)}` +
-                `&arrival_time_to=${encodeURIComponent(to)}` +
-                `&limit=25` +
-                `&order_by=arrival_time asc`;
-
-            const resp2 = await fetch(url + '&_t=' + Date.now(), { cache: 'no-store' });
-            if (!resp2.ok) throw new Error('HTTP ' + resp2.status);
-            const data = await resp2.json();
-
-            if (data.length > 0 && data[0].gtfs_stop__name) {
-                const officialEl = document.getElementById('stopOfficialName');
-                if (officialEl) officialEl.textContent = '🚏 ' + data[0].gtfs_stop__name;
-                if (isCustom) {
-                    currentStop.name = data[0].gtfs_stop__name;
-                    const nameEl = document.querySelector('.stop-name');
-                    if (nameEl) nameEl.textContent = data[0].gtfs_stop__name;
-                }
-            }
-
-            const arrivals = parseGtfsData(data, now, stop.lines || []);
-            renderArrivals(body, arrivals, 'planned');
-            source = 'planned';
-
-        } catch(e2) {
-            body.innerHTML = `<div class="stop-error">⚠️ שגיאה: ${esc(e2.message)}</div>`;
-            document.getElementById('statusDot').className = 'dot dot-err';
-            document.getElementById('statusText').textContent = 'שגיאה';
-            countdown = REFRESH_SEC;
-            return;
-        }
+        // Rebuild lastMotLines in the old MOT-WebApi shape so the boarding wizard
+        // (startBoarding/boardingPickLineRegular/boardingConfirm) keeps working unchanged.
+        lastMotLines = data.map(d => {
+            const eta = d.arrival_time ? new Date(d.arrival_time) : null;
+            const min = eta ? Math.round((eta - now) / 60000) : null;
+            return {
+                Shilut: d.gtfs_route__route_short_name || '?',
+                MinutesToArrival: min,
+                DestinationQuarterName: d.gtfs_route__route_long_name || '',
+                CompanyHebrewName: d.gtfs_route__agency_name || '',
+                MotDirection: d.gtfs_route__route_direction || 1,
+                MotLineId: d.gtfs_route__route_short_name || '?',
+                BusstopHebrewName: d.gtfs_stop__name || ''
+            };
+        }).filter(ln => ln.MinutesToArrival !== null);
+    } catch(e2) {
+        body.innerHTML = `<div class="stop-error">⚠️ שגיאה: ${esc(e2.message)}</div>`;
+        document.getElementById('statusDot').className = 'dot dot-err';
+        document.getElementById('statusText').textContent = 'שגיאה';
+        countdown = REFRESH_SEC;
+        return;
     }
+
+    // Best-effort: mark lines that have a real dispatched vehicle right now (SIRI) as "live"
+    // Note: bus.gov.il's old WebApi was retired (site migrated to a new Angular SPA), and Hasadna's
+    // public SIRI layer doesn't expose a reliable per-stop ETA — so we only use it as a confirmation
+    // badge (🛰️), the displayed minutes always come from the GTFS planned schedule above.
+    try {
+        const liveLines = await fetchSiriLiveLineSet(stop);
+        if (liveLines && liveLines.size > 0) {
+            arrivals.forEach(a => { if (liveLines.has(String(a.line))) a.hasGps = true; });
+            source = 'realtime';
+        }
+    } catch(e3) { /* silently ignore — planned data already rendered */ }
+
+    renderArrivals(body, arrivals, source);
 
     const ts = now.toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
     document.getElementById('lastRefresh').textContent = ts;
     document.getElementById('statusDot').className = 'dot dot-ok';
     document.getElementById('statusText').textContent = source === 'realtime'
-        ? '🛰️ זמן אמת — משרד התחבורה'
+        ? '🛰️ חלק מהקווים מאומתים כפעילים (SIRI)'
         : '📋 לוח זמנים מתוכנן';
     countdown = REFRESH_SEC;
 }
@@ -1316,46 +1377,30 @@ const BUS_CO_IL = {
 
 // ===== Line detail modal =====
 async function showLineModal(lineNum) {
-    // Find this line in raw MOT data
-    const ln = lastMotLines.find(l => String(l.Shilut) === lineNum);
-    if (!ln) return;
+    // Find all arrivals for this line from the last rendered data (GTFS-based, always populated)
+    const matches = lastArrivals.filter(a => String(a.line) === String(lineNum));
+    if (matches.length === 0) return;
 
-    const dest = ln.DestinationQuarterName || ln.Description || '';
-    const company = ln.CompanyHebrewName || '';
-    const arrList = ln.MinutesToArrivalList || (ln.MinutesToArrival != null ? [ln.MinutesToArrival] : []);
-    const stopName = ln.BusstopHebrewName || currentStop?.name || '';
-    const desc = ln.Description || '';
-    const destMakat = ln.DestinationMakat;
-    const stopType = ln.BusstopType || '';
+    const first = matches[0];
+    const dest = first.dest || '';
+    const company = first.company || '';
+    const stopName = currentStop?.name || '';
     const coCode = BUS_CO_IL[company];
-    const motDir = ln.MotDirection || 1;
 
     // Build time chips with clock
     const now = Date.now();
-    const chips = arrList.map(min => {
-        const clock = new Date(now + min * 60000).toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' });
-        const label = min <= 0 ? 'מגיע!' : min + " דק'";
-        return `<span class="modal-time-chip">${label} (${clock})</span>`;
+    const chips = matches.map(a => {
+        const clock = new Date(now + a.minutes * 60000).toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' });
+        const label = a.minutes <= 0 ? 'מגיע!' : a.minutes + " דק'";
+        const badge = a.hasGps ? ' 🛰️' : '';
+        return `<span class="modal-time-chip">${label}${badge} (${clock})</span>`;
     }).join('');
 
     // Build origin
     const origin = (currentStop?.lat && currentStop?.lon)
         ? `${currentStop.lat},${currentStop.lon}`
         : encodeURIComponent(stopName);
-
-    // Try to get destination stop coordinates for precise navigation
-    let destCoords = '';
-    if (destMakat) {
-        try {
-            const r = await fetch(`${GTFS_API}/gtfs_stops/list?code=${destMakat}&limit=1`);
-            const d = await r.json();
-            const stops = d.value || d;
-            if (stops.length > 0 && stops[0].lat && stops[0].lon) {
-                destCoords = `${stops[0].lat},${stops[0].lon}`;
-            }
-        } catch(e) {}
-    }
-    const destination = destCoords || encodeURIComponent(dest);
+    const destination = encodeURIComponent(dest);
     const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=transit`;
 
     const overlay = document.createElement('div');
@@ -1371,9 +1416,7 @@ async function showLineModal(lineNum) {
                 </div>
             </div>
             <div class="modal-body">
-                <div class="modal-section">📍 תחנה: ${esc(stopName)} ${stopType ? '(' + esc(stopType) + ')' : ''}</div>
-                <div class="modal-section" style="margin-top:6px">🗺️ מסלול: ${esc(desc)}</div>
-                ${destMakat ? '<div class="modal-section" style="margin-top:4px;color:#1a73e8">🏁 תחנת יעד: ' + destMakat + '</div>' : ''}
+                <div class="modal-section">📍 תחנה: ${esc(stopName)}</div>
                 <div class="modal-section" style="margin-top:12px">⏱️ הגעות קרובות:</div>
                 <div class="modal-times">${chips || '<span style="color:#aaa">אין נתונים</span>'}</div>
                 <div class="modal-btns">
@@ -2482,47 +2525,28 @@ async function boardingPollNextStop() {
     if (!stopCode) { window._boardingPollBusy = false; return; }
 
     try {
-        const ts = Date.now();
-        const url = `${PROXY}${encodeURIComponent(MOT_API + '/GetRealtimeBusLineListByBustop/' + stopCode + '/he/false')}&_t=${ts}`;
-        const resp = await fetch(url, { cache: 'no-store' });
-        const data = await resp.json();
-        const lines = data?.value || data || [];
+        // Note: bus.gov.il's old real-time WebApi was retired; Hasadna's public SIRI layer
+        // doesn't expose reliable per-stop ETA, so we only use it to confirm a real bus was
+        // dispatched today for this line — actual minutes always come from the schedule estimate.
+        const liveLines = await fetchSiriLiveLineSet({ code: stopCode });
+        const confirmed = liveLines && liveLines.has(String(lineNum));
 
-        const match = lines.find(ln => String(ln.Shilut) === lineNum);
+        if (confirmed) window._boardingSeenAtNext = true;
 
-        if (match) {
-            window._boardingSeenAtNext = true;
-            window._boardingMissedPolls = 0;
-            const arrivals = match.MinutesToArrivalList || (match.MinutesToArrival != null ? [match.MinutesToArrival] : []);
-            const minEta = arrivals.length > 0 ? Math.min(...arrivals) : null;
-            window._boardingLastEta = minEta;
-
-            if (statusEl) statusEl.textContent = `🚌 קו ${lineNum} → ${nextStop.name}: ${minEta != null ? minEta + " דק'" : 'מתקרב'}`;
-
-            if (minEta != null && minEta <= 0) {
+        // Calculate ETA from schedule (only reliable source of minutes we have)
+        const nextMin = nextStop.minFromStart;
+        if (nextMin != null) {
+            const etaEst = Math.max(0, Math.round(nextMin - elapsedMin));
+            window._boardingLastEta = etaEst;
+            const badge = confirmed ? ' 🛰️' : '';
+            if (statusEl) statusEl.textContent = `⏱️ ${nextStop.name}: ~${etaEst} דק' (לפי לו"ז)${badge}`;
+            if (etaEst <= 0) {
                 boardingAdvanceStop(nextIdx, nextStop);
-            } else if (nextStop.isDest && minEta != null && minEta <= 2 && !window._boardingAlerted) {
+            } else if (nextStop.isDest && etaEst <= 2 && !window._boardingAlerted) {
                 boardingTriggerAlert(dest, true);
             }
         } else {
-            if (window._boardingSeenAtNext) {
-                window._boardingMissedPolls++;
-                if (window._boardingMissedPolls >= 2) {
-                    boardingAdvanceStop(nextIdx, nextStop);
-                } else {
-                    if (statusEl) statusEl.textContent = `🔍 מאמת מעבר ב${nextStop.name}...`;
-                }
-            } else {
-                // Calculate ETA from schedule if available
-                const nextMin = nextStop.minFromStart;
-                if (nextMin != null) {
-                    const etaEst = Math.max(0, Math.round(nextMin - elapsedMin));
-                    window._boardingLastEta = etaEst;
-                    if (statusEl) statusEl.textContent = `⏱️ ${nextStop.name}: ~${etaEst} דק' (לפי לו"ז)`;
-                } else {
-                    if (statusEl) statusEl.textContent = `🔍 מחפש קו ${lineNum}...`;
-                }
-            }
+            if (statusEl) statusEl.textContent = confirmed ? `🛰️ קו ${lineNum} פעיל היום — ${nextStop.name}` : `🔍 מחפש קו ${lineNum}...`;
         }
 
         boardingRefreshUI();
