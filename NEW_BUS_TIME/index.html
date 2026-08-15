@@ -215,6 +215,8 @@
             { code: 'bdim', name: 'בהדים', desc: '', dir: 'extra', img: '', url: 'https://busnearby.co.il/stop/1:38736' }
         ];
 
+        let btnNum = 1;
+
         function esc(t) {
             const div = document.createElement('div');
             div.textContent = t;
@@ -224,12 +226,10 @@
         function renderButtons() {
             const baseGrid = document.getElementById('baseGrid');
             const homeGrid = document.getElementById('homeGrid');
-            let counter = 1;
             STOPS.forEach((s) => {
                 const btn = document.createElement('button');
                 btn.className = 'stop-btn ' + (s.dir === 'base' ? 'btn-base' : 'btn-home');
-                btn.innerHTML = '<span class="stop-btn-num">' + counter + '</span>' + esc(s.name);
-                counter++;
+                btn.innerHTML = '<span class="stop-btn-num">' + (btnNum++) + '</span>' + esc(s.name);
                 btn.onclick = () => selectStop(s, btn);
                 (s.dir === 'base' ? baseGrid : homeGrid).appendChild(btn);
             });
@@ -240,7 +240,7 @@
             EXTRAS.forEach((s) => {
                 const btn = document.createElement('button');
                 btn.className = 'stop-btn btn-extra';
-                btn.textContent = s.name;
+                btn.innerHTML = '<span class="stop-btn-num">' + (btnNum++) + '</span>' + esc(s.name);
                 btn.onclick = () => selectStop(s, btn);
                 extraGrid.appendChild(btn);
             });
@@ -251,7 +251,7 @@
             MORE.forEach((s) => {
                 const btn = document.createElement('button');
                 btn.className = 'stop-btn btn-orange';
-                btn.textContent = s.name;
+                btn.innerHTML = '<span class="stop-btn-num">' + (btnNum++) + '</span>' + esc(s.name);
                 btn.onclick = () => selectStop(s, btn);
                 moreGrid.appendChild(btn);
             });
