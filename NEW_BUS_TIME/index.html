@@ -122,6 +122,7 @@
         .stop-header.bg-blue { background: #e3f2fd; }
         .btn-section-label.lbl-extra { color: #0081cb; }
         .stop-btn.btn-extra { background: #00b0ff; flex: 0 0 48%; }
+        .stop-btn.btn-orange { background: #ff9800; flex: 0 0 48%; }
         .site-link {
             font-size: 12px;
             color: var(--primary);
@@ -177,6 +178,7 @@
         <div class="btn-grid" id="homeGrid"></div>
         <div class="btn-section-label lbl-extra">תחנות נוספות</div>
         <div class="btn-grid" id="extraGrid"></div>
+        <div class="btn-grid" id="moreGrid"></div>
     </div>
 
     <div class="stop-card" id="stopCard">
@@ -210,6 +212,11 @@
             { code: '21644', name: '21644 אבא  הלל/זבוט', desc: '', dir: 'extra', img: '', url: 'https://busnearby.co.il/stop/1:13198' }
         ];
 
+        const MORE = [
+            { code: 'bsh', name: 'ב"ש מרכז', desc: '', dir: 'extra', img: '', url: 'https://busnearby.co.il/stop/1:26652' },
+            { code: 'bdim', name: 'בהדים', desc: '', dir: 'extra', img: '', url: 'https://busnearby.co.il/stop/1:38736' }
+        ];
+
         function esc(t) {
             const div = document.createElement('div');
             div.textContent = t;
@@ -238,6 +245,17 @@
                 btn.textContent = s.name;
                 btn.onclick = () => selectStop(s, btn);
                 extraGrid.appendChild(btn);
+            });
+        }
+
+        function renderMore() {
+            const moreGrid = document.getElementById('moreGrid');
+            MORE.forEach((s) => {
+                const btn = document.createElement('button');
+                btn.className = 'stop-btn btn-orange';
+                btn.textContent = s.name;
+                btn.onclick = () => selectStop(s, btn);
+                moreGrid.appendChild(btn);
             });
         }
 
@@ -279,6 +297,7 @@
 
         renderButtons();
         renderExtras();
+        renderMore();
     </script>
 </body>
 </html>
