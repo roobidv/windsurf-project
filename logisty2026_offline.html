@@ -893,9 +893,10 @@
     </div>
 
     <div class="authority-filter">
-        <select class="authority-select" id="authoritySelect">
+        <input type="text" list="authorityList" class="authority-select" id="authoritySelect" placeholder="כל הרשויות">
+        <datalist id="authorityList">
             <option value="">כל הרשויות</option>
-        </select>
+        </datalist>
     </div>
 
     <div class="filters" id="levelFilters">
@@ -1074,14 +1075,14 @@
         function populateUI(src) {
             // Populate authority dropdown
             const authorities = [...new Set(allRows.map(r => r.authority))].sort();
-            const select = document.getElementById('authoritySelect');
-            select.innerHTML = '<option value="">כל הרשויות</option>';
+            const list = document.getElementById('authorityList');
+            list.innerHTML = '<option value="">כל הרשויות</option>';
             authorities.forEach(a => {
                 if (a) {
                     const opt = document.createElement('option');
                     opt.value = a;
                     opt.textContent = a;
-                    select.appendChild(opt);
+                    list.appendChild(opt);
                 }
             });
 
@@ -1112,7 +1113,7 @@
 
         function applyFilters() {
             const rawSearch = document.getElementById('searchInput').value.trim();
-            const authority = document.getElementById('authoritySelect').value;
+            const authority = (val => val && _authoritySet.has(val.toLowerCase()) ? val : '')(document.getElementById('authoritySelect').value.trim());
 
             // Smart search: if space detected, check if last word is a valid authority
             let searchTerms = rawSearch.toLowerCase();
@@ -1875,7 +1876,7 @@
 
         // Events
         document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 250));
-        document.getElementById('authoritySelect').addEventListener('change', applyFilters);
+        document.getElementById('authoritySelect').addEventListener('input', e => { const val = e.target.value.trim(); if (val && _authoritySet.has(val.toLowerCase())) applyFilters(); }); document.getElementById('authoritySelect').addEventListener('change', e => { const val = e.target.value.trim(); if (!val || !_authoritySet.has(val.toLowerCase())) { e.target.value = ''; } applyFilters(); });
         document.getElementById('levelFilters').addEventListener('click', e => {
             const chip = e.target.closest('.filter-chip');
             if (!chip) return;
