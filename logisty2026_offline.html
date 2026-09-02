@@ -953,7 +953,7 @@
             <div class="summary-value" id="sumBudget" style="color:var(--primary)">-</div>
         </div>
         <div class="summary-item">
-            <div class="summary-label">שולם תשפ"ה</div>
+            <div class="summary-label">שולם תשפ"ז</div>
             <div class="summary-value" id="sumPaid85" style="color:var(--green)">-</div>
         </div>
         <div class="summary-item">
@@ -1217,7 +1217,7 @@
                             <div class="amount-value">${esc(r.budget)}</div>
                         </div>
                         <div class="amount-box paid85">
-                            <div class="amount-label">שולם תשפ"ה</div>
+                            <div class="amount-label">שולם תשפ"ז</div>
                             <div class="amount-value">${esc(r.paid85) || '-'}</div>
                         </div>
                         <div class="amount-box paid86">
@@ -1490,7 +1490,7 @@
                 {keys:['שולם מלא','שולם הכל','תשלום מלא'], mode:'שולם מלא', fn: () => allRows.filter(r => _b(r) > 0 && _p(r) >= _b(r))},
                 {keys:['שולם','שילמו','משלמים'], mode:'שולם', fn: () => allRows.filter(r => _p(r) > 0)},
                 {keys:['שולם חלקי','תשלום חלקי'], mode:'שולם חלקי', fn: () => allRows.filter(r => {const p=_p(r),b=_b(r); return p>0 && b>0 && p<b;})},
-                {keys:["תשפ\"ה","תשפה","85"], mode:"שולם תשפ\"ה", fn: () => allRows.filter(r => _p85(r) > 0)},
+                {keys:["תשפ\"ז","תשפז","85"], mode:"שולם תשפ\"ז", fn: () => allRows.filter(r => _p85(r) > 0)},
                 {keys:["תשפ\"ו","תשפו","86"], mode:"שולם תשפ\"ו", fn: () => allRows.filter(r => _p86(r) > 0)},
                 {keys:['משרדי','מענה משרדי'], mode:'מענה משרדי', fn: () => allRows.filter(r => r.purchaseType.includes('משרדי'))},
                 {keys:['לא משרדי','רשות','בעלות'], mode:'לא משרדי', fn: () => allRows.filter(r => r.purchaseType && !r.purchaseType.includes('משרדי'))},
