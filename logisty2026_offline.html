@@ -577,6 +577,11 @@
         .card.type-red {
             border-right: 4px solid var(--red);
         }
+        .card.full-service {
+            background: #f3e8ff;
+            border: 1px solid #d8b4fe;
+            border-right: 4px solid #a855f7 !important;
+        }
 
         /* Phone fields */
         .phone-fields {
@@ -1028,7 +1033,7 @@
             allRows = parsed.slice(1).map(r => ({
                 authority:r[0]||'',code:r[1]||'',name:r[2]||'',
                 purchaseType:r[3]||'',level:r[4]||'',budgetType:r[5]||'',
-                count:r[6]||'',budget:r[7]||'',paid85:r[8]||'',
+                count:r[6]||'',serviceLevel:r[6]||'',budget:r[7]||'',paid85:r[8]||'',
                 paid86:r[9]||'',salesperson:r[10]||'',
                 name_sec:r[11]||'',phone_sec:r[12]||'',
                 name_mgr:r[13]||'',phone_mgr:r[14]||'',
@@ -1192,6 +1197,7 @@
                 const hasNotes = allVals > 0 ? ' has-notes' : '';
                 const isMisradi = r.purchaseType.includes('משרדי');
                 const typeClass = isMisradi ? ' type-green' : ' type-red';
+                const fullServiceClass = (r.serviceLevel || '').trim() === '2' ? ' full-service' : '';
                 const tagColor = isMisradi ? 'tag-green' : 'tag-red';
                 const waBtn = (ph) => {
                     const d = ph.replace(/[\s\-()]/g,'');
@@ -1201,7 +1207,7 @@
                     `<div class="note-item"><div class="note-text">${esc(n.text)}</div><div class="note-meta">${esc(n.meta)}</div><button class="note-delete" onclick="deleteNote('${baseKey}',${n.idx})">🗑</button></div>`
                 ).join('')}</div>` : '';
                 return `
-                <div class="card${hasNotes}${typeClass}" onclick="toggleCard(event, this)">
+                <div class="card${hasNotes}${typeClass}${fullServiceClass}" onclick="toggleCard(event, this)">
                     <div class="authority-name">${esc(r.authority)}</div>
                     <div class="card-header">
                         <div class="institution-name">${esc(r.name)}</div>
