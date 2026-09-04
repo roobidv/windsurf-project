@@ -358,6 +358,13 @@
             background: #fefce8;
             color: #a16207;
         }
+        .tag-budget-type.full-service {
+            background: #a855f7;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 800;
+            padding: 4px 12px;
+        }
 
         /* Amounts */
         .amounts {
@@ -1197,7 +1204,8 @@
                 const hasNotes = allVals > 0 ? ' has-notes' : '';
                 const isMisradi = r.purchaseType.includes('משרדי');
                 const typeClass = isMisradi ? ' type-green' : ' type-red';
-                const fullServiceClass = (r.serviceLevel || '').trim() === '2' ? ' full-service' : '';
+                const isFullService = (r.serviceLevel || '').trim() === '2';
+                const fullServiceClass = isFullService ? ' full-service' : '';
                 const tagColor = isMisradi ? 'tag-green' : 'tag-red';
                 const waBtn = (ph) => {
                     const d = ph.replace(/[\s\-()]/g,'');
@@ -1216,7 +1224,7 @@
                     <div class="card-tags">
                         <span class="tag tag-level">${esc(r.level)}</span>
                         <span class="tag tag-type ${tagColor}">${esc(r.purchaseType)}</span>
-                        <span class="tag tag-budget-type">${esc(r.budgetType)}</span>
+                        <span class="tag tag-budget-type${isFullService ? ' full-service' : ''}">${isFullService ? 'שרות מלא' : esc(r.budgetType)}</span>
                     </div>
                     <div class="amounts">
                         <div class="amount-box budget">
