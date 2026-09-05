@@ -200,7 +200,7 @@
             { code: '32465', name: 'מליד העבודה של אבא', desc: 'ישיר עד הבסיס', dir: 'base', img: '32465.jpg', url: 'https://busnearby.co.il/stop/1:16390' },
             { code: '33442', name: 'מהבסיס תחנה שחורה', desc: 'האחרים לצומת בית דגן', dir: 'home', img: '33442.jpg', url: 'https://busnearby.co.il/stop/1:21596' },
             { code: '33440', name: 'צומת בית דגן', desc: 'נוסעים לגבעת שמואל תחנה', dir: 'home', img: '33440.jpg', url: 'https://busnearby.co.il/stop/1:21595' },
-            { code: '21257', name: 'אחרי גשר גב. שמואל', desc: 'קווים ישירים לכפר סבא', dir: 'home', img: '21257.jpg', url: 'https://busnearby.co.il/stop/1:12962' },
+            { code: '16464', name: 'בהדים רחוק', desc: 'מחנה אריאל שרון/כביש 40', dir: 'home', btnClass: 'btn-orange', img: '16464.jpg', url: 'https://busnearby.co.il/stop/1:28549' },
             { code: '38243', name: 'ליד עבודה אבא לבית', desc: 'שים לב 42 מגיע רק לקניון ערים', dir: 'home', img: '38243.jpg', url: 'https://busnearby.co.il/stop/1:25206' },
             { code: '27063', name: 'צומת גהה הביתה', desc: 'מחלף גהה/דרך ז\'בוטינסקי — בני ברק', dir: 'home', img: '27063.jpg', url: 'https://busnearby.co.il/stop/1:14348' }
         ];
@@ -228,7 +228,7 @@
             const homeGrid = document.getElementById('homeGrid');
             STOPS.forEach((s) => {
                 const btn = document.createElement('button');
-                btn.className = 'stop-btn ' + (s.dir === 'base' ? 'btn-base' : 'btn-home');
+                btn.className = 'stop-btn ' + (s.btnClass || (s.dir === 'base' ? 'btn-base' : 'btn-home'));
                 btn.innerHTML = '<span class="stop-btn-num">' + (btnNum++) + '</span>' + esc(s.name);
                 btn.onclick = () => selectStop(s, btn);
                 (s.dir === 'base' ? baseGrid : homeGrid).appendChild(btn);
